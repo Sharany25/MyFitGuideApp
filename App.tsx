@@ -1,21 +1,10 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import TabNavigator from './src/navigator/TabNavigator';
+import React from "react";
+import StackNavigator from "./src/navigator/StackNavigator";
 
-export default function App() {
-  return (
-    <NavigationContainer>
-      <TabNavigator />
-    </NavigationContainer>
-  );
-}
-//import React from "react";
-//import StackNavigator from "./src/navigator/StackNavigator";
+const App: React.FC = () => {
+   return <StackNavigator />;
+ };
 
-//const App: React.FC = () => {
-//   return <StackNavigator />;
-// };
-
-// export default App;
+ export default App;
 
 //ctl+k+c comentar

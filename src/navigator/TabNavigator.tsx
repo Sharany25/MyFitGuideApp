@@ -2,16 +2,21 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import HomeScreen from '../screens/HomeScreen';
 import { Text } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons'; // Asegúrate de que el nombre de la importación sea correcto
+import Ionicons from 'react-native-vector-icons/Ionicons';
+import { RutinasScreen } from '../screens/RutinasScreen';
+import UbicacionScreen from '../screens/UbicacionScreen';
 
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
+    <Tab.Navigator 
+      screenOptions={{ headerShown: false }} 
+      initialRouteName="Inicio"
+    >
       <Tab.Screen 
         name="Rutinas" 
-        component={() => <Text>Rutinas</Text>} 
+        component={RutinasScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="fitness-outline" size={size} color={color} />
@@ -27,7 +32,7 @@ export default function TabNavigator() {
           ),
         }} 
       />
-      <Tab.Screen 
+            <Tab.Screen 
         name="Inicio" 
         component={HomeScreen} 
         options={{
@@ -38,10 +43,10 @@ export default function TabNavigator() {
       />
       <Tab.Screen 
         name="Ubicaciones"  
-        component={() => <Text>Ubicaciones</Text>} 
+        component={UbicacionScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="location-outline" size={size} color={color} /> // Cambiado a icono de ubicación
+            <Ionicons name="location-outline" size={size} color={color} />
           ),
         }} 
       />

@@ -7,8 +7,8 @@ export default function WeeklyRoutineCard() {
   return (
     <View style={styles.card}>
       <Image
-        source={RutinaSemanalImage} // Usar la imagen importada como fondo
-        style={styles.backgroundImage} // Estilo para la imagen de fondo
+        source={RutinaSemanalImage}
+        style={styles.backgroundImage}
       />
       <View style={styles.content}>
         <Text style={styles.title}>Plan de 5 días</Text>
@@ -23,32 +23,32 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
     marginBottom: 20,
-    backgroundColor: 'transparent', // Hacer el fondo transparente para ver la imagen
+    backgroundColor: 'transparent',
     elevation: 3,
-    position: 'relative', // Para posicionar la imagen de fondo
-    height: 200, // Aumentar la altura de la tarjeta
+    position: 'relative',
+    height: 200,
   },
   backgroundImage: {
     width: '100%',
-    height: '100%', // Hacer que la imagen ocupe todo el contenedor
-    position: 'absolute', // Posicionar la imagen de fondo
+    height: '100%',
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 12, // Asegurarse de que la imagen tenga bordes redondeados
+    borderRadius: 12,
   },
   content: {
     padding: 10,
-    zIndex: 1, // Asegurarse de que el contenido esté por encima de la imagen
+    zIndex: 1,
   },
   title: {
     fontWeight: 'bold',
-    fontSize: 18, // Aumentar el tamaño de la fuente del título
-    color: '#fff', // Cambiar el color del texto para que sea legible sobre la imagen
+    fontSize: 18,
+    color: '#fff',
   },
   subtitle: {
-    color: '#fff', // Cambiar el color del texto para que sea legible sobre la imagen
-    fontSize: 16, // Aumentar el tamaño de la fuente del subtítulo
+    color: '#fff',
+    fontSize: 16,
   },
 });

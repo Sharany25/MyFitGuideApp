@@ -17,7 +17,11 @@ import {
 } from 'react-native-paper';
 import * as Location from 'expo-location';
 
-const RegistroScreen = () => {
+interface RegistroScreenProps {
+  onRegisterSuccess: () => void;
+}
+
+const RegistroScreen: React.FC<RegistroScreenProps> = ({ onRegisterSuccess }) => {
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
   const [contrasena, setContrasena] = useState('');
@@ -36,6 +40,14 @@ const RegistroScreen = () => {
     }
     const location = await Location.getCurrentPositionAsync({});
     setUbicacion(`${location.coords.latitude}, ${location.coords.longitude}`);
+  };
+
+  const handleRegistro = () => {
+    if (aceptoTerminos && nombre && correo && contrasena && genero && nivel) {
+      onRegisterSuccess();
+    } else {
+      alert('Por favor completa todos los campos requeridos y acepta los términos.');
+    }
   };
 
   return (
@@ -133,7 +145,7 @@ const RegistroScreen = () => {
 
             <Button
               mode="contained"
-              onPress={() => console.log('Registrarse')}
+              onPress={handleRegistro}
               disabled={!aceptoTerminos}
               style={styles.registerButton}
             >

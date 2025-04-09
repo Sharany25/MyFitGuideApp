@@ -1,6 +1,8 @@
 import React from "react";
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { useForm, Controller } from "react-hook-form";
+import { useNavigation } from "@react-navigation/native";
+
 const logo = require("../../assets/Logo.png");
 
 type FormData = {
@@ -8,12 +10,17 @@ type FormData = {
   password: string;
 };
 
-const LoginScreen: React.FC = () => {
+interface LoginScreenProps {
+  onLoginSuccess: () => void;
+}
+
+const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
+  const navigation = useNavigation();
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>();
 
   const onSubmit = (data: FormData) => {
     if (data.email && data.password) {
-      alert(`Login Successful\nWelcome ${data.email}!`);
+      onLoginSuccess();
     }
   };
 
@@ -37,10 +44,7 @@ const LoginScreen: React.FC = () => {
             }}
             render={({ field: { onChange, onBlur, value } }) => (
               <TextInput
-                style={[
-                  styles.input,
-                  errors.email && styles.inputError,
-                ]}
+                style={[styles.input, errors.email && styles.inputError]}
                 placeholder="Email"
                 onBlur={onBlur}
                 onChangeText={onChange}
@@ -61,10 +65,7 @@ const LoginScreen: React.FC = () => {
             }}
             render={({ field: { onChange, onBlur, value } }) => (
               <TextInput
-                style={[
-                  styles.input,
-                  errors.password && styles.inputError,
-                ]}
+                style={[styles.input, errors.password && styles.inputError]}
                 placeholder="Contraseña"
                 secureTextEntry
                 onBlur={onBlur}
@@ -79,13 +80,17 @@ const LoginScreen: React.FC = () => {
           <Text style={styles.buttonText}>Iniciar Sesión</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.bottomButton}>
+        <TouchableOpacity
+          style={styles.bottomButton}
+          onPress={() => navigation.navigate("Registro")}
+        >
           <Text style={styles.bottomButtonText}>Registrarse</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 };
+
 
 const styles = StyleSheet.create({
   container: {
