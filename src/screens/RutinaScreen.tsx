@@ -1,35 +1,31 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  View, Text, TextInput, StyleSheet,
-  TouchableOpacity, Alert, ScrollView,
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  ScrollView,
 } from 'react-native';
-import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 
-type RootStackParamList = {
-  Rutinas: { nombre: string; objetivo: string; idUsuario: number };
-  Home: undefined;
-};
-
-type RutinaScreenRouteProp = RouteProp<RootStackParamList, 'Rutinas'>;
+interface RutinaScreenProps {
+  idUsuario: string;
+  nombre: string;
+  objetivo: string;
+  onComplete: () => void;
+}
 
 const opcionesPreferencia = ['gimnasio', 'casa', 'calistenia'];
 
-const RutinaScreen: React.FC = () => {
-  const navigation = useNavigation();
-  const route = useRoute<RutinaScreenRouteProp>();
-
-  // Destructuramos los params
-  const { nombre, objetivo, idUsuario } = route.params;
-
-  // Inicializamos los estados con valores recibidos
-  const [nombreState, setNombreState] = useState(nombre || '');
+const RutinaScreen: React.FC<RutinaScreenProps> = ({ idUsuario, nombre, objetivo, onComplete }) => {
   const [edad, setEdad] = useState('');
-  const [objetivoState, setObjetivoState] = useState(objetivo || '');
   const [preferenciaSeleccionada, setPreferenciaSeleccionada] = useState('');
   const [dias, setDias] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const generarRutina = async () => {
-    if (!nombreState || !edad || !objetivoState || !preferenciaSeleccionada || !dias) {
+    if (!nombre || !edad || !objetivo || !preferenciaSeleccionada || !dias) {
       Alert.alert('Campos incompletos', 'Por favor completa todos los campos.');
       return;
     }
@@ -47,15 +43,19 @@ const RutinaScreen: React.FC = () => {
       return;
     }
 
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+
     try {
       const response = await fetch('http://192.168.1.12:3000/MyFitGuide/rutinas-ia', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           idUsuario,
-          nombre: nombreState,
+          nombre,
           edad: edadNum,
-          objetivo: objetivoState,
+          objetivo,
           preferencias: [preferenciaSeleccionada],
           dias: diasNum,
         }),
@@ -65,13 +65,18 @@ const RutinaScreen: React.FC = () => {
 
       if (response.ok) {
         Alert.alert('Éxito', 'Rutina generada con éxito');
-        navigation.navigate('Home');
+        setEdad('');
+        setPreferenciaSeleccionada('');
+        setDias('');
+        onComplete();
       } else {
-        Alert.alert('Error', data.message || 'Error al generar rutina.');
+        Alert.alert('Error', data.message || 'Hubo un error al generar la rutina');
       }
     } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'No se pudo conectar al servidor.');
+      console.error('Error al generar la rutina:', error);
+      Alert.alert('Error', 'Hubo un error al generar la rutina');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -80,10 +85,10 @@ const RutinaScreen: React.FC = () => {
       <Text style={styles.titulo}>Generar Rutina de Entrenamiento</Text>
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, styles.inputDisabled]}
         placeholder="Nombre"
-        value={nombreState}
-        onChangeText={setNombreState}
+        value={nombre}
+        editable={false}
       />
 
       <TextInput
@@ -95,10 +100,10 @@ const RutinaScreen: React.FC = () => {
       />
 
       <TextInput
-        style={styles.input}
+        style={[styles.input, styles.inputDisabled]}
         placeholder="Objetivo (ej. Ganar masa, Definir)"
-        value={objetivoState}
-        onChangeText={setObjetivoState}
+        value={objetivo}
+        editable={false}
       />
 
       <Text style={styles.subtitulo}>Selecciona una preferencia:</Text>
@@ -132,13 +137,18 @@ const RutinaScreen: React.FC = () => {
         keyboardType="numeric"
       />
 
-      <TouchableOpacity style={styles.boton} onPress={generarRutina}>
-        <Text style={styles.botonTexto}>Generar Rutina</Text>
+      <TouchableOpacity
+        style={[styles.boton, isSubmitting && { backgroundColor: '#94d3a2' }]}
+        onPress={generarRutina}
+        disabled={isSubmitting}
+      >
+        <Text style={styles.botonTexto}>
+          {isSubmitting ? 'Generando...' : 'Generar Rutina'}
+        </Text>
       </TouchableOpacity>
     </ScrollView>
   );
 };
-
 
 const styles = StyleSheet.create({
   container: {
@@ -167,6 +177,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     borderColor: '#d1d5db',
     borderWidth: 1,
+  },
+  inputDisabled: {
+    backgroundColor: '#e5e7eb',
+    color: '#6b7280',
   },
   preferenciaContainer: {
     flexDirection: 'row',

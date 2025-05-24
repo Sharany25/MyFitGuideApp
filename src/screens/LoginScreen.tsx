@@ -16,7 +16,7 @@ type FormData = {
 
 // Define el tipo de las rutas de navegación si usas stack, por ejemplo:
 type RootStackParamList = {
-  Registro: undefined;
+  FormularioMultiStep: undefined;
   // otras rutas aquí
 };
 
@@ -149,7 +149,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
         <TouchableOpacity
           style={styles.bottomButton}
-          onPress={() => navigation.navigate("Registro")}
+          onPress={() => navigation.navigate("FormularioMultiStep")}
         >
           <Text style={styles.bottomButtonText}>¿No tienes cuenta? Regístrate</Text>
         </TouchableOpacity>

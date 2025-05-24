@@ -4,16 +4,12 @@ import { createStackNavigator } from "@react-navigation/stack";
 
 // Screens
 import LoginScreen from "../screens/LoginScreen";
-import RegistroScreen from "../screens/RegistroScreen";
-import MetricasScreen from "../screens/MetricaScreen";
-import RutinaScreen from "../screens/RutinaScreen";
 import HomeScreen from "../screens/HomeScreen";
+import FormularioMultiStepScreen from "../screens/FormularioMultiStepScreen";
 
 export type RootStackParamList = {
   Login: undefined;
-  Registro: undefined;
-  Metricas: undefined;
-  Rutinas: { nombre: string; objetivo: string; idUsuario: number };
+  FormularioMultiStep: undefined;
   Home: undefined;
 };
 
@@ -21,11 +17,6 @@ const Stack = createStackNavigator<RootStackParamList>();
 
 const StackNavigator: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isNewUser, setIsNewUser] = useState(false);
-
-  const [nombreUsuario, setNombreUsuario] = useState<string>('');
-  const [objetivoUsuario, setObjetivoUsuario] = useState<string>('');
-  const [idUsuario, setIdUsuario] = useState<number>(0); // Ajusta según tu lógica
 
   return (
     <NavigationContainer>
@@ -36,51 +27,19 @@ const StackNavigator: React.FC = () => {
               {...props}
               onLoginSuccess={(isNew: boolean) => {
                 setIsAuthenticated(true);
-                setIsNewUser(isNew);
-                props.navigation.replace(isNew ? "Metricas" : "Home");
+                props.navigation.replace(isNew ? "FormularioMultiStep" : "Home");
               }}
             />
           )}
         </Stack.Screen>
 
-        <Stack.Screen name="Registro">
+        {/* ✅ Se pasa la prop `onFinish` manualmente usando render prop */}
+        <Stack.Screen name="FormularioMultiStep">
           {(props) => (
-            <RegistroScreen
+            <FormularioMultiStepScreen
               {...props}
-              onRegisterSuccess={(nombre: string, userId: number) => {
-                setIsAuthenticated(true);
-                setIsNewUser(true);
-                setNombreUsuario(nombre);
-                setIdUsuario(userId);
-                props.navigation.replace("Metricas");
-              }}
-            />
-          )}
-        </Stack.Screen>
-
-        <Stack.Screen name="Metricas">
-          {(props) => (
-            <MetricasScreen
-              {...props}
-              idUsuario={idUsuario}
-              onComplete={(objetivo: string) => {
-                setObjetivoUsuario(objetivo);
-                props.navigation.replace("Rutinas", {
-                  nombre: nombreUsuario,
-                  objetivo,
-                  idUsuario,
-                });
-              }}
-            />
-          )}
-        </Stack.Screen>
-
-        <Stack.Screen name="Rutinas">
-          {(props) => (
-            <RutinaScreen
-              {...props}
-              onComplete={() => {
-                setIsNewUser(false);
+              onFinish={() => {
+                // Cuando se termina el flujo, navega al Home
                 props.navigation.replace("Home");
               }}
             />

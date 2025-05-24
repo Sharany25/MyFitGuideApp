@@ -19,13 +19,15 @@ import {
 import * as Location from 'expo-location';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useNavigation } from '@react-navigation/native';
 
 const { width } = Dimensions.get('window');
 const PRIMARY_COLOR = '#00C27F';
 
-const RegistroScreen: React.FC = () => {
-  const navigation = useNavigation<any>();
+type RegistroScreenProps = {
+  onRegisterSuccess: (nombre: string, userId: number) => void;
+};
+
+const RegistroScreen: React.FC<RegistroScreenProps> = ({ onRegisterSuccess }) => {
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
   const [contrasena, setContrasena] = useState('');
@@ -97,14 +99,13 @@ const RegistroScreen: React.FC = () => {
       const data = await response.json();
       console.log('Usuario registrado:', data);
 
-      // Guardar autenticación
       await AsyncStorage.setItem(
         'userData',
         JSON.stringify({ token: 'fake-token', isNewUser: true })
       );
 
-      // ✅ Navegar a Metricas y pasar nombre
-      navigation.replace('Metricas', { nombre });
+      // Llamar callback para que el padre maneje el siguiente paso
+      onRegisterSuccess(nombre, data.idUsuario || data.id || 0);
     } catch (error) {
       console.error(error);
       Alert.alert('Error', 'Hubo un problema al registrar. Intenta nuevamente.');
@@ -211,8 +212,6 @@ const RegistroScreen: React.FC = () => {
     </KeyboardAvoidingView>
   );
 };
-
-
 
 const styles = StyleSheet.create({
   keyboard: {

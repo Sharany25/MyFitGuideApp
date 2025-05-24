@@ -1,78 +1,88 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, Alert, ScrollView, StyleSheet,
-  TouchableOpacity, Animated, RefreshControl
+  RefreshControl, KeyboardAvoidingView, Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 
 interface MetricasScreenProps {
-  navigation: any;
-  onComplete: () => void;
-  idUsuario: number; // Se espera recibir esto desde Registro
+  onComplete: (metricas: {
+    genero: string;
+    altura: number;
+    peso: number;
+    objetivo: string;
+    alergias: string[];
+    presupuesto: number;
+  }) => void;
+  initialObjetivo?: string;
 }
 
-const MetricasScreen: React.FC<MetricasScreenProps> = ({ navigation, onComplete, idUsuario }) => {
+const MetricasScreen: React.FC<MetricasScreenProps> = ({ onComplete, initialObjetivo = '' }) => {
   const [genero, setGenero] = useState('');
   const [altura, setAltura] = useState('');
   const [peso, setPeso] = useState('');
-  const [objetivo, setObjetivo] = useState('');
+  const [objetivo, setObjetivo] = useState(initialObjetivo);
   const [alergias, setAlergias] = useState<string[]>([]);
   const [presupuesto, setPresupuesto] = useState('');
-  const [scaleAnim] = useState(new Animated.Value(1));
   const [refreshing, setRefreshing] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   const handleSubmit = async () => {
-    if (!genero || !altura || !peso || !objetivo || !presupuesto) {
-      Alert.alert('Error', 'Por favor completa todos los campos obligatorios.');
-      return;
-    }
+    if (isSubmitting) return;
 
-    if (
-      isNaN(parseFloat(altura)) ||
-      isNaN(parseFloat(peso)) ||
-      isNaN(parseFloat(presupuesto))
-    ) {
-      Alert.alert('Error', 'Altura, peso y presupuesto deben ser números válidos.');
-      return;
-    }
+    if (!genero) return Alert.alert('Error', 'Por favor ingresa tu género.');
+    if (!altura) return Alert.alert('Error', 'Por favor ingresa tu altura.');
+    if (isNaN(parseFloat(altura))) return Alert.alert('Error', 'La altura debe ser un número válido.');
+    if (!peso) return Alert.alert('Error', 'Por favor ingresa tu peso.');
+    if (isNaN(parseFloat(peso))) return Alert.alert('Error', 'El peso debe ser un número válido.');
+    if (!objetivo) return Alert.alert('Error', 'Por favor ingresa tu objetivo.');
+    if (!presupuesto) return Alert.alert('Error', 'Por favor ingresa tu presupuesto.');
+    if (isNaN(parseFloat(presupuesto))) return Alert.alert('Error', 'El presupuesto debe ser un número válido.');
 
     const metricaData = {
-      idUsuario,
       genero,
       altura: parseFloat(altura),
       peso: parseFloat(peso),
       objetivo,
-      alergias: alergias.join(','),
+      alergias: alergias.filter(Boolean),
       presupuesto: parseFloat(presupuesto),
     };
 
     try {
-      const response = await fetch('http://192.168.1.12:3000/MyFitGuide/Metricas', {
+      setIsSubmitting(true);
+
+      const response = await fetch('http://192.168.1.12:3000/MyFitGuide/openai/dieta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(metricaData),
       });
 
       const data = await response.json();
+
       if (response.ok) {
         Alert.alert('Éxito', 'Datos enviados correctamente');
-
-        // Limpia campos
         setGenero('');
         setAltura('');
         setPeso('');
         setObjetivo('');
         setAlergias([]);
         setPresupuesto('');
-
-        // Navega a siguiente paso
-        onComplete();
+        onComplete(metricaData);
       } else {
         Alert.alert('Error', data.message || 'Hubo un error al enviar los datos');
       }
     } catch (error) {
       console.error('Error al enviar los datos:', error);
       Alert.alert('Error', 'Hubo un error al enviar los datos');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -90,126 +100,123 @@ const MetricasScreen: React.FC<MetricasScreenProps> = ({ navigation, onComplete,
     setAlergias(updated);
   };
 
-  const handlePressIn = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 0.95,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handlePressOut = () => {
-    Animated.spring(scaleAnim, {
-      toValue: 1,
-      useNativeDriver: true,
-    }).start();
-  };
-
   const onRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => {
-      setRefreshing(false);
-    }, 2000);
+    setTimeout(() => setRefreshing(false), 2000);
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Text style={styles.title}>MyFitGuide Dieta!</Text>
+      <ScrollView
+        contentContainerStyle={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        <Text style={styles.title}>MyFitGuide Dieta!</Text>
 
-      <View style={styles.inputGroup}>
-        <Ionicons name="person-outline" size={24} style={styles.icon} />
-        <TextInput
-          style={styles.input}
+        <InputWithIcon
+          icon="person-outline"
           placeholder="Género (Ejemplo: Hombre)"
-          placeholderTextColor="#D1D1D6"
           value={genero}
           onChangeText={setGenero}
+          autoFocus
         />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Ionicons name="arrow-up-circle-outline" size={24} style={styles.icon} />
-        <TextInput
-          style={styles.input}
+        <InputWithIcon
+          icon="arrow-up-circle-outline"
           placeholder="Altura (cm)"
-          placeholderTextColor="#D1D1D6"
           value={altura}
           onChangeText={setAltura}
           keyboardType="numeric"
         />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Ionicons name="fitness-outline" size={24} style={styles.icon} />
-        <TextInput
-          style={styles.input}
+        <InputWithIcon
+          icon="fitness-outline"
           placeholder="Peso (kg)"
-          placeholderTextColor="#D1D1D6"
           value={peso}
           onChangeText={setPeso}
           keyboardType="numeric"
         />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Ionicons name="trending-up-outline" size={24} style={styles.icon} />
-        <TextInput
-          style={styles.input}
+        <InputWithIcon
+          icon="trending-up-outline"
           placeholder="Objetivo (Ej: Perder peso)"
-          placeholderTextColor="#D1D1D6"
           value={objetivo}
           onChangeText={setObjetivo}
+          editable={true}
         />
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Ionicons name="cash-outline" size={24} style={styles.icon} />
-        <TextInput
-          style={styles.input}
+        <InputWithIcon
+          icon="cash-outline"
           placeholder="Presupuesto semanal $"
-          placeholderTextColor="#D1D1D6"
           value={presupuesto}
           onChangeText={setPresupuesto}
           keyboardType="numeric"
         />
-      </View>
 
-      <Text style={styles.label}>Alergias Alimenticias (opcional)</Text>
-      {alergias.map((alergia, index) => (
-        <View key={index} style={styles.inputGroup}>
-          <Ionicons name="alert-circle-outline" size={24} style={styles.icon} />
-          <TextInput
-            style={styles.input}
+        <Text style={styles.label}>Alergias Alimenticias (opcional)</Text>
+        {alergias.map((alergia, index) => (
+          <InputWithIcon
+            key={index}
+            icon="alert-circle-outline"
             placeholder={`Alergia ${index + 1}`}
-            placeholderTextColor="#D1D1D6"
             value={alergia}
-            onChangeText={(value) => handleAlergiaChange(index, value)}
+            onChangeText={(text) => handleAlergiaChange(index, text)}
           />
-        </View>
-      ))}
+        ))}
 
-      <TouchableOpacity style={styles.addButton} onPress={handleAddAlergia}>
-        <Ionicons name="add-circle-outline" size={24} color="#fff" />
-        <Text style={styles.addButtonText}>Agregar Alergia</Text>
-      </TouchableOpacity>
+        <TouchableOpacity style={styles.addButton} onPress={handleAddAlergia}>
+          <Ionicons name="add-circle-outline" size={24} color="#fff" />
+          <Text style={styles.addButtonText}>Agregar Alergia</Text>
+        </TouchableOpacity>
 
-      <View style={styles.buttonContainer}>
-        <Animated.View style={[styles.submitButton, { transform: [{ scale: scaleAnim }] }]}>
+        <Animated.View style={[styles.submitButton, animatedStyle]}>
           <TouchableOpacity
-            style={styles.submitButtonContent}
             onPress={handleSubmit}
-            onPressIn={handlePressIn}
-            onPressOut={handlePressOut}
+            disabled={isSubmitting}
+            onPressIn={() => (scale.value = withSpring(0.95))}
+            onPressOut={() => (scale.value = withSpring(1))}
+            style={styles.submitButtonContent}
           >
-            <Text style={styles.submitButtonText}>Enviar Dieta a IA</Text>
+            <Text style={styles.submitButtonText}>
+              {isSubmitting ? 'Enviando...' : 'Enviar Dieta a IA'}
+            </Text>
           </TouchableOpacity>
         </Animated.View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
+
+const InputWithIcon = ({
+  icon,
+  placeholder,
+  value,
+  onChangeText,
+  keyboardType = 'default',
+  autoFocus = false,
+  editable = true,
+}: {
+  icon: any;
+  placeholder: string;
+  value: string;
+  onChangeText?: (text: string) => void;
+  keyboardType?: 'default' | 'numeric';
+  autoFocus?: boolean;
+  editable?: boolean;
+}) => (
+  <View style={styles.inputGroup}>
+    <Ionicons name={icon} size={24} style={styles.icon} />
+    <TextInput
+      style={styles.input}
+      placeholder={placeholder}
+      placeholderTextColor="#D1D1D6"
+      value={value}
+      onChangeText={onChangeText}
+      keyboardType={keyboardType}
+      autoFocus={autoFocus}
+      editable={editable}
+    />
+  </View>
+);
 
 const styles = StyleSheet.create({
   container: {
@@ -277,26 +284,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 10,
   },
-  buttonContainer: {
-    marginTop: 20,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-    paddingVertical: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
-  },
   submitButton: {
     backgroundColor: '#007bff',
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   submitButtonContent: {
     paddingVertical: 10,
-    justifyContent: 'center',
+    width: '100%',
     alignItems: 'center',
   },
   submitButtonText: {
