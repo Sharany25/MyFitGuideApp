@@ -1,3 +1,5 @@
+// screens/LoginScreen.tsx
+
 import React, { useState } from "react";
 import {
   View,
@@ -26,7 +28,18 @@ type FormData = {
 };
 
 interface LoginScreenProps {
-  onLoginSuccess: (isNew: boolean) => void;
+  onLoginSuccess: (
+    isNew: boolean,
+    userData?: {
+      userId: number;
+      nombre: string;
+      edad: string;
+      objetivo: string;
+      genero: string;
+      altura: string;
+      peso: string;
+    }
+  ) => void;
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
@@ -40,7 +53,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
     setLoading(true);
     try {
-      const response = await fetch("http://192.168.1.12:3000/MyFitGuide/Usuarios/login", {
+      const response = await fetch("http://192.168.1.11:3000/MyFitGuide/Usuarios/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -51,14 +64,30 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
       const result = await response.json();
 
-      if (response.ok) {
+      if (response.ok && result) {
         console.log("Login exitoso", result);
-        if (result.user) {
-          await AsyncStorage.setItem("user", JSON.stringify(result.user));
-          onLoginSuccess(result.user.isNew ?? false);
-        } else {
-          onLoginSuccess(false);
+
+        const fechaNacimiento = new Date(result.fechaNacimiento);
+        const hoy = new Date();
+        let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
+        const m = hoy.getMonth() - fechaNacimiento.getMonth();
+        if (m < 0 || (m === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
+          edad--;
         }
+
+        const userData = {
+          userId: 0,
+          nombre: result.nombre || '',
+          edad: edad.toString(),
+          objetivo: result.objetivo || '',
+          genero: result.genero || '',
+          altura: result.altura?.toString() || '',
+          peso: result.peso?.toString() || '',
+        };
+
+        await AsyncStorage.setItem("user", JSON.stringify(result));
+
+        onLoginSuccess(false, userData);
       } else {
         Alert.alert("Error", result.message || "Error al iniciar sesión.");
       }

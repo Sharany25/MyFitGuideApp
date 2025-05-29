@@ -1,3 +1,5 @@
+// screens/DietaScreen.tsx
+
 import React, { useState } from 'react';
 import {
   View,
@@ -11,11 +13,11 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/StackNavigator';
 import ProgressStepper from '../components/ProgressStepper';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
@@ -24,52 +26,71 @@ const TEXT_COLOR = '#1F2937';
 const BORDER_COLOR = '#E5E7EB';
 const BG_COLOR = '#F9FAFB';
 
+type DietaScreenRouteProp = RouteProp<RootStackParamList, 'Dieta'>;
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Dieta'>;
 
 const DietaScreen: React.FC = () => {
-  const route = useRoute();
+  const route = useRoute<DietaScreenRouteProp>();
   const navigation = useNavigation<NavigationProp>();
-  const { userId, nombre } = route.params as { userId: number; nombre: string };
+  const { userId, nombre } = route.params;
 
   const [peso, setPeso] = useState('');
   const [altura, setAltura] = useState('');
   const [objetivo, setObjetivo] = useState('');
-  const [sexo, setSexo] = useState<'Hombre' | 'Mujer' | ''>('');
+  const [genero, setGenero] = useState<'Masculino' | 'Femenino' | ''>('');
+  const [alergias, setAlergias] = useState<string[]>([]);
+  const [presupuesto, setPresupuesto] = useState('');
   const [cargando, setCargando] = useState(false);
 
+  const handleAlergiaChange = (index: number, text: string) => {
+    const nuevas = [...alergias];
+    nuevas[index] = text;
+    setAlergias(nuevas);
+  };
+
+  const handleAgregarAlergia = () => {
+    if (alergias.length >= 5) {
+      Alert.alert('Límite alcanzado', 'Máximo 5 alergias permitidas.');
+      return;
+    }
+    setAlergias([...alergias, '']);
+  };
+
   const handleSiguiente = async () => {
-    if (!peso || !altura || !objetivo || !sexo) {
-      Alert.alert('Campos incompletos', 'Por favor completa todos los campos.');
+    if (!peso || !altura || !objetivo || !genero || !presupuesto) {
+      Alert.alert('Campos incompletos', 'Completa todos los campos obligatorios.');
       return;
     }
 
     const pesoNum = parseFloat(peso);
     const alturaNum = parseFloat(altura);
+    const presupuestoNum = parseFloat(presupuesto);
 
-    if (isNaN(pesoNum) || isNaN(alturaNum)) {
-      Alert.alert('Error', 'Peso y altura deben ser números válidos.');
+    if (isNaN(pesoNum) || isNaN(alturaNum) || isNaN(presupuestoNum)) {
+      Alert.alert('Error', 'Peso, altura y presupuesto deben ser números válidos.');
       return;
     }
 
     setCargando(true);
 
     try {
-      const response = await fetch('http://192.168.1.11:3000/MyFitGuide/metrica', {
+      const response = await fetch('http://192.168.1.11:3000/MyFitGuide/prueba-dieta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          idUsuario: userId,
-          peso: pesoNum,
+          genero,
           altura: alturaNum,
-          sexo,
+          peso: pesoNum,
           objetivo,
+          alergias: alergias.filter(Boolean),
+          presupuesto: presupuestoNum,
         }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        Alert.alert('Éxito', 'Métricas registradas correctamente');
+        Alert.alert('Éxito', 'Datos enviados correctamente');
         navigation.replace('Rutina', { userId, nombre, objetivo });
       } else {
         Alert.alert('Error', data.message || 'Error al registrar métricas');
@@ -94,7 +115,6 @@ const DietaScreen: React.FC = () => {
 
         <View style={styles.form}>
           <Text style={styles.label}>Peso (kg)</Text>
-          <Text style={styles.helperText}>Ingresa tu peso actual en kilogramos.</Text>
           <TextInput
             style={styles.input}
             placeholder="Ej. 70"
@@ -104,7 +124,6 @@ const DietaScreen: React.FC = () => {
           />
 
           <Text style={styles.label}>Altura (cm)</Text>
-          <Text style={styles.helperText}>Ingresa tu altura actual en centímetros.</Text>
           <TextInput
             style={styles.input}
             placeholder="Ej. 175"
@@ -114,42 +133,59 @@ const DietaScreen: React.FC = () => {
           />
 
           <Text style={styles.label}>Objetivo</Text>
-          <Text style={styles.helperText}>¿Cuál es tu meta? Ejemplo: bajar grasa, ganar masa.</Text>
           <TextInput
             style={styles.input}
-            placeholder="Ej. bajar grasa, ganar masa"
+            placeholder="Ej. Bajar grasa, ganar masa"
             value={objetivo}
             onChangeText={setObjetivo}
           />
 
+          <Text style={styles.label}>Presupuesto semanal ($)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Ej. 500"
+            keyboardType="numeric"
+            value={presupuesto}
+            onChangeText={setPresupuesto}
+          />
+
           <Text style={styles.label}>Sexo</Text>
-          <Text style={styles.helperText}>Selecciona tu sexo para personalizar tus recomendaciones.</Text>
-          <View style={styles.sexoContainer}>
-            {['Hombre', 'Mujer'].map((value) => {
-              const isSelected = sexo === value;
-              const color = value === 'Hombre' ? '#3B82F6' : '#EC4899';
-              const icon = value === 'Hombre' ? 'gender-male' : 'gender-female';
-              return (
-                <TouchableOpacity
-                  key={value}
-                  onPress={() => setSexo(value as 'Hombre' | 'Mujer')}
-                  style={[
-                    styles.generoBoton,
-                    {
-                      backgroundColor: isSelected ? color : '#E5E7EB',
-                      borderColor: color,
-                    },
-                  ]}
-                >
-                  <MaterialCommunityIcons
-                    name={icon}
-                    size={24}
-                    color={isSelected ? '#fff' : color}
-                  />
-                </TouchableOpacity>
-              );
-            })}
+          <View style={styles.generoContainer}>
+            <TouchableOpacity
+              style={[
+                styles.generoButton,
+                genero === 'Masculino' && styles.generoSeleccionado,
+              ]}
+              onPress={() => setGenero('Masculino')}
+            >
+              <Ionicons name="male" size={28} color={genero === 'Masculino' ? '#fff' : '#007BFF'} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.generoButton,
+                genero === 'Femenino' && styles.generoSeleccionadoF,
+              ]}
+              onPress={() => setGenero('Femenino')}
+            >
+              <Ionicons name="female" size={28} color={genero === 'Femenino' ? '#fff' : '#E91E63'} />
+            </TouchableOpacity>
           </View>
+
+          <Text style={styles.label}>Alergias alimenticias (opcional)</Text>
+          {alergias.map((alergia, index) => (
+            <TextInput
+              key={index}
+              style={styles.input}
+              placeholder={`Alergia ${index + 1}`}
+              value={alergia}
+              onChangeText={(text) => handleAlergiaChange(index, text)}
+            />
+          ))}
+
+          <TouchableOpacity style={styles.addButton} onPress={handleAgregarAlergia}>
+            <Text style={styles.addButtonText}>+ Agregar alergia</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.boton, cargando && { backgroundColor: '#94d3a2' }]}
@@ -198,11 +234,6 @@ const styles = StyleSheet.create({
     marginBottom: 6,
     marginTop: 10,
   },
-  helperText: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 6,
-  },
   input: {
     backgroundColor: '#FFFFFF',
     padding: 12,
@@ -212,27 +243,41 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 10,
   },
-  sexoContainer: {
+  generoContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 20,
-    marginBottom: 30,
+    marginVertical: 10,
+  },
+  generoButton: {
+    marginHorizontal: 15,
+    padding: 12,
+    borderRadius: 50,
+    backgroundColor: '#E5E7EB',
+  },
+  generoSeleccionado: {
+    backgroundColor: '#007BFF',
+  },
+  generoSeleccionadoF: {
+    backgroundColor: '#E91E63',
+  },
+  addButton: {
+    backgroundColor: PRIMARY_COLOR,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
     marginTop: 10,
   },
-  generoBoton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
+  addButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   boton: {
     backgroundColor: PRIMARY_COLOR,
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 10,
+    marginTop: 20,
   },
   botonTexto: {
     color: '#FFFFFF',

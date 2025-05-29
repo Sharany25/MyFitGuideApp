@@ -1,22 +1,41 @@
 // navigation/StackNavigator.tsx
 
-import React, { useState } from "react";
-import { NavigationContainer } from "@react-navigation/native";
-import { createStackNavigator } from "@react-navigation/stack";
+import React, { useState } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 
 // Screens
-import LoginScreen from "../screens/LoginScreen";
-import HomeScreen from "../screens/HomeScreen";
-import RegistroScreen from "../screens/RegistroScreen";
-import DietaScreen from "../screens/DietaScreen";
-import RutinaScreen from "../screens/RutinaScreen";
+import LoginScreen from '../screens/LoginScreen';
+import HomeScreen from '../screens/HomeScreen';
+import RegistroScreen from '../screens/RegistroScreen';
+import DietaScreen from '../screens/DietaScreen';
+import RutinaScreen from '../screens/RutinaScreen';
+import PerfilScreen from '../screens/PerfilScreen';
 
 export type RootStackParamList = {
   Login: undefined;
   Registro: undefined;
   Dieta: { userId: number; nombre: string };
   Rutina: { userId: number; nombre: string; objetivo: string };
-  Home: undefined;
+  Home: {
+    userId: number;
+    nombre: string;
+    edad: string;
+    objetivo: string;
+    genero: string;
+    altura: string;
+    peso: string;
+    tipoRegistro: 'nuevo' | 'login';
+  };
+  Perfil: {
+    nombre: string;
+    edad: string;
+    objetivo: string;
+    genero: string;
+    altura: string;
+    peso: string;
+    tipoRegistro: 'nuevo' | 'login';
+  };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -31,9 +50,27 @@ const StackNavigator: React.FC = () => {
           {(props) => (
             <LoginScreen
               {...props}
-              onLoginSuccess={(isNew: boolean) => {
+              onLoginSuccess={(
+                isNewUser: boolean,
+                userData?: {
+                  userId: number;
+                  nombre: string;
+                  edad: string;
+                  objetivo: string;
+                  genero: string;
+                  altura: string;
+                  peso: string;
+                }
+              ) => {
                 setIsAuthenticated(true);
-                props.navigation.replace(isNew ? "Registro" : "Home");
+                if (isNewUser) {
+                  props.navigation.replace('Registro');
+                } else if (userData) {
+                  props.navigation.replace('Home', {
+                    ...userData,
+                    tipoRegistro: 'login',
+                  });
+                }
               }}
             />
           )}
@@ -43,8 +80,8 @@ const StackNavigator: React.FC = () => {
           {(props) => (
             <RegistroScreen
               {...props}
-              onRegisterSuccess={(nombre: string, userId: number) => {
-                props.navigation.replace("Dieta", { nombre, userId });
+              onRegisterSuccess={(nombre: string, userId: number, userData) => {
+                props.navigation.replace('Dieta', { nombre, userId });
               }}
             />
           )}
@@ -54,9 +91,9 @@ const StackNavigator: React.FC = () => {
           {(props) => (
             <DietaScreen
               {...props}
-              onNext={(objetivo: string) => {
+              onNext={(objetivo: string, extraData) => {
                 const { userId, nombre } = props.route.params;
-                props.navigation.replace("Rutina", {
+                props.navigation.replace('Rutina', {
                   userId,
                   nombre,
                   objetivo,
@@ -70,14 +107,36 @@ const StackNavigator: React.FC = () => {
           {(props) => (
             <RutinaScreen
               {...props.route.params}
-              onComplete={() => {
-                props.navigation.replace("Home");
+              onComplete={(profileData) => {
+                props.navigation.replace('Home', {
+                  ...profileData,
+                  tipoRegistro: 'nuevo',
+                });
               }}
             />
           )}
         </Stack.Screen>
 
-        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Home">
+          {(props) => (
+            <HomeScreen
+              {...props}
+              onPerfilPress={() => {
+                props.navigation.navigate('Perfil', {
+                  nombre: props.route.params.nombre,
+                  edad: props.route.params.edad,
+                  objetivo: props.route.params.objetivo,
+                  genero: props.route.params.genero,
+                  altura: props.route.params.altura,
+                  peso: props.route.params.peso,
+                  tipoRegistro: props.route.params.tipoRegistro,
+                });
+              }}
+            />
+          )}
+        </Stack.Screen>
+
+        <Stack.Screen name="Perfil" component={PerfilScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
