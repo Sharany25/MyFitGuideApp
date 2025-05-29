@@ -74,7 +74,7 @@ const DietaScreen: React.FC = () => {
     setCargando(true);
 
     try {
-      const response = await fetch('http://192.168.1.11:3000/MyFitGuide/prueba-dieta', {
+      const response = await fetch('http://192.168.101.16:3000/MyFitGuide/prueba-dieta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

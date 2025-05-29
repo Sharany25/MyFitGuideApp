@@ -1,5 +1,3 @@
-// screens/LoginScreen.tsx
-
 import React, { useState } from "react";
 import {
   View,
@@ -7,9 +5,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  Alert,
   ActivityIndicator,
   Dimensions,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { useNavigation } from "@react-navigation/native";
@@ -17,10 +17,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { TextInput } from "react-native-paper";
 import type { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/StackNavigator";
+import SuccessToast from "../components/SuccessToast";
+import ErrorToast from "../components/ErrorToast";
 
 const logo = require("../../assets/Logo.png");
-
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 type FormData = {
   email: string;
@@ -47,13 +48,15 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>();
   const [loading, setLoading] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
 
   const onSubmit = async (data: FormData) => {
     if (!data.email || !data.password) return;
 
     setLoading(true);
     try {
-      const response = await fetch("http://192.168.1.11:3000/MyFitGuide/Usuarios/login", {
+      const response = await fetch("http://192.168.101.16:3000/MyFitGuide/Usuarios/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -65,143 +68,149 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       const result = await response.json();
 
       if (response.ok && result) {
-        console.log("Login exitoso", result);
-
         const fechaNacimiento = new Date(result.fechaNacimiento);
         const hoy = new Date();
         let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
         const m = hoy.getMonth() - fechaNacimiento.getMonth();
-        if (m < 0 || (m === 0 && hoy.getDate() < fechaNacimiento.getDate())) {
-          edad--;
-        }
+        if (m < 0 || (m === 0 && hoy.getDate() < fechaNacimiento.getDate())) edad--;
 
         const userData = {
           userId: 0,
-          nombre: result.nombre || '',
+          nombre: result.nombre || "",
           edad: edad.toString(),
-          objetivo: result.objetivo || '',
-          genero: result.genero || '',
-          altura: result.altura?.toString() || '',
-          peso: result.peso?.toString() || '',
+          objetivo: result.objetivo || "",
+          genero: result.genero || "",
+          altura: result.altura?.toString() || "",
+          peso: result.peso?.toString() || "",
         };
 
         await AsyncStorage.setItem("user", JSON.stringify(result));
-
-        onLoginSuccess(false, userData);
+        setShowSuccess(true);
+        setTimeout(() => {
+          onLoginSuccess(false, userData);
+        }, 2000);
       } else {
-        Alert.alert("Error", result.message || "Error al iniciar sesión.");
+        setShowError(true);
       }
     } catch (error) {
       console.error("Error en el login:", error);
-      Alert.alert("Error", "Ocurrió un error. Intenta nuevamente.");
+      setShowError(true);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={logo}
-            style={[styles.logo, { width: width * 0.3, height: width * 0.3 }]}
-          />
-        </View>
+    <>
+      <SuccessToast message="¡Login exitoso!" visible={showSuccess} onHide={() => setShowSuccess(false)} />
+      <ErrorToast message="Correo o contraseña incorrectos" visible={showError} onHide={() => setShowError(false)} />
 
-        <Text style={[styles.appName, { fontSize: width * 0.07 }]}>MyFitGuide</Text>
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: "#f0f0f0" }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.card}>
+            <View style={styles.logoContainer}>
+              <Image source={logo} style={styles.logo} />
+            </View>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Correo Electrónico</Text>
-          <Controller
-            control={control}
-            name="email"
-            rules={{
-              required: "El email es obligatorio",
-              pattern: { value: /\S+@\S+\.\S+/, message: "Email no válido" },
-            }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <>
-                <TextInput
-                  label="Correo Electrónico"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  style={[styles.input, errors.email && styles.inputError]}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  error={!!errors.email}
-                />
-                {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
-              </>
-            )}
-          />
-        </View>
+            <Text style={styles.appName}>MyFitGuide</Text>
 
-        <View style={styles.inputContainer}>
-          <Text style={styles.label}>Contraseña</Text>
-          <Controller
-            control={control}
-            name="password"
-            rules={{
-              required: "La contraseña es obligatoria",
-              minLength: { value: 8, message: "Mínimo 8 caracteres" },
-            }}
-            render={({ field: { onChange, onBlur, value } }) => (
-              <>
-                <TextInput
-                  label="Contraseña"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  style={[styles.input, errors.password && styles.inputError]}
-                  secureTextEntry={!passwordVisible}
-                  error={!!errors.password}
-                  right={
-                    <TextInput.Icon
-                      icon={passwordVisible ? "eye" : "eye-off"}
-                      onPress={() => setPasswordVisible(!passwordVisible)}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Correo Electrónico</Text>
+              <Controller
+                control={control}
+                name="email"
+                rules={{
+                  required: "El email es obligatorio",
+                  pattern: { value: /\S+@\S+\.\S+/, message: "Email no válido" },
+                }}
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <>
+                    <TextInput
+                      label="Correo Electrónico"
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      style={[styles.input, errors.email && styles.inputError]}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      error={!!errors.email}
                     />
-                  }
-                />
-                {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
-              </>
-            )}
-          />
-        </View>
+                    {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
+                  </>
+                )}
+              />
+            </View>
 
-        <TouchableOpacity
-          style={[styles.button, loading && { backgroundColor: "#ccc" }]}
-          onPress={handleSubmit(onSubmit)}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Iniciar Sesión</Text>
-          )}
-        </TouchableOpacity>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Contraseña</Text>
+              <Controller
+                control={control}
+                name="password"
+                rules={{
+                  required: "La contraseña es obligatoria",
+                  minLength: { value: 8, message: "Mínimo 8 caracteres" },
+                }}
+                render={({ field: { onChange, onBlur, value } }) => (
+                  <>
+                    <TextInput
+                      label="Contraseña"
+                      value={value}
+                      onChangeText={onChange}
+                      onBlur={onBlur}
+                      style={[styles.input, errors.password && styles.inputError]}
+                      secureTextEntry={!passwordVisible}
+                      error={!!errors.password}
+                      right={
+                        <TextInput.Icon
+                          icon={passwordVisible ? "eye" : "eye-off"}
+                          onPress={() => setPasswordVisible(!passwordVisible)}
+                        />
+                      }
+                    />
+                    {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
+                  </>
+                )}
+              />
+            </View>
 
-        <TouchableOpacity
-          style={styles.bottomButton}
-          onPress={() => navigation.navigate("Registro")}
-        >
-          <Text style={styles.bottomButtonText}>¿Nuevo usuario? Crear cuenta</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+            <TouchableOpacity
+              style={[styles.button, loading && { backgroundColor: "#ccc" }]}
+              onPress={handleSubmit(onSubmit)}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Iniciar Sesión</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.bottomButton} onPress={() => navigation.navigate("Registro")}>
+              <Text style={styles.bottomButtonText}>¿Nuevo usuario? Crear cuenta</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </>
   );
 };
 
 const PRIMARY_COLOR = "#28a745";
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f0f0f0",
+  scrollContainer: {
+    flexGrow: 1,
     justifyContent: "center",
-    alignItems: "center",
     padding: 20,
+    paddingBottom: 80,
+    minHeight: height,
   },
   card: {
     width: "100%",
@@ -209,6 +218,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 25,
     borderRadius: 15,
+    alignSelf: "center",
     elevation: 5,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -220,13 +230,16 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   logo: {
-    marginBottom: 15,
+    width: width * 0.3,
+    height: width * 0.3,
     borderRadius: 50,
+    marginBottom: 10,
   },
   appName: {
     fontWeight: "700",
     color: PRIMARY_COLOR,
     textAlign: "center",
+    fontSize: width * 0.07,
     marginBottom: 20,
   },
   inputContainer: {

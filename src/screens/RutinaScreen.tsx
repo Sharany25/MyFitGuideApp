@@ -67,7 +67,7 @@ const RutinaScreen: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('http://192.168.1.11:3000/MyFitGuide/prueba-rutina', {
+      const response = await fetch('http://192.168.101.16:3000/MyFitGuide/prueba-rutina', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
