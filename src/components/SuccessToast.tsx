@@ -1,6 +1,5 @@
 // components/SuccessToast.tsx
-
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Animated, Dimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -13,7 +12,7 @@ interface SuccessToastProps {
 }
 
 const SuccessToast: React.FC<SuccessToastProps> = ({ message, visible, onHide }) => {
-  const slideAnim = new Animated.Value(-100);
+  const slideAnim = useRef(new Animated.Value(-100)).current;
 
   useEffect(() => {
     if (visible) {
@@ -27,7 +26,7 @@ const SuccessToast: React.FC<SuccessToastProps> = ({ message, visible, onHide })
             toValue: -100,
             duration: 300,
             useNativeDriver: true,
-          }).start(() => onHide());
+          }).start(onHide);
         }, 2000);
       });
     }

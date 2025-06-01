@@ -1,289 +1,392 @@
-// screens/DietaScreen.tsx
-
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
-  ScrollView,
-  StyleSheet,
   Text,
-  TextInput,
+  StyleSheet,
   TouchableOpacity,
-  Alert,
+  ScrollView,
   Dimensions,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import type { StackNavigationProp } from '@react-navigation/stack';
-import { RootStackParamList } from '../navigation/StackNavigator';
-import ProgressStepper from '../components/ProgressStepper';
+} from "react-native";
+import { useRoute, useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/StackNavigator";
+import ProgressStepper from "../components/ProgressStepper";
+import { Ionicons } from "@expo/vector-icons";
+import CustomToast from "../components/CustomToast";
+import { TextInput } from "react-native";
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
-const PRIMARY_COLOR = '#00C27F';
-const TEXT_COLOR = '#1F2937';
-const BORDER_COLOR = '#E5E7EB';
-const BG_COLOR = '#F9FAFB';
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Rutina">;
 
-type DietaScreenRouteProp = RouteProp<RootStackParamList, 'Dieta'>;
-type NavigationProp = StackNavigationProp<RootStackParamList, 'Dieta'>;
+const opcionesPreferencia = ["gimnasio", "casa", "calistenia"];
 
-const DietaScreen: React.FC = () => {
-  const route = useRoute<DietaScreenRouteProp>();
+const PRIMARY_COLOR = "#00C27F";
+const TEXT_COLOR = "#1F2937";
+const BG_COLOR = "#F9FAFB";
+
+const RutinaScreen: React.FC = () => {
+  const route = useRoute();
   const navigation = useNavigation<NavigationProp>();
-  const { userId, nombre } = route.params;
-
-  const [peso, setPeso] = useState('');
-  const [altura, setAltura] = useState('');
-  const [objetivo, setObjetivo] = useState('');
-  const [genero, setGenero] = useState<'Masculino' | 'Femenino' | ''>('');
-  const [alergias, setAlergias] = useState<string[]>([]);
-  const [presupuesto, setPresupuesto] = useState('');
-  const [cargando, setCargando] = useState(false);
-
-  const handleAlergiaChange = (index: number, text: string) => {
-    const nuevas = [...alergias];
-    nuevas[index] = text;
-    setAlergias(nuevas);
+  // Acepta userId como string SIEMPRE
+  const { userId, nombre, objetivo } = route.params as {
+    userId: string; // <-- Aquí es string, igual que en tu backend
+    nombre: string;
+    objetivo: string;
   };
 
-  const handleAgregarAlergia = () => {
-    if (alergias.length >= 5) {
-      Alert.alert('Límite alcanzado', 'Máximo 5 alergias permitidas.');
+  const [edad, setEdad] = useState("");
+  const [preferenciaSeleccionada, setPreferenciaSeleccionada] = useState("");
+  const [dias, setDias] = useState("");
+  const [lesiones, setLesiones] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Toast states
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+
+  // Solo números en edad
+  const handleEdadChange = (val: string) => setEdad(val.replace(/[^0-9]/g, ""));
+
+  const generarRutina = async () => {
+    // Validación de campos obligatorios
+    if (!userId || !nombre || !edad || !objetivo || !preferenciaSeleccionada || !dias) {
+      setShowError(true);
       return;
     }
-    setAlergias([...alergias, '']);
-  };
+    const edadNum = parseInt(edad, 10);
+    const diasNum = parseInt(dias, 10);
 
-  const handleSiguiente = async () => {
-    if (!peso || !altura || !objetivo || !genero || !presupuesto) {
-      Alert.alert('Campos incompletos', 'Completa todos los campos obligatorios.');
+    if (isNaN(edadNum) || edadNum <= 0) {
+      setShowError(true);
       return;
     }
-
-    const pesoNum = parseFloat(peso);
-    const alturaNum = parseFloat(altura);
-    const presupuestoNum = parseFloat(presupuesto);
-
-    if (isNaN(pesoNum) || isNaN(alturaNum) || isNaN(presupuestoNum)) {
-      Alert.alert('Error', 'Peso, altura y presupuesto deben ser números válidos.');
+    if (isNaN(diasNum) || diasNum < 1 || diasNum > 7) {
+      setShowError(true);
       return;
     }
-
-    setCargando(true);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
     try {
-      const response = await fetch('http://192.168.101.16:3000/MyFitGuide/prueba-dieta', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("http://192.168.1.5:3000/MyFitGuide/prueba-rutina", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          genero,
-          altura: alturaNum,
-          peso: pesoNum,
+          userId: userId, // <-- Así, como string SIEMPRE
+          nombre,
+          edad: edadNum,
           objetivo,
-          alergias: alergias.filter(Boolean),
-          presupuesto: presupuestoNum,
+          preferencias: [preferenciaSeleccionada],
+          dias: diasNum,
+          lesiones,
         }),
       });
 
-      const data = await response.json();
-
       if (response.ok) {
-        Alert.alert('Éxito', 'Datos enviados correctamente');
-        navigation.replace('Rutina', { userId, nombre, objetivo });
+        setShowSuccess(true);
+        setTimeout(() => {
+          setEdad("");
+          setPreferenciaSeleccionada("");
+          setDias("");
+          setLesiones("");
+          navigation.replace("Tabs", {
+            userId, // Lo pasas tal cual como string a Tabs
+            nombre,
+            edad,
+            objetivo,
+            genero: "",
+            altura: "",
+            peso: "",
+            tipoRegistro: "nuevo",
+          });
+        }, 1000);
       } else {
-        Alert.alert('Error', data.message || 'Error al registrar métricas');
+        setShowError(true);
       }
     } catch (error) {
-      console.error(error);
-      Alert.alert('Error', 'Hubo un problema al enviar los datos');
+      setShowError(true);
     } finally {
-      setCargando(false);
+      setIsSubmitting(false);
     }
   };
 
+  const InputWithIcon = ({
+    icon,
+    placeholder,
+    value,
+    onChangeText,
+    keyboardType = "default",
+    editable = true,
+    multiline = false,
+  }: {
+    icon: keyof typeof Ionicons.glyphMap;
+    placeholder: string;
+    value: string;
+    onChangeText: (text: string) => void;
+    keyboardType?: "default" | "numeric";
+    editable?: boolean;
+    multiline?: boolean;
+  }) => (
+    <View style={styles.inputGroup}>
+      <Ionicons name={icon} size={22} color={PRIMARY_COLOR} style={{ marginRight: 10 }} />
+      <TextInput
+        style={[
+          styles.input,
+          !editable && styles.inputDisabled,
+          multiline && { minHeight: 40, textAlignVertical: "top" },
+        ]}
+        placeholder={placeholder}
+        value={value}
+        onChangeText={onChangeText}
+        keyboardType={keyboardType}
+        editable={editable}
+        placeholderTextColor="#A0A0A0"
+        multiline={multiline}
+        blurOnSubmit={false}
+        returnKeyType={multiline ? "done" : "next"}
+      />
+    </View>
+  );
+
+  // Selector interactivo de días (círculos)
+  const renderDiasSelector = () => (
+    <View style={styles.diasCirculosContainer}>
+      {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+        <TouchableOpacity
+          key={num}
+          style={[
+            styles.diaCirculo,
+            dias === num.toString() && styles.diaCirculoSeleccionado,
+          ]}
+          onPress={() => setDias(num.toString())}
+        >
+          <Text
+            style={[
+              styles.diaCirculoTexto,
+              dias === num.toString() && styles.diaCirculoTextoSeleccionado,
+            ]}
+          >
+            {num}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={{ flex: 1, backgroundColor: BG_COLOR }}
-    >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.appName}>MyFitGuide</Text>
-        <ProgressStepper currentStep="Dieta" />
-        <Text style={styles.subtitle}>Cuéntanos sobre tu cuerpo</Text>
+    <>
+      <CustomToast
+        message="¡Rutina generada con éxito!"
+        visible={showSuccess}
+        onHide={() => setShowSuccess(false)}
+        type="success"
+      />
+      <CustomToast
+        message="Error: verifica tus datos"
+        visible={showError}
+        onHide={() => setShowError(false)}
+        type="error"
+      />
+      <KeyboardAvoidingView
+        style={{ flex: 1, backgroundColor: BG_COLOR }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : height * 0.05}
+      >
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Text style={styles.appName}>MyFitGuide</Text>
+          <ProgressStepper currentStep="Rutina" />
+          <Text style={styles.subtitle}>Diseñemos tu rutina ideal</Text>
 
-        <View style={styles.form}>
-          <Text style={styles.label}>Peso (kg)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej. 70"
-            keyboardType="numeric"
-            value={peso}
-            onChangeText={setPeso}
+          <InputWithIcon
+            icon="person-outline"
+            placeholder="Nombre"
+            value={nombre}
+            onChangeText={() => {}}
+            editable={false}
           />
-
-          <Text style={styles.label}>Altura (cm)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej. 175"
+          <InputWithIcon
+            icon="calendar-outline"
+            placeholder="Edad"
+            value={edad}
+            onChangeText={handleEdadChange}
             keyboardType="numeric"
-            value={altura}
-            onChangeText={setAltura}
           />
-
-          <Text style={styles.label}>Objetivo</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej. Bajar grasa, ganar masa"
+          <InputWithIcon
+            icon="flag-outline"
+            placeholder="Objetivo"
             value={objetivo}
-            onChangeText={setObjetivo}
+            onChangeText={() => {}}
+            editable={false}
           />
 
-          <Text style={styles.label}>Presupuesto semanal ($)</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Ej. 500"
-            keyboardType="numeric"
-            value={presupuesto}
-            onChangeText={setPresupuesto}
-          />
-
-          <Text style={styles.label}>Sexo</Text>
-          <View style={styles.generoContainer}>
-            <TouchableOpacity
-              style={[
-                styles.generoButton,
-                genero === 'Masculino' && styles.generoSeleccionado,
-              ]}
-              onPress={() => setGenero('Masculino')}
-            >
-              <Ionicons name="male" size={28} color={genero === 'Masculino' ? '#fff' : '#007BFF'} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.generoButton,
-                genero === 'Femenino' && styles.generoSeleccionadoF,
-              ]}
-              onPress={() => setGenero('Femenino')}
-            >
-              <Ionicons name="female" size={28} color={genero === 'Femenino' ? '#fff' : '#E91E63'} />
-            </TouchableOpacity>
+          <Text style={styles.label}>¿Dónde prefieres entrenar?</Text>
+          <View style={styles.preferenciaContainer}>
+            {opcionesPreferencia.map((item) => (
+              <TouchableOpacity
+                key={item}
+                style={[
+                  styles.opcion,
+                  preferenciaSeleccionada === item && styles.opcionSeleccionada,
+                ]}
+                onPress={() => setPreferenciaSeleccionada(item)}
+              >
+                <Text
+                  style={[
+                    styles.opcionTexto,
+                    preferenciaSeleccionada === item && styles.opcionTextoActivo,
+                  ]}
+                >
+                  {item.toUpperCase()}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
-          <Text style={styles.label}>Alergias alimenticias (opcional)</Text>
-          {alergias.map((alergia, index) => (
-            <TextInput
-              key={index}
-              style={styles.input}
-              placeholder={`Alergia ${index + 1}`}
-              value={alergia}
-              onChangeText={(text) => handleAlergiaChange(index, text)}
-            />
-          ))}
+          <Text style={styles.label}>¿Cuántos días quieres entrenar?</Text>
+          {renderDiasSelector()}
 
-          <TouchableOpacity style={styles.addButton} onPress={handleAgregarAlergia}>
-            <Text style={styles.addButtonText}>+ Agregar alergia</Text>
-          </TouchableOpacity>
+          <InputWithIcon
+            icon="medkit-outline"
+            placeholder="¿Tienes lesiones? (opcional)"
+            value={lesiones}
+            onChangeText={setLesiones}
+            multiline={true}
+          />
 
           <TouchableOpacity
-            style={[styles.boton, cargando && { backgroundColor: '#94d3a2' }]}
-            onPress={handleSiguiente}
-            disabled={cargando}
+            style={[styles.boton, isSubmitting && { backgroundColor: "#94d3a2" }]}
+            onPress={generarRutina}
+            disabled={isSubmitting}
           >
             <Text style={styles.botonTexto}>
-              {cargando ? 'Enviando...' : 'Siguiente'}
+              {isSubmitting ? "Generando..." : "Generar Rutina"}
             </Text>
           </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    paddingBottom: 50,
+    padding: width * 0.05,
+    paddingBottom: 40,
   },
   appName: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: width * 0.08,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     color: PRIMARY_COLOR,
-    marginBottom: 10,
+    marginBottom: 12,
     marginTop: 10,
   },
   subtitle: {
-    fontSize: width * 0.04,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  form: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    elevation: 3,
+    fontSize: width * 0.045,
+    color: "#6B7280",
+    textAlign: "center",
+    marginBottom: 22,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: "600",
     color: TEXT_COLOR,
-    marginBottom: 6,
+    marginBottom: 8,
     marginTop: 10,
+  },
+  inputGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderColor: "#d1d5db",
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    marginBottom: 16,
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    padding: 12,
-    borderRadius: 10,
+    flex: 1,
     fontSize: 16,
-    borderColor: BORDER_COLOR,
-    borderWidth: 1,
-    marginBottom: 10,
+    color: TEXT_COLOR,
+    paddingVertical: 12,
   },
-  generoContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginVertical: 10,
+  inputDisabled: {
+    color: "#6b7280",
   },
-  generoButton: {
-    marginHorizontal: 15,
-    padding: 12,
-    borderRadius: 50,
-    backgroundColor: '#E5E7EB',
+  preferenciaContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 22,
   },
-  generoSeleccionado: {
-    backgroundColor: '#007BFF',
+  opcion: {
+    flex: 1,
+    marginHorizontal: 5,
+    paddingVertical: 13,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 8,
+    alignItems: "center",
   },
-  generoSeleccionadoF: {
-    backgroundColor: '#E91E63',
-  },
-  addButton: {
+  opcionSeleccionada: {
     backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 10,
   },
-  addButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+  opcionTexto: {
+    fontWeight: "600",
+    color: TEXT_COLOR,
+  },
+  opcionTextoActivo: {
+    color: "#FFFFFF",
+  },
+  diasCirculosContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 18,
+    marginTop: 8,
+    gap: 7,
+  },
+  diaCirculo: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: PRIMARY_COLOR,
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    marginHorizontal: 4,
+    elevation: 2,
+  },
+  diaCirculoSeleccionado: {
+    backgroundColor: PRIMARY_COLOR,
+    borderColor: "#009966",
+  },
+  diaCirculoTexto: {
+    fontWeight: "700",
+    color: PRIMARY_COLOR,
+    fontSize: 18,
+  },
+  diaCirculoTextoSeleccionado: {
+    color: "#fff",
   },
   boton: {
     backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 14,
+    paddingVertical: 15,
     borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 20,
+    alignItems: "center",
+    marginTop: 10,
+    marginBottom: 30,
   },
   botonTexto: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });
 
-export default DietaScreen;
+export default RutinaScreen;

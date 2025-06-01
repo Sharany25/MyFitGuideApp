@@ -3,39 +3,36 @@ import {
   ScrollView,
   View,
   Text,
-  TextInput,
   StyleSheet,
   RefreshControl,
   TouchableOpacity,
   Alert,
+  Dimensions,
+  TextInput,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../navigation/StackNavigator';
 import type { RouteProp } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
-type RouteProps = RouteProp<RootStackParamList, 'Home'>;
+const { width } = Dimensions.get('window');
+const PRIMARY_COLOR = '#00C27F';
+
+type NavigationProp = StackNavigationProp<RootStackParamList, 'Tabs'>;
 
 const HomeScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation<NavigationProp>();
-  const route = useRoute<RouteProps>();
+  const route = useRoute<RouteProp<RootStackParamList, 'Tabs'>>();
 
-  const userParams = route.params;
-
-  const nombre = userParams?.nombre ?? 'Usuario';
-  const edad = userParams?.edad ?? '';
-  const objetivo = userParams?.objetivo ?? '';
-  const genero = userParams?.genero ?? '';
-  const altura = userParams?.altura ?? '';
-  const peso = userParams?.peso ?? '';
-  const tipoRegistro = userParams?.tipoRegistro ?? 'login';
+  // Usa parámetros desde Tabs
+  const { nombre = 'Usuario', edad = '', objetivo = '', genero = '', altura = '', peso = '', tipoRegistro = 'login', userId = 0 } = route.params || {};
 
   const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 2000);
+    setTimeout(() => setRefreshing(false), 1200);
   };
 
   const cerrarSesion = async () => {
@@ -47,21 +44,73 @@ const HomeScreen: React.FC = () => {
     <ScrollView
       style={styles.container}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      contentContainerStyle={{ paddingBottom: 40 }}
     >
-      <Text style={styles.welcome}>Hola, {nombre}</Text>
+      <View style={styles.headerBox}>
+        <Ionicons name="person-circle-outline" size={60} color={PRIMARY_COLOR} />
+        <View>
+          <Text style={styles.welcome}>¡Hola, {nombre}!</Text>
+          <Text style={styles.subtitle}>Tu bienestar es nuestra meta</Text>
+        </View>
+      </View>
 
-      <TextInput style={styles.searchInput} placeholder="Buscar" />
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Buscar en la app..."
+        placeholderTextColor="#8E8E8E"
+      />
 
       <View style={styles.tagsContainer}>
-        <Text style={styles.tag}>⭐ Favoritos</Text>
-        <Text style={styles.tag}>📜 Historial</Text>
-        <Text style={styles.tag}>⚙️ Personalización</Text>
+        <TouchableOpacity style={styles.tagButton}>
+          <Ionicons name="star" size={16} color={PRIMARY_COLOR} />
+          <Text style={styles.tagText}>Favoritos</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tagButton}>
+          <Ionicons name="time-outline" size={16} color={PRIMARY_COLOR} />
+          <Text style={styles.tagText}>Historial</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tagButton}>
+          <Ionicons name="settings-outline" size={16} color={PRIMARY_COLOR} />
+          <Text style={styles.tagText}>Personalización</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.cardGrid}>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() => navigation.navigate('Dieta', { userId, nombre })}
+        >
+          <Ionicons name="fast-food-outline" size={32} color={PRIMARY_COLOR} style={{ marginBottom: 6 }} />
+          <Text style={styles.cardTitle}>Comidas de la semana</Text>
+          <Text style={styles.cardDesc}>Revisa y ajusta tu plan alimenticio.</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.card}
+          onPress={() =>
+            navigation.navigate('Rutina', { userId, nombre, objetivo })
+          }
+        >
+          <Ionicons name="barbell-outline" size={32} color={PRIMARY_COLOR} style={{ marginBottom: 6 }} />
+          <Text style={styles.cardTitle}>Rutina semanal</Text>
+          <Text style={styles.cardDesc}>Verifica o edita tu entrenamiento.</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.profileInfoBox}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+          <InfoLabel label="Edad" value={edad} />
+          <InfoLabel label="Género" value={genero} />
+          <InfoLabel label="Altura (cm)" value={altura} />
+          <InfoLabel label="Peso (kg)" value={peso} />
+          <InfoLabel label="Objetivo" value={objetivo} />
+        </View>
       </View>
 
       <TouchableOpacity
         style={styles.perfilButton}
         onPress={() => {
           navigation.navigate('Perfil', {
+            userId,
             nombre,
             edad,
             objetivo,
@@ -72,53 +121,141 @@ const HomeScreen: React.FC = () => {
           });
         }}
       >
+        <Ionicons name="person" size={18} color="#fff" style={{ marginRight: 6 }} />
         <Text style={styles.perfilButtonText}>Ver Perfil</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.logoutButton} onPress={cerrarSesion}>
+        <Ionicons name="log-out-outline" size={18} color="#fff" style={{ marginRight: 6 }} />
         <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
       </TouchableOpacity>
-
-      <Text style={styles.sectionTitle}>Comidas de la semana</Text>
-      <Text style={styles.sectionTitle}>Rutina semanal</Text>
     </ScrollView>
   );
 };
 
-const PRIMARY_COLOR = '#00C27F';
+// Componente para cada dato personal en la tarjeta
+const InfoLabel = ({ label, value }: { label: string; value: string | number }) => (
+  <View style={styles.infoBox}>
+    <Text style={styles.infoLabel}>{label}</Text>
+    <Text style={styles.infoValue}>{value || 'N/D'}</Text>
+  </View>
+);
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
+  container: { flex: 1, padding: 16, backgroundColor: '#F9FAFB' },
+
+  headerBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 18,
+    marginBottom: 16,
+  },
   welcome: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 23,
+    fontWeight: '700',
     color: PRIMARY_COLOR,
-    marginBottom: 10,
+    marginBottom: 1,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: '#5B5B5B',
+    fontWeight: '500',
+    marginBottom: 3,
   },
   searchInput: {
-    backgroundColor: '#f1f1f1',
-    padding: 10,
-    borderRadius: 10,
-    marginBottom: 10,
+    backgroundColor: '#F1F5F9',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 12,
+    fontSize: 15,
   },
   tagsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 18,
+    gap: 8,
   },
-  tag: {
-    backgroundColor: '#e0e0e0',
+  tagButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E6F8F1',
+    borderRadius: 14,
+    paddingHorizontal: 15,
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
+    gap: 6,
+  },
+  tagText: {
+    color: PRIMARY_COLOR,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  cardGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 16,
+  },
+  card: {
+    flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    padding: 18,
+    marginHorizontal: 2,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    minHeight: 130,
+    gap: 2,
+  },
+  cardTitle: {
+    fontWeight: 'bold',
+    color: PRIMARY_COLOR,
+    fontSize: 16,
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  cardDesc: {
+    color: '#374151',
+    fontSize: 13,
+    textAlign: 'center',
+  },
+  profileInfoBox: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
+    elevation: 2,
+    marginBottom: 20,
+    marginTop: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  infoBox: {
+    marginRight: 14,
+    marginBottom: 8,
+  },
+  infoLabel: {
+    color: '#7C7C7C',
     fontSize: 12,
+    fontWeight: '500',
+  },
+  infoValue: {
+    color: '#212121',
+    fontSize: 15,
+    fontWeight: '700',
   },
   perfilButton: {
+    flexDirection: 'row',
     backgroundColor: PRIMARY_COLOR,
-    padding: 12,
-    borderRadius: 10,
+    paddingVertical: 13,
+    borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 10,
+    justifyContent: 'center',
+    marginBottom: 9,
   },
   perfilButtonText: {
     color: '#fff',
@@ -126,21 +263,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   logoutButton: {
+    flexDirection: 'row',
     backgroundColor: '#ef4444',
-    padding: 12,
-    borderRadius: 10,
+    paddingVertical: 13,
+    borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   logoutButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginVertical: 10,
   },
 });
 

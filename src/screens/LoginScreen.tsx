@@ -15,7 +15,7 @@ import { useForm, Controller } from "react-hook-form";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { TextInput } from "react-native-paper";
-import type { StackNavigationProp } from "@react-navigation/stack";
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from "../navigation/StackNavigator";
 import SuccessToast from "../components/SuccessToast";
 import ErrorToast from "../components/ErrorToast";
@@ -32,7 +32,7 @@ interface LoginScreenProps {
   onLoginSuccess: (
     isNew: boolean,
     userData?: {
-      userId: number;
+      userId: string;
       nombre: string;
       edad: string;
       objetivo: string;
@@ -44,7 +44,7 @@ interface LoginScreenProps {
 }
 
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
-  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>();
   const [loading, setLoading] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -56,7 +56,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
     setLoading(true);
     try {
-      const response = await fetch("http://192.168.101.16:3000/MyFitGuide/Usuarios/login", {
+      const response = await fetch("http://192.168.1.5:3000/MyFitGuide/Usuarios/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -74,8 +74,9 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         const m = hoy.getMonth() - fechaNacimiento.getMonth();
         if (m < 0 || (m === 0 && hoy.getDate() < fechaNacimiento.getDate())) edad--;
 
+        // MODIFICACIÓN: userId obtiene el id real del usuario desde la API (_id o idUsuario)
         const userData = {
-          userId: 0,
+          userId: result._id || result.idUsuario || "", // ← AQUÍ EL CAMBIO
           nombre: result.nombre || "",
           edad: edad.toString(),
           objetivo: result.objetivo || "",

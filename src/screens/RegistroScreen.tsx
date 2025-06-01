@@ -18,17 +18,18 @@ import {
 import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { StackNavigationProp } from '@react-navigation/stack';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/StackNavigator';
 import ProgressStepper from '../components/ProgressStepper';
 import UbicacionAlerta from '../components/UbicacionAlerta';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import CustomToast from '../components/CustomToast';
 
 const { width } = Dimensions.get('window');
 const PRIMARY_COLOR = '#00C27F';
 const TEXT_COLOR = '#1F2937';
 
-type NavigationProp = StackNavigationProp<RootStackParamList, 'Registro'>;
+type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Registro'>;
 
 const formatDate = (date: Date): string => {
   const day = date.getDate().toString().padStart(2, '0');
@@ -52,6 +53,10 @@ const RegistroScreen: React.FC = () => {
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [showUbicacionModal, setShowUbicacionModal] = useState(false);
 
+  // Toasts
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+
   const solicitarUbicacion = async () => {
     setLoadingLocation(true);
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -72,29 +77,24 @@ const RegistroScreen: React.FC = () => {
   };
 
   const handleRegistro = async () => {
-    if (!aceptoTerminos) {
-      alert('Debes aceptar los términos y condiciones');
-      return;
-    }
-    if (!nombre || !correo || !contrasena || !fechaNacimiento) {
-      alert('Por favor completa todos los campos');
+    if (!aceptoTerminos || !nombre || !correo || !contrasena || !fechaNacimiento) {
+      setShowError(true);
       return;
     }
 
     const fechaParts = fechaNacimiento.split('/');
     if (fechaParts.length !== 3) {
-      alert('La fecha de nacimiento debe tener formato DD/MM/YYYY.');
+      setShowError(true);
       return;
     }
-
     const fechaISO = `${fechaParts[2]}-${fechaParts[1]}-${fechaParts[0]}`;
     if (isNaN(new Date(fechaISO).getTime())) {
-      alert('La fecha de nacimiento es inválida.');
+      setShowError(true);
       return;
     }
 
     try {
-      const response = await fetch('http://192.168.101.16:3000/MyFitGuide/Usuarios', {
+      const response = await fetch('http://192.168.1.5:3000/MyFitGuide/Usuarios', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -107,21 +107,26 @@ const RegistroScreen: React.FC = () => {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        alert(error.message || 'Error al registrar usuario.');
+        setShowError(true);
         return;
       }
 
       const data = await response.json();
-      await AsyncStorage.setItem('userData', JSON.stringify({ token: 'fake-token', isNewUser: true }));
 
-      navigation.replace('Dieta', {
-        nombre,
-        userId: data.idUsuario || data.id || 0,
-      });
+      // Guarda el usuario completo en AsyncStorage para perfil/autologin
+      await AsyncStorage.setItem('user', JSON.stringify(data));
+
+      setShowSuccess(true);
+
+      setTimeout(() => {
+        navigation.replace('Dieta', {
+          nombre,
+          // Se asegura de tomar el id correcto: _id, idUsuario o id (¡ajusta esto según tu API!)
+          userId: data._id || data.idUsuario || data.id || "",
+        });
+      }, 1500);
     } catch (error) {
-      console.error(error);
-      alert('Hubo un problema al registrar. Intenta nuevamente.');
+      setShowError(true);
     }
   };
 
@@ -130,6 +135,20 @@ const RegistroScreen: React.FC = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.keyboard}
     >
+      {/* Toasts */}
+      <CustomToast
+        message="¡Registro guardado correctamente!"
+        visible={showSuccess}
+        onHide={() => setShowSuccess(false)}
+        type="success"
+      />
+      <CustomToast
+        message="Error al guardar tus datos. Revisa tus datos."
+        visible={showError}
+        onHide={() => setShowError(false)}
+        type="error"
+      />
+
       <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
         <Text style={styles.appName}>MyFitGuide</Text>
         <ProgressStepper currentStep="Registro" />

@@ -1,6 +1,5 @@
 // components/ErrorToast.tsx
-
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Animated, Dimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -13,7 +12,7 @@ interface ErrorToastProps {
 }
 
 const ErrorToast: React.FC<ErrorToastProps> = ({ message, visible, onHide }) => {
-  const slideAnim = new Animated.Value(-100);
+  const slideAnim = useRef(new Animated.Value(-100)).current;
 
   useEffect(() => {
     if (visible) {
@@ -27,8 +26,8 @@ const ErrorToast: React.FC<ErrorToastProps> = ({ message, visible, onHide }) => 
             toValue: -100,
             duration: 300,
             useNativeDriver: true,
-          }).start(() => onHide());
-        }, 2500);
+          }).start(onHide);
+        }, 2000);
       });
     }
   }, [visible]);
@@ -36,8 +35,8 @@ const ErrorToast: React.FC<ErrorToastProps> = ({ message, visible, onHide }) => 
   if (!visible) return null;
 
   return (
-    <Animated.View style={[styles.toast, { transform: [{ translateY: slideAnim }] }]}>      
-      <Ionicons name="alert-circle-outline" size={24} color="#fff" style={{ marginRight: 10 }} />
+    <Animated.View style={[styles.toast, { transform: [{ translateY: slideAnim }] }]}>
+      <Ionicons name="close-circle-outline" size={24} color="#fff" style={{ marginRight: 10 }} />
       <Text style={styles.toastText}>{message}</Text>
     </Animated.View>
   );
@@ -49,7 +48,7 @@ const styles = StyleSheet.create({
     top: 50,
     left: width * 0.1,
     right: width * 0.1,
-    backgroundColor: "#dc3545",
+    backgroundColor: "#e53935",
     padding: 14,
     borderRadius: 12,
     flexDirection: "row",
