@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  Dimensions,
+  ActivityIndicator,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/StackNavigator';
@@ -12,107 +19,49 @@ type PerfilRouteProp = RouteProp<RootStackParamList, 'Perfil'>;
 
 const PerfilScreen: React.FC = () => {
   const route = useRoute<PerfilRouteProp>();
-  const params = route.params || {};
-
   const [loading, setLoading] = useState(true);
-  const [perfil, setPerfil] = useState({
-    nombre: 'Sin nombre',
-    edad: 'N/D',
-    objetivo: 'N/D',
-    genero: 'N/D',
-    altura: 'N/D',
-    peso: 'N/D',
-    tipoRegistro: 'N/D',
-  });
 
-  // Calcula edad si sólo tienes fechaNacimiento
-  const calcularEdad = (fechaNac: string | undefined) => {
-    if (!fechaNac) return 'N/D';
-    const fechaNacimiento = new Date(fechaNac);
-    const hoy = new Date();
-    let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
-    const m = hoy.getMonth() - fechaNacimiento.getMonth();
-    if (m < 0 || (m === 0 && hoy.getDate() < fechaNacimiento.getDate())) edad--;
-    return edad.toString();
-  };
+  // Estado para todos los datos completos
+  const [perfilCompleto, setPerfilCompleto] = useState<{
+    usuario?: any;
+    dieta?: any;
+    rutina?: any;
+  }>({});
 
   useEffect(() => {
-    const cargarPerfil = async () => {
+    const fetchPerfilCompleto = async () => {
+      setLoading(true);
+
       try {
-        // 1. Si viene todo por params (flujo de registro/rutina), úsalo
-        if (
-          typeof params === 'object' &&
-          params.nombre &&
-          params.edad &&
-          params.objetivo &&
-          params.genero &&
-          params.altura &&
-          params.peso
-        ) {
-          setPerfil({
-            nombre: String(params.nombre),
-            edad: String(params.edad),
-            objetivo: String(params.objetivo),
-            genero: String(params.genero),
-            altura: String(params.altura),
-            peso: String(params.peso),
-            tipoRegistro: params.tipoRegistro || 'nuevo',
-          });
-          setLoading(false);
-          return;
-        }
-
-        // 2. Si no, busca datos del usuario autenticado en AsyncStorage (flujo de login)
-        const stored = await AsyncStorage.getItem('user');
-        if (stored) {
-          const user = JSON.parse(stored);
-
-          let perfilData = {
-            nombre: user.nombre || 'Sin nombre',
-            edad: user.edad || calcularEdad(user.fechaNacimiento) || 'N/D',
-            objetivo: user.objetivo || 'N/D',
-            genero: user.genero || 'N/D',
-            altura: user.altura ? String(user.altura) : 'N/D',
-            peso: user.peso ? String(user.peso) : 'N/D',
-            tipoRegistro: 'login',
-          };
-
-          // Si faltan datos, busca por API
-          if (!user.objetivo || !user.genero || !user.altura || !user.peso) {
-            try {
-              const resp = await fetch(
-                `http://192.168.1.5:3000/MyFitGuide/Usuarios/${user._id}`
-              );
-              if (resp.ok) {
-                const apiUser = await resp.json();
-                perfilData = {
-                  ...perfilData,
-                  objetivo: apiUser.objetivo || perfilData.objetivo,
-                  genero: apiUser.genero || perfilData.genero,
-                  altura: apiUser.altura ? String(apiUser.altura) : perfilData.altura,
-                  peso: apiUser.peso ? String(apiUser.peso) : perfilData.peso,
-                };
-              }
-            } catch (error) {
-              // Si falla la API, sigue con los datos locales
-            }
+        let userId: string | undefined = route.params?.userId;
+        if (!userId) {
+          // Busca en AsyncStorage si no viene por params
+          const stored = await AsyncStorage.getItem('user');
+          if (stored) {
+            const user = JSON.parse(stored);
+            userId = user._id || user.idUsuario || user.id;
           }
-
-          setPerfil(perfilData);
+        }
+        if (!userId) {
           setLoading(false);
           return;
         }
 
-        // 3. Si no hay nada, deja defaults
-        setLoading(false);
-      } catch (e) {
+        // Llama a tu endpoint unificado
+        const res = await fetch(`http://192.168.1.5:3000/MyFitGuide/usuario-completo/${userId}`);
+        if (res.ok) {
+          const json = await res.json();
+          setPerfilCompleto(json);
+        }
+      } catch (err) {
+        // Si hay error, deja datos vacíos
+      } finally {
         setLoading(false);
       }
     };
 
-    cargarPerfil();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(params)]);
+    fetchPerfilCompleto();
+  }, [route.params?.userId]);
 
   if (loading) {
     return (
@@ -122,30 +71,66 @@ const PerfilScreen: React.FC = () => {
     );
   }
 
+  const { usuario, dieta, rutina } = perfilCompleto || {};
+
+  // Utilidad para mostrar valores o "N/D"
+  const v = (valor: any) => (valor !== undefined && valor !== null && valor !== '' ? valor : 'N/D');
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>Mi Perfil</Text>
+      <Text style={styles.header}>Mi Perfil Completo</Text>
       <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Datos Personales</Text>
         <Text style={styles.label}>Nombre:</Text>
-        <Text style={styles.value}>{perfil.nombre}</Text>
-        <Text style={styles.label}>Edad:</Text>
-        <Text style={styles.value}>{perfil.edad}</Text>
-        <Text style={styles.label}>Género:</Text>
-        <Text style={styles.value}>{perfil.genero}</Text>
-        <Text style={styles.label}>Altura (cm):</Text>
-        <Text style={styles.value}>{perfil.altura}</Text>
-        <Text style={styles.label}>Peso (kg):</Text>
-        <Text style={styles.value}>{perfil.peso}</Text>
-        <Text style={styles.label}>Objetivo:</Text>
-        <Text style={styles.value}>{perfil.objetivo}</Text>
-        <Text style={styles.label}>Tipo de registro:</Text>
+        <Text style={styles.value}>{v(usuario?.nombre)}</Text>
+        <Text style={styles.label}>Correo:</Text>
+        <Text style={styles.value}>{v(usuario?.correoElectronico)}</Text>
+        <Text style={styles.label}>Fecha Nacimiento:</Text>
         <Text style={styles.value}>
-          {perfil.tipoRegistro === 'nuevo'
-            ? 'Registro nuevo'
-            : perfil.tipoRegistro === 'login'
-            ? 'Inicio de sesión'
-            : perfil.tipoRegistro}
+          {usuario?.fechaNacimiento
+            ? new Date(usuario.fechaNacimiento).toLocaleDateString()
+            : 'N/D'}
         </Text>
+        <Text style={styles.label}>Ubicación:</Text>
+        <Text style={styles.value}>{v(usuario?.ubicacion)}</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Datos de Dieta</Text>
+        <Text style={styles.label}>Género:</Text>
+        <Text style={styles.value}>{v(dieta?.genero)}</Text>
+        <Text style={styles.label}>Altura (cm):</Text>
+        <Text style={styles.value}>{v(dieta?.altura)}</Text>
+        <Text style={styles.label}>Peso (kg):</Text>
+        <Text style={styles.value}>{v(dieta?.peso)}</Text>
+        <Text style={styles.label}>Objetivo:</Text>
+        <Text style={styles.value}>{v(dieta?.objetivo)}</Text>
+        <Text style={styles.label}>Alergias:</Text>
+        <Text style={styles.value}>
+          {Array.isArray(dieta?.alergias) && dieta?.alergias.length > 0
+            ? dieta.alergias.join(', ')
+            : 'N/D'}
+        </Text>
+        <Text style={styles.label}>Presupuesto:</Text>
+        <Text style={styles.value}>{v(dieta?.presupuesto)}</Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Datos de Rutina</Text>
+        <Text style={styles.label}>Edad:</Text>
+        <Text style={styles.value}>{v(rutina?.edad)}</Text>
+        <Text style={styles.label}>Objetivo:</Text>
+        <Text style={styles.value}>{v(rutina?.objetivo)}</Text>
+        <Text style={styles.label}>Preferencias:</Text>
+        <Text style={styles.value}>
+          {Array.isArray(rutina?.preferencias) && rutina?.preferencias.length > 0
+            ? rutina.preferencias.join(', ')
+            : 'N/D'}
+        </Text>
+        <Text style={styles.label}>Días de Entrenamiento:</Text>
+        <Text style={styles.value}>{v(rutina?.dias)}</Text>
+        <Text style={styles.label}>Lesiones:</Text>
+        <Text style={styles.value}>{v(rutina?.lesiones)}</Text>
       </View>
     </ScrollView>
   );
@@ -169,7 +154,14 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     padding: 20,
     elevation: 2,
-    marginBottom: 20,
+    marginBottom: 18,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: PRIMARY_COLOR,
+    marginBottom: 7,
+    marginTop: -10,
   },
   label: {
     fontSize: 14,

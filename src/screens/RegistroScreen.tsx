@@ -17,7 +17,6 @@ import {
 } from 'react-native-paper';
 import * as Location from 'expo-location';
 import { useNavigation } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/StackNavigator';
 import ProgressStepper from '../components/ProgressStepper';
@@ -26,8 +25,8 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import CustomToast from '../components/CustomToast';
 
 const { width } = Dimensions.get('window');
-const PRIMARY_COLOR = '#00C27F';
-const TEXT_COLOR = '#1F2937';
+const PRIMARY_COLOR = '#FFD700'; // Amarillo
+const TEXT_COLOR = '#000000'; // Negro
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, 'Registro'>;
 
@@ -57,6 +56,7 @@ const RegistroScreen: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
 
+  // Función para solicitar ubicación al usuario
   const solicitarUbicacion = async () => {
     setLoadingLocation(true);
     const { status } = await Location.requestForegroundPermissionsAsync();
@@ -76,6 +76,7 @@ const RegistroScreen: React.FC = () => {
     }
   };
 
+  // Handler de registro de usuario
   const handleRegistro = async () => {
     if (!aceptoTerminos || !nombre || !correo || !contrasena || !fechaNacimiento) {
       setShowError(true);
@@ -87,6 +88,7 @@ const RegistroScreen: React.FC = () => {
       setShowError(true);
       return;
     }
+    // Formatea fecha a ISO
     const fechaISO = `${fechaParts[2]}-${fechaParts[1]}-${fechaParts[0]}`;
     if (isNaN(new Date(fechaISO).getTime())) {
       setShowError(true);
@@ -112,17 +114,14 @@ const RegistroScreen: React.FC = () => {
       }
 
       const data = await response.json();
-
-      // Guarda el usuario completo en AsyncStorage para perfil/autologin
-      await AsyncStorage.setItem('user', JSON.stringify(data));
+      const userId = data._id || data.idUsuario || data.id || "";
 
       setShowSuccess(true);
 
       setTimeout(() => {
         navigation.replace('Dieta', {
           nombre,
-          // Se asegura de tomar el id correcto: _id, idUsuario o id (¡ajusta esto según tu API!)
-          userId: data._id || data.idUsuario || data.id || "",
+          userId,
         });
       }, 1500);
     } catch (error) {
@@ -307,23 +306,21 @@ const styles = StyleSheet.create({
   },
   buttonOutline: {
     borderColor: PRIMARY_COLOR,
-    marginVertical: 10,
+    borderWidth: 1,
+    marginBottom: 15,
   },
   checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    marginTop: 10,
+    marginBottom: 10,
   },
   checkboxLabel: {
-    marginLeft: 8,
-    color: TEXT_COLOR,
-    fontSize: 13,
+    fontSize: 14,
+    color: '#374151',
   },
   registerButton: {
     backgroundColor: PRIMARY_COLOR,
-    borderRadius: 10,
-    marginTop: 5,
+    marginTop: 10,
   },
 });
 

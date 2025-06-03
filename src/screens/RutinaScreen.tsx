@@ -30,7 +30,8 @@ const BG_COLOR = "#F9FAFB";
 const RutinaScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation<NavigationProp>();
-  // Asegúrate de que userId sea string, porque así lo espera tu API y tu Stack
+
+  // userId, nombre, objetivo vienen por params (userId es string)
   const { userId, nombre, objetivo } = route.params as {
     userId: string;
     nombre: string;
@@ -51,7 +52,7 @@ const RutinaScreen: React.FC = () => {
   const handleEdadChange = (val: string) => setEdad(val.replace(/[^0-9]/g, ""));
 
   const generarRutina = async () => {
-    if (!nombre || !edad || !objetivo || !preferenciaSeleccionada || !dias) {
+    if (!userId || !nombre || !edad || !objetivo || !preferenciaSeleccionada || !dias) {
       setShowError(true);
       return;
     }
@@ -70,12 +71,11 @@ const RutinaScreen: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // Envía userId como string
       const response = await fetch("http://192.168.1.5:3000/MyFitGuide/prueba-rutina", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId, // <--- CORRECTO
+          userId: userId,
           nombre,
           edad: edadNum,
           objetivo,
@@ -88,21 +88,9 @@ const RutinaScreen: React.FC = () => {
       if (response.ok) {
         setShowSuccess(true);
         setTimeout(() => {
-          setEdad("");
-          setPreferenciaSeleccionada("");
-          setDias("");
-          setLesiones("");
-          navigation.replace("Tabs", {
-            userId,
-            nombre,
-            edad,
-            objetivo,
-            genero: "",
-            altura: "",
-            peso: "",
-            tipoRegistro: "nuevo",
-          });
-        }, 1000);
+          // Navega SOLO con el userId a Tabs
+          navigation.replace("Tabs", { userId });
+        }, 1200);
       } else {
         setShowError(true);
       }
@@ -151,7 +139,6 @@ const RutinaScreen: React.FC = () => {
     </View>
   );
 
-  // Render CÍRCULOS DÍAS 1 al 7
   const renderDiasSelector = () => (
     <View style={styles.diasCirculosContainer}>
       {[1, 2, 3, 4, 5, 6, 7].map((num) => (

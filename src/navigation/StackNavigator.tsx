@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, RouteProp } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 
 // Screens
@@ -13,28 +13,10 @@ import PerfilScreen from '../screens/PerfilScreen';
 export type RootStackParamList = {
   Login: undefined;
   Registro: undefined;
-  Dieta: { userId: number; nombre: string };
-  Rutina: { userId: number; nombre: string; objetivo: string };
-  Tabs: {
-    userId: number;
-    nombre: string;
-    edad: string;
-    objetivo: string;
-    genero: string;
-    altura: string;
-    peso: string;
-    tipoRegistro: 'nuevo' | 'login';
-  };
-  Perfil: {
-    userId: number;
-    nombre: string;
-    edad: string;
-    objetivo: string;
-    genero: string;
-    altura: string;
-    peso: string;
-    tipoRegistro: 'nuevo' | 'login';
-  };
+  Dieta: { userId: string; nombre: string };
+  Rutina: { userId: string; nombre: string; objetivo: string };
+  Tabs: { userId: string };
+  Perfil: { userId: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -50,26 +32,12 @@ const StackNavigator: React.FC = () => {
           {(props) => (
             <LoginScreen
               {...props}
-              onLoginSuccess={(
-                isNewUser: boolean,
-                userData?: {
-                  userId: number;
-                  nombre: string;
-                  edad: string;
-                  objetivo: string;
-                  genero: string;
-                  altura: string;
-                  peso: string;
-                }
-              ) => {
+              onLoginSuccess={(isNewUser: boolean, userData?: { userId: string; nombre: string }) => {
                 setIsAuthenticated(true);
                 if (isNewUser) {
                   props.navigation.replace('Registro');
                 } else if (userData) {
-                  props.navigation.replace('Tabs', {
-                    ...userData,
-                    tipoRegistro: 'login',
-                  });
+                  props.navigation.replace('Tabs', { userId: userData.userId });
                 }
               }}
             />
@@ -81,17 +49,7 @@ const StackNavigator: React.FC = () => {
           {(props) => (
             <RegistroScreen
               {...props}
-              onRegisterSuccess={(
-                nombre: string,
-                userId: number,
-                userData?: {
-                  edad?: string;
-                  objetivo?: string;
-                  genero?: string;
-                  altura?: string;
-                  peso?: string;
-                }
-              ) => {
+              onRegisterSuccess={(nombre: string, userId: string) => {
                 props.navigation.replace('Dieta', { nombre, userId });
               }}
             />
@@ -103,16 +61,8 @@ const StackNavigator: React.FC = () => {
           {(props) => (
             <DietaScreen
               {...props}
-              onNext={(
-                objetivo: string,
-                extraData: {
-                  edad: string;
-                  genero: string;
-                  altura: string;
-                  peso: string;
-                }
-              ) => {
-                const { userId, nombre } = props.route.params;
+              onNext={(objetivo: string, extraData: { edad: string; genero: string; altura: string; peso: string }) => {
+                const { userId, nombre } = props.route.params as RouteProp<RootStackParamList, 'Dieta'>;
                 props.navigation.replace('Rutina', {
                   userId,
                   nombre,
@@ -129,20 +79,17 @@ const StackNavigator: React.FC = () => {
           {(props) => (
             <RutinaScreen
               {...props}
-              onComplete={(
-                profileData: {
-                  userId: number;
-                  nombre: string;
-                  edad: string;
-                  objetivo: string;
-                  genero: string;
-                  altura: string;
-                  peso: string;
-                }
-              ) => {
+              onComplete={(profileData: {
+                userId: string;
+                nombre: string;
+                edad: string;
+                objetivo: string;
+                genero: string;
+                altura: string;
+                peso: string;
+              }) => {
                 props.navigation.replace('Tabs', {
-                  ...profileData,
-                  tipoRegistro: 'nuevo',
+                  userId: profileData.userId,
                 });
               }}
             />

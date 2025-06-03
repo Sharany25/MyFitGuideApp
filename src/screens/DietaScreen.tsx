@@ -1,392 +1,275 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 import {
   View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   ScrollView,
-  Dimensions,
-  KeyboardAvoidingView,
-  Platform,
-} from "react-native";
-import { useRoute, useNavigation } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../navigation/StackNavigator";
-import ProgressStepper from "../components/ProgressStepper";
-import { Ionicons } from "@expo/vector-icons";
-import CustomToast from "../components/CustomToast";
-import { TextInput } from "react-native";
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Alert,
+} from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
+import type { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../navigation/StackNavigator';
+import ProgressStepper from '../components/ProgressStepper';
 
-const { width, height } = Dimensions.get("window");
+type NavigationProp = StackNavigationProp<RootStackParamList, 'Dieta'>;
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Rutina">;
-
-const opcionesPreferencia = ["gimnasio", "casa", "calistenia"];
-
-const PRIMARY_COLOR = "#00C27F";
-const TEXT_COLOR = "#1F2937";
-const BG_COLOR = "#F9FAFB";
-
-const RutinaScreen: React.FC = () => {
+const DietaScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation<NavigationProp>();
-  // Acepta userId como string SIEMPRE
-  const { userId, nombre, objetivo } = route.params as {
-    userId: string; // <-- Aquí es string, igual que en tu backend
-    nombre: string;
-    objetivo: string;
+  const { userId, nombre } = route.params as { userId: string; nombre: string };
+
+  const [peso, setPeso] = useState('');
+  const [altura, setAltura] = useState('');
+  const [objetivo, setObjetivo] = useState('');
+  const [genero, setGenero] = useState<'masculino' | 'femenino' | ''>('');
+  const [presupuesto, setPresupuesto] = useState('');
+  const [alergiaInput, setAlergiaInput] = useState('');
+  const [alergias, setAlergias] = useState<string[]>([]);
+  const [cargando, setCargando] = useState(false);
+
+  const handleAddAlergia = () => {
+    if (alergiaInput.trim()) {
+      setAlergias([...alergias, alergiaInput.trim()]);
+      setAlergiaInput('');
+    }
   };
 
-  const [edad, setEdad] = useState("");
-  const [preferenciaSeleccionada, setPreferenciaSeleccionada] = useState("");
-  const [dias, setDias] = useState("");
-  const [lesiones, setLesiones] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const handleRemoveAlergia = (index: number) => {
+    setAlergias(alergias.filter((_, i) => i !== index));
+  };
 
-  // Toast states
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [showError, setShowError] = useState(false);
-
-  // Solo números en edad
-  const handleEdadChange = (val: string) => setEdad(val.replace(/[^0-9]/g, ""));
-
-  const generarRutina = async () => {
-    // Validación de campos obligatorios
-    if (!userId || !nombre || !edad || !objetivo || !preferenciaSeleccionada || !dias) {
-      setShowError(true);
+  const handleSiguiente = async () => {
+    if (!peso || !altura || !objetivo || !genero || !presupuesto) {
+      Alert.alert('Campos incompletos', 'Por favor completa todos los campos.');
       return;
     }
-    const edadNum = parseInt(edad, 10);
-    const diasNum = parseInt(dias, 10);
 
-    if (isNaN(edadNum) || edadNum <= 0) {
-      setShowError(true);
+    const pesoNum = parseFloat(peso);
+    const alturaNum = parseFloat(altura);
+    const presupuestoNum = parseFloat(presupuesto);
+
+    if (isNaN(pesoNum) || isNaN(alturaNum) || isNaN(presupuestoNum)) {
+      Alert.alert('Error', 'Peso, altura y presupuesto deben ser números válidos.');
       return;
     }
-    if (isNaN(diasNum) || diasNum < 1 || diasNum > 7) {
-      setShowError(true);
-      return;
-    }
-    if (isSubmitting) return;
-    setIsSubmitting(true);
+
+    setCargando(true);
 
     try {
-      const response = await fetch("http://192.168.1.5:3000/MyFitGuide/prueba-rutina", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const response = await fetch('http://192.168.1.5:3000/MyFitGuide/prueba-dieta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: userId, // <-- Así, como string SIEMPRE
-          nombre,
-          edad: edadNum,
+          userId: userId,
+          genero: genero,
+          altura: alturaNum,
+          peso: pesoNum,
           objetivo,
-          preferencias: [preferenciaSeleccionada],
-          dias: diasNum,
-          lesiones,
+          alergias,
+          presupuesto: presupuestoNum,
         }),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        setShowSuccess(true);
-        setTimeout(() => {
-          setEdad("");
-          setPreferenciaSeleccionada("");
-          setDias("");
-          setLesiones("");
-          navigation.replace("Tabs", {
-            userId, // Lo pasas tal cual como string a Tabs
-            nombre,
-            edad,
-            objetivo,
-            genero: "",
-            altura: "",
-            peso: "",
-            tipoRegistro: "nuevo",
-          });
-        }, 1000);
+        Alert.alert('Éxito', 'Datos de dieta guardados correctamente');
+        navigation.replace('Rutina', { userId, nombre, objetivo });
       } else {
-        setShowError(true);
+        Alert.alert('Error', data.message || 'Error al guardar datos');
       }
     } catch (error) {
-      setShowError(true);
+      Alert.alert('Error', 'Hubo un problema al enviar los datos');
     } finally {
-      setIsSubmitting(false);
+      setCargando(false);
     }
   };
 
-  const InputWithIcon = ({
-    icon,
-    placeholder,
-    value,
-    onChangeText,
-    keyboardType = "default",
-    editable = true,
-    multiline = false,
-  }: {
-    icon: keyof typeof Ionicons.glyphMap;
-    placeholder: string;
-    value: string;
-    onChangeText: (text: string) => void;
-    keyboardType?: "default" | "numeric";
-    editable?: boolean;
-    multiline?: boolean;
-  }) => (
-    <View style={styles.inputGroup}>
-      <Ionicons name={icon} size={22} color={PRIMARY_COLOR} style={{ marginRight: 10 }} />
-      <TextInput
-        style={[
-          styles.input,
-          !editable && styles.inputDisabled,
-          multiline && { minHeight: 40, textAlignVertical: "top" },
-        ]}
-        placeholder={placeholder}
-        value={value}
-        onChangeText={onChangeText}
-        keyboardType={keyboardType}
-        editable={editable}
-        placeholderTextColor="#A0A0A0"
-        multiline={multiline}
-        blurOnSubmit={false}
-        returnKeyType={multiline ? "done" : "next"}
-      />
-    </View>
-  );
-
-  // Selector interactivo de días (círculos)
-  const renderDiasSelector = () => (
-    <View style={styles.diasCirculosContainer}>
-      {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-        <TouchableOpacity
-          key={num}
-          style={[
-            styles.diaCirculo,
-            dias === num.toString() && styles.diaCirculoSeleccionado,
-          ]}
-          onPress={() => setDias(num.toString())}
-        >
-          <Text
-            style={[
-              styles.diaCirculoTexto,
-              dias === num.toString() && styles.diaCirculoTextoSeleccionado,
-            ]}
-          >
-            {num}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-
   return (
-    <>
-      <CustomToast
-        message="¡Rutina generada con éxito!"
-        visible={showSuccess}
-        onHide={() => setShowSuccess(false)}
-        type="success"
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.titulo}>Tu información corporal y dieta</Text>
+      <ProgressStepper currentStep="Dieta" />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Peso (kg)"
+        keyboardType="numeric"
+        value={peso}
+        onChangeText={setPeso}
       />
-      <CustomToast
-        message="Error: verifica tus datos"
-        visible={showError}
-        onHide={() => setShowError(false)}
-        type="error"
+      <TextInput
+        style={styles.input}
+        placeholder="Altura (cm)"
+        keyboardType="numeric"
+        value={altura}
+        onChangeText={setAltura}
       />
-      <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: BG_COLOR }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : height * 0.05}
-      >
-        <ScrollView
-          contentContainerStyle={styles.container}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Text style={styles.appName}>MyFitGuide</Text>
-          <ProgressStepper currentStep="Rutina" />
-          <Text style={styles.subtitle}>Diseñemos tu rutina ideal</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Objetivo (ej. bajar grasa, ganar masa)"
+        value={objetivo}
+        onChangeText={setObjetivo}
+      />
 
-          <InputWithIcon
-            icon="person-outline"
-            placeholder="Nombre"
-            value={nombre}
-            onChangeText={() => {}}
-            editable={false}
-          />
-          <InputWithIcon
-            icon="calendar-outline"
-            placeholder="Edad"
-            value={edad}
-            onChangeText={handleEdadChange}
-            keyboardType="numeric"
-          />
-          <InputWithIcon
-            icon="flag-outline"
-            placeholder="Objetivo"
-            value={objetivo}
-            onChangeText={() => {}}
-            editable={false}
-          />
-
-          <Text style={styles.label}>¿Dónde prefieres entrenar?</Text>
-          <View style={styles.preferenciaContainer}>
-            {opcionesPreferencia.map((item) => (
-              <TouchableOpacity
-                key={item}
-                style={[
-                  styles.opcion,
-                  preferenciaSeleccionada === item && styles.opcionSeleccionada,
-                ]}
-                onPress={() => setPreferenciaSeleccionada(item)}
-              >
-                <Text
-                  style={[
-                    styles.opcionTexto,
-                    preferenciaSeleccionada === item && styles.opcionTextoActivo,
-                  ]}
-                >
-                  {item.toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text style={styles.label}>¿Cuántos días quieres entrenar?</Text>
-          {renderDiasSelector()}
-
-          <InputWithIcon
-            icon="medkit-outline"
-            placeholder="¿Tienes lesiones? (opcional)"
-            value={lesiones}
-            onChangeText={setLesiones}
-            multiline={true}
-          />
-
+      <Text style={styles.subtitulo}>Género</Text>
+      <View style={styles.sexoContainer}>
+        {[
+          { value: 'masculino', label: 'Masculino' },
+          { value: 'femenino', label: 'Femenino' },
+        ].map(({ value, label }) => (
           <TouchableOpacity
-            style={[styles.boton, isSubmitting && { backgroundColor: "#94d3a2" }]}
-            onPress={generarRutina}
-            disabled={isSubmitting}
+            key={value}
+            style={[
+              styles.opcionSexo,
+              genero === value && styles.opcionSeleccionada,
+            ]}
+            onPress={() => setGenero(value as 'masculino' | 'femenino')}
           >
-            <Text style={styles.botonTexto}>
-              {isSubmitting ? "Generando..." : "Generar Rutina"}
+            <Text
+              style={[
+                styles.opcionTexto,
+                genero === value && styles.opcionTextoActivo,
+              ]}
+            >
+              {label}
             </Text>
           </TouchableOpacity>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </>
+        ))}
+      </View>
+
+      <TextInput
+        style={styles.input}
+        placeholder="Presupuesto mensual (ej. 2500)"
+        keyboardType="numeric"
+        value={presupuesto}
+        onChangeText={setPresupuesto}
+      />
+
+      <Text style={styles.subtitulo}>Alergias alimenticias</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+        <TextInput
+          style={[styles.input, { flex: 1, marginBottom: 0 }]}
+          placeholder="Añadir alergia (ej. gluten)"
+          value={alergiaInput}
+          onChangeText={setAlergiaInput}
+        />
+        <TouchableOpacity onPress={handleAddAlergia} style={styles.agregarBtn}>
+          <Text style={{ color: '#fff', fontWeight: 'bold' }}>+</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.alergiasList}>
+        {alergias.map((a, idx) => (
+          <TouchableOpacity
+            key={idx}
+            style={styles.alergiaChip}
+            onPress={() => handleRemoveAlergia(idx)}
+          >
+            <Text style={{ color: '#fff' }}>{a} ✕</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <TouchableOpacity
+        style={[styles.boton, cargando && { backgroundColor: '#94d3a2' }]}
+        onPress={handleSiguiente}
+        disabled={cargando}
+      >
+        <Text style={styles.botonTexto}>
+          {cargando ? 'Enviando...' : 'Siguiente'}
+        </Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    padding: width * 0.05,
-    paddingBottom: 40,
+    flexGrow: 1,
+    padding: 20,
+    backgroundColor: '#f0fdf4',
   },
-  appName: {
-    textAlign: "center",
-    fontSize: width * 0.08,
-    fontWeight: "bold",
-    color: PRIMARY_COLOR,
-    marginBottom: 12,
-    marginTop: 10,
+  titulo: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#10b981',
   },
-  subtitle: {
-    fontSize: width * 0.045,
-    color: "#6B7280",
-    textAlign: "center",
-    marginBottom: 22,
-  },
-  label: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: TEXT_COLOR,
-    marginBottom: 8,
-    marginTop: 10,
-  },
-  inputGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#d1d5db",
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    marginBottom: 16,
+  subtitulo: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 20,
+    marginBottom: 10,
+    color: '#374151',
   },
   input: {
-    flex: 1,
+    backgroundColor: '#fff',
+    padding: 14,
+    marginBottom: 15,
+    borderRadius: 10,
     fontSize: 16,
-    color: TEXT_COLOR,
-    paddingVertical: 12,
+    borderColor: '#d1d5db',
+    borderWidth: 1,
   },
-  inputDisabled: {
-    color: "#6b7280",
+  sexoContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5,
   },
-  preferenciaContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 22,
-  },
-  opcion: {
+  opcionSexo: {
     flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 13,
-    backgroundColor: "#E5E7EB",
+    marginHorizontal: 4,
+    paddingVertical: 10,
+    backgroundColor: '#e5e7eb',
     borderRadius: 8,
-    alignItems: "center",
+    alignItems: 'center',
   },
   opcionSeleccionada: {
-    backgroundColor: PRIMARY_COLOR,
+    backgroundColor: '#10b981',
   },
   opcionTexto: {
-    fontWeight: "600",
-    color: TEXT_COLOR,
+    fontWeight: '600',
+    color: '#374151',
   },
   opcionTextoActivo: {
-    color: "#FFFFFF",
+    color: '#fff',
   },
-  diasCirculosContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 18,
-    marginTop: 8,
-    gap: 7,
+  alergiasList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 8,
   },
-  diaCirculo: {
-    width: 40,
-    height: 40,
+  alergiaChip: {
+    backgroundColor: '#10b981',
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginRight: 8,
+    marginBottom: 5,
+  },
+  agregarBtn: {
+    backgroundColor: '#10b981',
+    marginLeft: 6,
     borderRadius: 20,
-    borderWidth: 2,
-    borderColor: PRIMARY_COLOR,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    marginHorizontal: 4,
-    elevation: 2,
-  },
-  diaCirculoSeleccionado: {
-    backgroundColor: PRIMARY_COLOR,
-    borderColor: "#009966",
-  },
-  diaCirculoTexto: {
-    fontWeight: "700",
-    color: PRIMARY_COLOR,
-    fontSize: 18,
-  },
-  diaCirculoTextoSeleccionado: {
-    color: "#fff",
+    width: 34,
+    height: 34,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   boton: {
-    backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 15,
+    backgroundColor: '#10b981',
+    paddingVertical: 14,
     borderRadius: 10,
-    alignItems: "center",
-    marginTop: 10,
-    marginBottom: 30,
+    alignItems: 'center',
+    marginTop: 30,
   },
   botonTexto: {
-    color: "#FFFFFF",
+    color: '#fff',
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: 'bold',
   },
 });
 
-export default RutinaScreen;
+export default DietaScreen;

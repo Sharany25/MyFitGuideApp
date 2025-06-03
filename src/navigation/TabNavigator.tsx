@@ -1,43 +1,22 @@
-// src/navigation/TabNavigator.tsx
-
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, RouteProp } from '@react-navigation/native';
+import { RootStackParamList } from '../navigation/StackNavigator';
 
-// Importa tus screens
 import PerfilScreen from '../screens/PerfilScreen';
 import DietaScreen from '../screens/DietaScreen';
 import RutinaScreen from '../screens/RutinaScreen';
 import HomeScreen from '../screens/HomeScreen';
 
-const Tab = createBottomTabNavigator();
-
-const PerfilTabWrapper = () => {
-  // Los params llegan desde el Stack principal (Tabs)
-  // @ts-ignore
-  const { params } = useRoute<any>();
-  return <PerfilScreen {...params} />;
+type TabParamList = {
+  Perfil: { userId?: string };
+  Dieta: { userId?: string };
+  Rutina: { userId?: string };
+  Home: RootStackParamList['Home']; // Asumiendo que HomeScreen toma los mismos props que en RootStackParamList
 };
 
-const DietaTabWrapper = () => {
-  // @ts-ignore
-  const { params } = useRoute<any>();
-  // Si quieres pasarle props iniciales (no es obligatorio)
-  return <DietaScreen {...params} />;
-};
-
-const RutinaTabWrapper = () => {
-  // @ts-ignore
-  const { params } = useRoute<any>();
-  return <RutinaScreen {...params} />;
-};
-
-const HomeTabWrapper = () => {
-  // @ts-ignore
-  const { params } = useRoute<any>();
-  return <HomeScreen {...params} />;
-};
+const Tab = createBottomTabNavigator<TabParamList>();
 
 const TabNavigator: React.FC = () => {
   return (
@@ -75,6 +54,26 @@ const TabNavigator: React.FC = () => {
       <Tab.Screen name="Rutina" component={RutinaTabWrapper} />
     </Tab.Navigator>
   );
+};
+
+const PerfilTabWrapper: React.FC = () => {
+  const { params } = useRoute<RouteProp<TabParamList, 'Perfil'>>();
+  return <PerfilScreen userId={params?.userId} />;
+};
+
+const DietaTabWrapper: React.FC = () => {
+  const { params } = useRoute<RouteProp<TabParamList, 'Dieta'>>();
+  return <DietaScreen userId={params?.userId} />;
+};
+
+const RutinaTabWrapper: React.FC = () => {
+  const { params } = useRoute<RouteProp<TabParamList, 'Rutina'>>();
+  return <RutinaScreen userId={params?.userId} />;
+};
+
+const HomeTabWrapper: React.FC = () => {
+  const { params } = useRoute<RouteProp<TabParamList, 'Home'>>();
+  return <HomeScreen {...params} />;
 };
 
 export default TabNavigator;

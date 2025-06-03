@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ScrollView,
   View,
@@ -9,6 +9,7 @@ import {
   Alert,
   Dimensions,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -24,21 +25,81 @@ type NavigationProp = StackNavigationProp<RootStackParamList, 'Tabs'>;
 
 const HomeScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [perfilCompleto, setPerfilCompleto] = useState<any>({});
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp<RootStackParamList, 'Tabs'>>();
 
-  // Usa parámetros desde Tabs
-  const { nombre = 'Usuario', edad = '', objetivo = '', genero = '', altura = '', peso = '', tipoRegistro = 'login', userId = 0 } = route.params || {};
+  // Preferimos el userId desde route.params o desde el usuario almacenado
+  const [userId, setUserId] = useState<string>("");
+
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      let id = route.params?.userId;
+      if (!id) {
+        const stored = await AsyncStorage.getItem('user');
+        if (stored) {
+          const user = JSON.parse(stored);
+          id = user._id || user.idUsuario || user.id;
+        }
+      }
+      if (!id) {
+        setLoading(false);
+        return;
+      }
+      setUserId(id);
+
+      try {
+        const res = await fetch(`http://192.168.1.5:3000/MyFitGuide/usuario-completo/${id}`);
+        if (res.ok) {
+          setPerfilCompleto(await res.json());
+        }
+      } catch (e) {}
+      setLoading(false);
+    };
+
+    loadData();
+  }, [route.params?.userId]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1200);
+    // Vuelve a cargar info
+    let id = route.params?.userId;
+    if (!id) {
+      const stored = await AsyncStorage.getItem('user');
+      if (stored) {
+        const user = JSON.parse(stored);
+        id = user._id || user.idUsuario || user.id;
+      }
+    }
+    if (id) {
+      try {
+        const res = await fetch(`http://192.168.1.5:3000/MyFitGuide/usuario-completo/${id}`);
+        if (res.ok) {
+          setPerfilCompleto(await res.json());
+        }
+      } catch (e) {}
+    }
+    setTimeout(() => setRefreshing(false), 1000);
   };
 
   const cerrarSesion = async () => {
     await AsyncStorage.removeItem('user');
     navigation.replace('Login');
   };
+
+  const v = (valor: any) => (valor !== undefined && valor !== null && valor !== '' ? valor : 'N/D');
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { flex: 1, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={PRIMARY_COLOR} />
+      </View>
+    );
+  }
+
+  const { usuario = {}, dieta = {}, rutina = {} } = perfilCompleto;
 
   return (
     <ScrollView
@@ -49,7 +110,7 @@ const HomeScreen: React.FC = () => {
       <View style={styles.headerBox}>
         <Ionicons name="person-circle-outline" size={60} color={PRIMARY_COLOR} />
         <View>
-          <Text style={styles.welcome}>¡Hola, {nombre}!</Text>
+          <Text style={styles.welcome}>¡Hola, {v(usuario?.nombre) || 'Usuario'}!</Text>
           <Text style={styles.subtitle}>Tu bienestar es nuestra meta</Text>
         </View>
       </View>
@@ -78,7 +139,7 @@ const HomeScreen: React.FC = () => {
       <View style={styles.cardGrid}>
         <TouchableOpacity
           style={styles.card}
-          onPress={() => navigation.navigate('Dieta', { userId, nombre })}
+          onPress={() => navigation.navigate('Dieta', { userId, nombre: v(usuario?.nombre) })}
         >
           <Ionicons name="fast-food-outline" size={32} color={PRIMARY_COLOR} style={{ marginBottom: 6 }} />
           <Text style={styles.cardTitle}>Comidas de la semana</Text>
@@ -87,7 +148,7 @@ const HomeScreen: React.FC = () => {
         <TouchableOpacity
           style={styles.card}
           onPress={() =>
-            navigation.navigate('Rutina', { userId, nombre, objetivo })
+            navigation.navigate('Rutina', { userId, nombre: v(usuario?.nombre), objetivo: v(dieta?.objetivo) })
           }
         >
           <Ionicons name="barbell-outline" size={32} color={PRIMARY_COLOR} style={{ marginBottom: 6 }} />
@@ -98,27 +159,18 @@ const HomeScreen: React.FC = () => {
 
       <View style={styles.profileInfoBox}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-          <InfoLabel label="Edad" value={edad} />
-          <InfoLabel label="Género" value={genero} />
-          <InfoLabel label="Altura (cm)" value={altura} />
-          <InfoLabel label="Peso (kg)" value={peso} />
-          <InfoLabel label="Objetivo" value={objetivo} />
+          <InfoLabel label="Edad" value={v(rutina?.edad)} />
+          <InfoLabel label="Género" value={v(dieta?.genero)} />
+          <InfoLabel label="Altura (cm)" value={v(dieta?.altura)} />
+          <InfoLabel label="Peso (kg)" value={v(dieta?.peso)} />
+          <InfoLabel label="Objetivo" value={v(dieta?.objetivo)} />
         </View>
       </View>
 
       <TouchableOpacity
         style={styles.perfilButton}
         onPress={() => {
-          navigation.navigate('Perfil', {
-            userId,
-            nombre,
-            edad,
-            objetivo,
-            genero,
-            altura,
-            peso,
-            tipoRegistro,
-          });
+          navigation.navigate('Perfil', { userId });
         }}
       >
         <Ionicons name="person" size={18} color="#fff" style={{ marginRight: 6 }} />
@@ -133,7 +185,6 @@ const HomeScreen: React.FC = () => {
   );
 };
 
-// Componente para cada dato personal en la tarjeta
 const InfoLabel = ({ label, value }: { label: string; value: string | number }) => (
   <View style={styles.infoBox}>
     <Text style={styles.infoLabel}>{label}</Text>
@@ -143,7 +194,6 @@ const InfoLabel = ({ label, value }: { label: string; value: string | number }) 
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: '#F9FAFB' },
-
   headerBox: {
     flexDirection: 'row',
     alignItems: 'center',
