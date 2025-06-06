@@ -9,6 +9,7 @@ import DietaScreen from '../screens/DietaScreen';
 import RutinaScreen from '../screens/RutinaScreen';
 import TabNavigator from './TabNavigator';
 import PerfilScreen from '../screens/PerfilScreen';
+import MapScreen from '../screens/MapScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -109,6 +110,7 @@ const StackNavigator: React.FC = () => {
           component={PerfilScreen}
           options={{ headerShown: false }}
         />
+
       </Stack.Navigator>
     </NavigationContainer>
   );

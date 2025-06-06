@@ -23,14 +23,13 @@
 
 // export default App;
 
-// App.tsx
+
 import React from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import StackNavigator from "./src/navigation/StackNavigator";
 import { StyleSheet, LogBox } from "react-native";
 
-// Ignorar el warning específico de useInsertionEffect (solo en desarrollo)
 LogBox.ignoreLogs(["useInsertionEffect must not schedule updates"]);
 
 const App: React.FC = () => {

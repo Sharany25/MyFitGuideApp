@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   ScrollView,
   View,
@@ -6,7 +6,6 @@ import {
   StyleSheet,
   RefreshControl,
   TouchableOpacity,
-  Alert,
   Dimensions,
   TextInput,
   ActivityIndicator,
@@ -17,6 +16,7 @@ import type { StackNavigationProp } from '@react-navigation/stack';
 import type { RootStackParamList } from '../navigation/StackNavigator';
 import type { RouteProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { useHomePerfil } from '../hooks/homePerfil';
 
 const { width } = Dimensions.get('window');
 const PRIMARY_COLOR = '#00C27F';
@@ -24,65 +24,16 @@ const PRIMARY_COLOR = '#00C27F';
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Tabs'>;
 
 const HomeScreen: React.FC = () => {
-  const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [perfilCompleto, setPerfilCompleto] = useState<any>({});
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp<RootStackParamList, 'Tabs'>>();
 
-  // Preferimos el userId desde route.params o desde el usuario almacenado
-  const [userId, setUserId] = useState<string>("");
-
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      let id = route.params?.userId;
-      if (!id) {
-        const stored = await AsyncStorage.getItem('user');
-        if (stored) {
-          const user = JSON.parse(stored);
-          id = user._id || user.idUsuario || user.id;
-        }
-      }
-      if (!id) {
-        setLoading(false);
-        return;
-      }
-      setUserId(id);
-
-      try {
-        const res = await fetch(`http://192.168.1.5:3000/MyFitGuide/usuario-completo/${id}`);
-        if (res.ok) {
-          setPerfilCompleto(await res.json());
-        }
-      } catch (e) {}
-      setLoading(false);
-    };
-
-    loadData();
-  }, [route.params?.userId]);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    // Vuelve a cargar info
-    let id = route.params?.userId;
-    if (!id) {
-      const stored = await AsyncStorage.getItem('user');
-      if (stored) {
-        const user = JSON.parse(stored);
-        id = user._id || user.idUsuario || user.id;
-      }
-    }
-    if (id) {
-      try {
-        const res = await fetch(`http://192.168.1.5:3000/MyFitGuide/usuario-completo/${id}`);
-        if (res.ok) {
-          setPerfilCompleto(await res.json());
-        }
-      } catch (e) {}
-    }
-    setTimeout(() => setRefreshing(false), 1000);
-  };
+  const {
+    perfilCompleto,
+    loading,
+    refreshing,
+    onRefresh,
+    userId,
+  } = useHomePerfil(route.params?.userId);
 
   const cerrarSesion = async () => {
     await AsyncStorage.removeItem('user');

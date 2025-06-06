@@ -19,6 +19,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from "../navigation/StackNavigator";
 import SuccessToast from "../components/SuccessToast";
 import ErrorToast from "../components/ErrorToast";
+import { useLogin } from "../hooks/useLogin";
 
 const logo = require("../../assets/Logo.png");
 const { width, height } = Dimensions.get("window");
@@ -46,65 +47,55 @@ interface LoginScreenProps {
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>();
-  const [loading, setLoading] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
 
+  const { login, loading, error } = useLogin();
+
   const onSubmit = async (data: FormData) => {
     if (!data.email || !data.password) return;
 
-    setLoading(true);
-    try {
-      const response = await fetch("http://192.168.1.5:3000/MyFitGuide/Usuarios/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          correoElectronico: data.email,
-          contraseña: data.password,
-        }),
-      });
+    const loginData = {
+      correoElectronico: data.email,
+      contraseña: data.password,
+    };
 
-      const result = await response.json();
+    const result = await login(loginData);
 
-      if (response.ok && result) {
-        const fechaNacimiento = new Date(result.fechaNacimiento);
-        const hoy = new Date();
-        let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
-        const m = hoy.getMonth() - fechaNacimiento.getMonth();
-        if (m < 0 || (m === 0 && hoy.getDate() < fechaNacimiento.getDate())) edad--;
+    if (result) {
+      // Calcula la edad
+      const fechaNacimiento = new Date(result.fechaNacimiento);
+      const hoy = new Date();
+      let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
+      const m = hoy.getMonth() - fechaNacimiento.getMonth();
+      if (m < 0 || (m === 0 && hoy.getDate() < fechaNacimiento.getDate())) edad--;
 
-        // MODIFICACIÓN: userId obtiene el id real del usuario desde la API (_id o idUsuario)
-        const userData = {
-          userId: result._id || result.idUsuario || "", // ← AQUÍ EL CAMBIO
-          nombre: result.nombre || "",
-          edad: edad.toString(),
-          objetivo: result.objetivo || "",
-          genero: result.genero || "",
-          altura: result.altura?.toString() || "",
-          peso: result.peso?.toString() || "",
-        };
+      const userData = {
+        userId: result._id || result.idUsuario || "",
+        nombre: result.nombre || "",
+        edad: edad.toString(),
+        objetivo: result.objetivo || "",
+        genero: result.genero || "",
+        altura: result.altura?.toString() || "",
+        peso: result.peso?.toString() || "",
+      };
 
-        await AsyncStorage.setItem("user", JSON.stringify(result));
-        setShowSuccess(true);
-        setTimeout(() => {
-          onLoginSuccess(false, userData);
-        }, 2000);
-      } else {
-        setShowError(true);
-      }
-    } catch (error) {
-      console.error("Error en el login:", error);
+      await AsyncStorage.setItem("user", JSON.stringify(result));
+      setShowSuccess(true);
+      setTimeout(() => {
+        setShowSuccess(false);
+        onLoginSuccess(false, userData);
+      }, 2000);
+    } else {
       setShowError(true);
-    } finally {
-      setLoading(false);
     }
   };
 
   return (
     <>
       <SuccessToast message="¡Login exitoso!" visible={showSuccess} onHide={() => setShowSuccess(false)} />
-      <ErrorToast message="Correo o contraseña incorrectos" visible={showError} onHide={() => setShowError(false)} />
+      <ErrorToast message={error || "Correo o contraseña incorrectos"} visible={showError} onHide={() => setShowError(false)} />
 
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: "#f0f0f0" }}

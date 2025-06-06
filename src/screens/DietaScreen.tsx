@@ -12,6 +12,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/StackNavigator';
 import ProgressStepper from '../components/ProgressStepper';
+import { useDieta } from '../hooks/useDieta';
 
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Dieta'>;
 
@@ -27,7 +28,8 @@ const DietaScreen: React.FC = () => {
   const [presupuesto, setPresupuesto] = useState('');
   const [alergiaInput, setAlergiaInput] = useState('');
   const [alergias, setAlergias] = useState<string[]>([]);
-  const [cargando, setCargando] = useState(false);
+
+  const { enviarDieta, loading, error, success } = useDieta();
 
   const handleAddAlergia = () => {
     if (alergiaInput.trim()) {
@@ -55,35 +57,21 @@ const DietaScreen: React.FC = () => {
       return;
     }
 
-    setCargando(true);
+    const result = await enviarDieta({
+      userId,
+      genero: genero as 'masculino' | 'femenino',
+      altura: alturaNum,
+      peso: pesoNum,
+      objetivo,
+      alergias,
+      presupuesto: presupuestoNum,
+    });
 
-    try {
-      const response = await fetch('http://192.168.1.5:3000/MyFitGuide/prueba-dieta', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: userId,
-          genero: genero,
-          altura: alturaNum,
-          peso: pesoNum,
-          objetivo,
-          alergias,
-          presupuesto: presupuestoNum,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        Alert.alert('Éxito', 'Datos de dieta guardados correctamente');
-        navigation.replace('Rutina', { userId, nombre, objetivo });
-      } else {
-        Alert.alert('Error', data.message || 'Error al guardar datos');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Hubo un problema al enviar los datos');
-    } finally {
-      setCargando(false);
+    if (result) {
+      Alert.alert('Éxito', 'Datos de dieta guardados correctamente');
+      navigation.replace('Rutina', { userId, nombre, objetivo });
+    } else if (error) {
+      Alert.alert('Error', error);
     }
   };
 
@@ -172,12 +160,12 @@ const DietaScreen: React.FC = () => {
       </View>
 
       <TouchableOpacity
-        style={[styles.boton, cargando && { backgroundColor: '#94d3a2' }]}
+        style={[styles.boton, loading && { backgroundColor: '#94d3a2' }]}
         onPress={handleSiguiente}
-        disabled={cargando}
+        disabled={loading}
       >
         <Text style={styles.botonTexto}>
-          {cargando ? 'Enviando...' : 'Siguiente'}
+          {loading ? 'Enviando...' : 'Siguiente'}
         </Text>
       </TouchableOpacity>
     </ScrollView>

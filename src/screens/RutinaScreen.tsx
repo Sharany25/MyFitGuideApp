@@ -16,6 +16,7 @@ import ProgressStepper from "../components/ProgressStepper";
 import { Ionicons } from "@expo/vector-icons";
 import CustomToast from "../components/CustomToast";
 import { TextInput } from "react-native";
+import { useRutina } from "../hooks/useRutina";
 
 const { width, height } = Dimensions.get("window");
 
@@ -31,7 +32,6 @@ const RutinaScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation<NavigationProp>();
 
-  // userId, nombre, objetivo vienen por params (userId es string)
   const { userId, nombre, objetivo } = route.params as {
     userId: string;
     nombre: string;
@@ -42,16 +42,20 @@ const RutinaScreen: React.FC = () => {
   const [preferenciaSeleccionada, setPreferenciaSeleccionada] = useState("");
   const [dias, setDias] = useState("");
   const [lesiones, setLesiones] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Toast states
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [showError, setShowError] = useState(false);
+  const {
+    generarRutina,
+    loading: isSubmitting,
+    success: showSuccess,
+    error: showError,
+    setSuccess: setShowSuccess,
+    setError: setShowError,
+  } = useRutina();
 
   // Solo números en edad
   const handleEdadChange = (val: string) => setEdad(val.replace(/[^0-9]/g, ""));
 
-  const generarRutina = async () => {
+  const onGenerarRutina = async () => {
     if (!userId || !nombre || !edad || !objetivo || !preferenciaSeleccionada || !dias) {
       setShowError(true);
       return;
@@ -68,36 +72,22 @@ const RutinaScreen: React.FC = () => {
       return;
     }
     if (isSubmitting) return;
-    setIsSubmitting(true);
 
-    try {
-      const response = await fetch("http://192.168.1.5:3000/MyFitGuide/prueba-rutina", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: userId,
-          nombre,
-          edad: edadNum,
-          objetivo,
-          preferencias: [preferenciaSeleccionada],
-          dias: diasNum,
-          lesiones,
-        }),
-      });
+    const ok = await generarRutina({
+      userId,
+      nombre,
+      edad: edadNum,
+      objetivo,
+      preferencias: [preferenciaSeleccionada],
+      dias: diasNum,
+      lesiones,
+    });
 
-      if (response.ok) {
-        setShowSuccess(true);
-        setTimeout(() => {
-          // Navega SOLO con el userId a Tabs
-          navigation.replace("Tabs", { userId });
-        }, 1200);
-      } else {
-        setShowError(true);
-      }
-    } catch (error) {
-      setShowError(true);
-    } finally {
-      setIsSubmitting(false);
+    if (ok) {
+      setTimeout(() => {
+        setShowSuccess(false);
+        navigation.replace("Tabs", { userId });
+      }, 1200);
     }
   };
 
@@ -248,7 +238,7 @@ const RutinaScreen: React.FC = () => {
 
           <TouchableOpacity
             style={[styles.boton, isSubmitting && { backgroundColor: "#94d3a2" }]}
-            onPress={generarRutina}
+            onPress={onGenerarRutina}
             disabled={isSubmitting}
           >
             <Text style={styles.botonTexto}>

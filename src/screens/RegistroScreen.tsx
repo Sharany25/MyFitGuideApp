@@ -23,6 +23,7 @@ import ProgressStepper from '../components/ProgressStepper';
 import UbicacionAlerta from '../components/UbicacionAlerta';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import CustomToast from '../components/CustomToast';
+import { useRegistro } from '../hooks/useRegistro';
 
 const { width } = Dimensions.get('window');
 const PRIMARY_COLOR = '#FFD700'; // Amarillo
@@ -52,9 +53,15 @@ const RegistroScreen: React.FC = () => {
   const [loadingLocation, setLoadingLocation] = useState(false);
   const [showUbicacionModal, setShowUbicacionModal] = useState(false);
 
-  // Toasts
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [showError, setShowError] = useState(false);
+  // Toasts ahora vienen del hook
+  const {
+    registrar,
+    loading,
+    success: showSuccess,
+    error: showError,
+    setSuccess: setShowSuccess,
+    setError: setShowError,
+  } = useRegistro();
 
   // Función para solicitar ubicación al usuario
   const solicitarUbicacion = async () => {
@@ -95,37 +102,22 @@ const RegistroScreen: React.FC = () => {
       return;
     }
 
-    try {
-      const response = await fetch('http://192.168.1.5:3000/MyFitGuide/Usuarios', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          nombre,
-          correoElectronico: correo,
-          contraseña: contrasena,
-          fechaNacimiento: fechaISO,
-          ubicacion,
-        }),
-      });
+    const userId = await registrar({
+      nombre,
+      correoElectronico: correo,
+      contraseña: contrasena,
+      fechaNacimiento: fechaISO,
+      ubicacion,
+    });
 
-      if (!response.ok) {
-        setShowError(true);
-        return;
-      }
-
-      const data = await response.json();
-      const userId = data._id || data.idUsuario || data.id || "";
-
-      setShowSuccess(true);
-
+    if (userId) {
       setTimeout(() => {
+        setShowSuccess(false);
         navigation.replace('Dieta', {
           nombre,
           userId,
         });
       }, 1500);
-    } catch (error) {
-      setShowError(true);
     }
   };
 
@@ -249,6 +241,7 @@ const RegistroScreen: React.FC = () => {
               disabled={!aceptoTerminos}
               style={styles.registerButton}
               contentStyle={{ paddingVertical: 10 }}
+              loading={loading}
             >
               Registrarse
             </Button>

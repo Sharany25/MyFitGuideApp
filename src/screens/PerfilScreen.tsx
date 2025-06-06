@@ -1,177 +1,340 @@
-import React, { useEffect, useState } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
-  View,
   Text,
   StyleSheet,
   ScrollView,
   Dimensions,
   ActivityIndicator,
+  Platform,
+  View,
+  TouchableOpacity,
+  Animated,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/StackNavigator';
+import { useUserPerfil } from '../hooks/usePerfil';
+import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 
 const { width } = Dimensions.get('window');
 const PRIMARY_COLOR = '#00C27F';
-const TEXT_COLOR = '#1F2937';
+const BG_COLOR = '#F3F8F6';
+const SHADOW_COLOR = '#37dbbc';
+const TEXT_COLOR = '#232946';
+const LABEL_COLOR = '#7a8797';
 
 type PerfilRouteProp = RouteProp<RootStackParamList, 'Perfil'>;
 
 const PerfilScreen: React.FC = () => {
   const route = useRoute<PerfilRouteProp>();
-  const [loading, setLoading] = useState(true);
+  const userId = route.params?.userId;
+  const { perfilCompleto, loading, error } = useUserPerfil(userId);
 
-  // Estado para todos los datos completos
-  const [perfilCompleto, setPerfilCompleto] = useState<{
-    usuario?: any;
-    dieta?: any;
-    rutina?: any;
-  }>({});
+  const usuario = perfilCompleto?.usuario || null;
+  const dieta = perfilCompleto?.dieta || null;
+  const rutina = perfilCompleto?.rutina || null;
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    const fetchPerfilCompleto = async () => {
-      setLoading(true);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 650,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
-      try {
-        let userId: string | undefined = route.params?.userId;
-        if (!userId) {
-          // Busca en AsyncStorage si no viene por params
-          const stored = await AsyncStorage.getItem('user');
-          if (stored) {
-            const user = JSON.parse(stored);
-            userId = user._id || user.idUsuario || user.id;
-          }
-        }
-        if (!userId) {
-          setLoading(false);
-          return;
-        }
-
-        // Llama a tu endpoint unificado
-        const res = await fetch(`http://192.168.1.5:3000/MyFitGuide/usuario-completo/${userId}`);
-        if (res.ok) {
-          const json = await res.json();
-          setPerfilCompleto(json);
-        }
-      } catch (err) {
-        // Si hay error, deja datos vacíos
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPerfilCompleto();
-  }, [route.params?.userId]);
+  const v = (valor: any) => (valor !== undefined && valor !== null && valor !== '' ? valor : 'N/D');
 
   if (loading) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.loadingBox]}>
         <ActivityIndicator size="large" color={PRIMARY_COLOR} />
       </View>
     );
   }
 
-  const { usuario, dieta, rutina } = perfilCompleto || {};
-
-  // Utilidad para mostrar valores o "N/D"
-  const v = (valor: any) => (valor !== undefined && valor !== null && valor !== '' ? valor : 'N/D');
+  if (error) {
+    return (
+      <View style={[styles.loadingBox]}>
+        <Text style={{ color: 'red', fontSize: 16 }}>{error}</Text>
+      </View>
+    );
+  }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>Mi Perfil Completo</Text>
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Datos Personales</Text>
-        <Text style={styles.label}>Nombre:</Text>
-        <Text style={styles.value}>{v(usuario?.nombre)}</Text>
-        <Text style={styles.label}>Correo:</Text>
-        <Text style={styles.value}>{v(usuario?.correoElectronico)}</Text>
-        <Text style={styles.label}>Fecha Nacimiento:</Text>
-        <Text style={styles.value}>
-          {usuario?.fechaNacimiento
-            ? new Date(usuario.fechaNacimiento).toLocaleDateString()
-            : 'N/D'}
+    <ScrollView
+      style={styles.bg}
+      contentContainerStyle={styles.scrollContent}
+      showsVerticalScrollIndicator={false}
+      keyboardShouldPersistTaps="handled"
+    >
+      <Animated.View style={[styles.headerBox, { opacity: fadeAnim }]}>
+        <View style={styles.iconShadow}>
+          <Ionicons
+            name="person-circle"
+            size={width * 0.19}
+            color={PRIMARY_COLOR}
+          />
+        </View>
+        <Text style={styles.header}>
+          {usuario?.nombre ? usuario.nombre : 'Mi Perfil'}
         </Text>
-        <Text style={styles.label}>Ubicación:</Text>
-        <Text style={styles.value}>{v(usuario?.ubicacion)}</Text>
-      </View>
+        <Text style={styles.subHeader}>Consulta toda tu información</Text>
+        {/* <TouchableOpacity style={styles.editBtn} activeOpacity={0.7}>
+          <Ionicons name="create-outline" size={17} color="#fff" />
+          <Text style={styles.editBtnText}>Editar</Text>
+        </TouchableOpacity> */}
+      </Animated.View>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Datos de Dieta</Text>
-        <Text style={styles.label}>Género:</Text>
-        <Text style={styles.value}>{v(dieta?.genero)}</Text>
-        <Text style={styles.label}>Altura (cm):</Text>
-        <Text style={styles.value}>{v(dieta?.altura)}</Text>
-        <Text style={styles.label}>Peso (kg):</Text>
-        <Text style={styles.value}>{v(dieta?.peso)}</Text>
-        <Text style={styles.label}>Objetivo:</Text>
-        <Text style={styles.value}>{v(dieta?.objetivo)}</Text>
-        <Text style={styles.label}>Alergias:</Text>
-        <Text style={styles.value}>
-          {Array.isArray(dieta?.alergias) && dieta?.alergias.length > 0
-            ? dieta.alergias.join(', ')
-            : 'N/D'}
-        </Text>
-        <Text style={styles.label}>Presupuesto:</Text>
-        <Text style={styles.value}>{v(dieta?.presupuesto)}</Text>
-      </View>
+      {/* CARD DATOS PERSONALES */}
+      <BlurView intensity={26} tint="light" style={styles.cardBlur}>
+        <View style={styles.cardContent}>
+          <SectionHeader icon="person" color="#27b77e" title="Datos Personales" />
+          {usuario && Object.keys(usuario).length > 0 ? (
+            <>
+              <PerfilLabel label="Nombre" value={v(usuario?.nombre)} />
+              <PerfilLabel label="Correo" value={v(usuario?.correoElectronico)} />
+              <PerfilLabel
+                label="Fecha Nacimiento"
+                value={
+                  usuario?.fechaNacimiento
+                    ? new Date(usuario.fechaNacimiento).toLocaleDateString()
+                    : 'N/D'
+                }
+              />
+              <PerfilLabel label="Ubicación" value={v(usuario?.ubicacion)} />
+            </>
+          ) : (
+            <Text style={styles.emptyText}>Sin datos personales registrados.</Text>
+          )}
+        </View>
+      </BlurView>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Datos de Rutina</Text>
-        <Text style={styles.label}>Edad:</Text>
-        <Text style={styles.value}>{v(rutina?.edad)}</Text>
-        <Text style={styles.label}>Objetivo:</Text>
-        <Text style={styles.value}>{v(rutina?.objetivo)}</Text>
-        <Text style={styles.label}>Preferencias:</Text>
-        <Text style={styles.value}>
-          {Array.isArray(rutina?.preferencias) && rutina?.preferencias.length > 0
-            ? rutina.preferencias.join(', ')
-            : 'N/D'}
-        </Text>
-        <Text style={styles.label}>Días de Entrenamiento:</Text>
-        <Text style={styles.value}>{v(rutina?.dias)}</Text>
-        <Text style={styles.label}>Lesiones:</Text>
-        <Text style={styles.value}>{v(rutina?.lesiones)}</Text>
-      </View>
+      <View style={styles.cardSeparator} />
+
+      {/* CARD DIETA */}
+      <BlurView intensity={20} tint="light" style={styles.cardBlur}>
+        <View style={styles.cardContent}>
+          <SectionHeader icon="fast-food" color="#33d17a" title="Datos de Dieta" />
+          {dieta && Object.keys(dieta).length > 0 ? (
+            <>
+              <PerfilLabel label="Género" value={v(dieta?.genero)} />
+              <PerfilLabel label="Altura (cm)" value={v(dieta?.altura)} />
+              <PerfilLabel label="Peso (kg)" value={v(dieta?.peso)} />
+              <PerfilLabel label="Objetivo" value={v(dieta?.objetivo)} />
+              <PerfilLabel
+                label="Alergias"
+                value={
+                  Array.isArray(dieta?.alergias) && dieta?.alergias.length > 0
+                    ? dieta.alergias.join(', ')
+                    : 'N/D'
+                }
+              />
+              <PerfilLabel label="Presupuesto" value={v(dieta?.presupuesto)} />
+            </>
+          ) : (
+            <Text style={styles.emptyText}>Sin datos de dieta registrados.</Text>
+          )}
+        </View>
+      </BlurView>
+
+      <View style={styles.cardSeparator} />
+
+      {/* CARD RUTINA */}
+      <BlurView intensity={15} tint="light" style={styles.cardBlur}>
+        <View style={styles.cardContent}>
+          <SectionHeader icon="barbell" color="#4780f5" title="Datos de Rutina" />
+          {rutina && Object.keys(rutina).length > 0 ? (
+            <>
+              <PerfilLabel label="Edad" value={v(rutina?.edad)} />
+              <PerfilLabel label="Objetivo" value={v(rutina?.objetivo)} />
+              <PerfilLabel
+                label="Preferencias"
+                value={
+                  Array.isArray(rutina?.preferencias) && rutina?.preferencias.length > 0
+                    ? rutina.preferencias.join(', ')
+                    : 'N/D'
+                }
+              />
+              <PerfilLabel label="Días de Entrenamiento" value={v(rutina?.dias)} />
+              <PerfilLabel label="Lesiones" value={v(rutina?.lesiones)} />
+            </>
+          ) : (
+            <Text style={styles.emptyText}>Sin datos de rutina registrados.</Text>
+          )}
+        </View>
+      </BlurView>
+      <View style={{ height: 28 }} />
     </ScrollView>
   );
 };
 
+const SectionHeader = ({
+  icon,
+  title,
+  color,
+}: {
+  icon: any;
+  title: string;
+  color?: string;
+}) => (
+  <View
+    style={[
+      styles.sectionHeader,
+      { borderBottomColor: color || PRIMARY_COLOR, borderBottomWidth: 1.3 },
+    ]}
+  >
+    <Ionicons name={icon} size={21} color={color || PRIMARY_COLOR} style={styles.sectionIcon} />
+    <Text style={[styles.sectionTitle, { color: color || PRIMARY_COLOR }]}>{title}</Text>
+  </View>
+);
+
+const PerfilLabel = ({ label, value }: { label: string; value: string }) => (
+  <View style={styles.labelRow}>
+    <Text style={styles.label}>{label}:</Text>
+    <Text style={styles.value}>{value}</Text>
+  </View>
+);
+
 const styles = StyleSheet.create({
-  container: {
-    padding: 20,
-    backgroundColor: '#F9FAFB',
-    flexGrow: 1,
+  bg: {
+    flex: 1,
+    backgroundColor: BG_COLOR,
+  },
+  scrollContent: {
+    padding: 18,
+    paddingTop: Platform.OS === 'android' ? 48 : 64,
+    paddingBottom: 44,
+    backgroundColor: BG_COLOR,
+  },
+  loadingBox: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: BG_COLOR,
+  },
+  headerBox: {
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  iconShadow: {
+    borderRadius: 999,
+    backgroundColor: '#e1faef',
+    padding: 7,
+    elevation: 10,
+    marginBottom: 2,
   },
   header: {
-    fontSize: width * 0.07,
+    fontSize: width * 0.077,
     fontWeight: 'bold',
     color: PRIMARY_COLOR,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 1,
+    letterSpacing: 0.5,
   },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 20,
+  subHeader: {
+    fontSize: 16,
+    color: LABEL_COLOR,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 7,
+    marginTop: 3,
+    letterSpacing: 0.1,
+  },
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PRIMARY_COLOR,
+    paddingHorizontal: 18,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginTop: 9,
+    alignSelf: 'center',
     elevation: 2,
-    marginBottom: 18,
+  },
+  editBtnText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 15,
+    marginLeft: 5,
+    letterSpacing: 0.2,
+  },
+  cardBlur: {
+    borderRadius: 18,
+    marginBottom: 15,
+    overflow: 'hidden',
+    elevation: 9,
+    shadowColor: SHADOW_COLOR,
+    shadowOpacity: 0.11,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 5 },
+    borderWidth: 1,
+    borderColor: '#e1e9ef',
+  },
+  cardContent: {
+    paddingVertical: 17,
+    paddingHorizontal: 19,
+    backgroundColor: 'rgba(255,255,255,0.82)',
+  },
+  cardSeparator: {
+    height: 18,
+    width: '100%',
+    backgroundColor: 'transparent',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 13,
+    gap: 7,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 13,
+  },
+  sectionIcon: {
+    marginRight: 7,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 17.5,
     fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    marginBottom: 7,
-    marginTop: -10,
+    letterSpacing: 0.3,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 9,
+    marginTop: 1,
+    borderBottomColor: '#eef2f3',
+    borderBottomWidth: 1,
+    paddingBottom: 6,
+    gap: 2,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: TEXT_COLOR,
-    marginTop: 10,
+    fontSize: 15.5,
+    color: LABEL_COLOR,
+    fontWeight: '700',
+    width: '50%',
+    textAlign: 'left',
+    lineHeight: 20,
+    letterSpacing: 0.07,
   },
   value: {
     fontSize: 16,
-    color: '#374151',
+    color: TEXT_COLOR,
+    fontWeight: '700',
+    textAlign: 'right',
+    width: '48%',
+    lineHeight: 20,
+    letterSpacing: 0.1,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: LABEL_COLOR,
+    fontSize: 14,
+    fontStyle: 'italic',
+    marginVertical: 10,
   },
 });
 
