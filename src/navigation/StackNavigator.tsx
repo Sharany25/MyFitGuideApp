@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavigationContainer, RouteProp } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import { useUser } from '../context/UserContext'; // Importa el hook useUser desde tu UserContext
 
 // Screens
 import LoginScreen from '../screens/LoginScreen';
@@ -11,6 +12,7 @@ import TabNavigator from './TabNavigator';
 import PerfilScreen from '../screens/PerfilScreen';
 import MapScreen from '../screens/MapScreen';
 
+// Define el tipo de tus parámetros de navegación
 export type RootStackParamList = {
   Login: undefined;
   Registro: undefined;
@@ -23,7 +25,7 @@ export type RootStackParamList = {
 const Stack = createStackNavigator<RootStackParamList>();
 
 const StackNavigator: React.FC = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { state } = useUser(); // Utiliza el hook useUser para obtener el estado y el dispatch del UserContext
 
   return (
     <NavigationContainer>
@@ -34,12 +36,8 @@ const StackNavigator: React.FC = () => {
             <LoginScreen
               {...props}
               onLoginSuccess={(isNewUser: boolean, userData?: { userId: string; nombre: string }) => {
-                setIsAuthenticated(true);
-                if (isNewUser) {
-                  props.navigation.replace('Registro');
-                } else if (userData) {
-                  props.navigation.replace('Tabs', { userId: userData.userId });
-                }
+                // Actualiza el usuario en el contexto al hacer login
+                // Aquí deberías realizar la lógica de autenticación y almacenar los datos del usuario en el contexto
               }}
             />
           )}
@@ -51,7 +49,8 @@ const StackNavigator: React.FC = () => {
             <RegistroScreen
               {...props}
               onRegisterSuccess={(nombre: string, userId: string) => {
-                props.navigation.replace('Dieta', { nombre, userId });
+                // Actualiza el usuario en el contexto al registrar
+                // Aquí deberías almacenar los datos del nuevo usuario en el contexto
               }}
             />
           )}
@@ -63,13 +62,7 @@ const StackNavigator: React.FC = () => {
             <DietaScreen
               {...props}
               onNext={(objetivo: string, extraData: { edad: string; genero: string; altura: string; peso: string }) => {
-                const { userId, nombre } = props.route.params as RouteProp<RootStackParamList, 'Dieta'>;
-                props.navigation.replace('Rutina', {
-                  userId,
-                  nombre,
-                  objetivo,
-                  ...extraData,
-                });
+                // Aquí deberías actualizar los datos de la dieta del usuario en el contexto
               }}
             />
           )}
@@ -89,9 +82,7 @@ const StackNavigator: React.FC = () => {
                 altura: string;
                 peso: string;
               }) => {
-                props.navigation.replace('Tabs', {
-                  userId: profileData.userId,
-                });
+                // Aquí deberías actualizar los datos de la rutina del usuario en el contexto
               }}
             />
           )}

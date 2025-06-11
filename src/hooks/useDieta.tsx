@@ -21,7 +21,7 @@ export const useDieta = () => {
     setSuccess(false);
 
     try {
-      const response = await fetch('http://192.168.1.11:3000/MyFitGuide/prueba-dieta', {
+      const response = await fetch('http://192.168.1.12:3000/MyFitGuide/prueba-dieta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),

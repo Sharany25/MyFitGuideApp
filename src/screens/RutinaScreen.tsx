@@ -1,37 +1,43 @@
 import React, { useState } from "react";
 import {
   View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   ScrollView,
-  Dimensions,
+  StyleSheet,
+  Text,
   KeyboardAvoidingView,
   Platform,
+  Dimensions,
+  TouchableOpacity,
 } from "react-native";
+import { TextInput } from "react-native-paper";
+import { Ionicons } from "@expo/vector-icons";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/StackNavigator";
 import ProgressStepper from "../components/ProgressStepper";
-import { Ionicons } from "@expo/vector-icons";
 import CustomToast from "../components/CustomToast";
-import { TextInput } from "react-native";
 import { useRutina } from "../hooks/useRutina";
+import { useUser } from "../context/UserContext";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
+const PRIMARY_COLOR = "#FFD700";
+const BG_COLOR = "#FFFDEB";
+const TEXT_COLOR = "#232946";
+const FIELD_DISABLED_BG = "#FAF7EB";
+const FIELD_DISABLED_TEXT = "#BEBEBE";
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Rutina">;
 
-const opcionesPreferencia = ["gimnasio", "casa", "calistenia"];
-
-const PRIMARY_COLOR = "#00C27F";
-const TEXT_COLOR = "#1F2937";
-const BG_COLOR = "#F9FAFB";
+const opcionesPreferencia = [
+  { label: "Gimnasio", value: "gimnasio", icon: "barbell-outline" },
+  { label: "Casa", value: "casa", icon: "home-outline" },
+  { label: "Calistenia", value: "calistenia", icon: "walk-outline" },
+];
 
 const RutinaScreen: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation<NavigationProp>();
-
   const { userId, nombre, objetivo } = route.params as {
     userId: string;
     nombre: string;
@@ -40,9 +46,10 @@ const RutinaScreen: React.FC = () => {
 
   const [edad, setEdad] = useState("");
   const [preferenciaSeleccionada, setPreferenciaSeleccionada] = useState("");
-  const [dias, setDias] = useState("");
+  const [dias, setDias] = useState<number | null>(null);
   const [lesiones, setLesiones] = useState("");
 
+  const { state, dispatch } = useUser();
   const {
     generarRutina,
     loading: isSubmitting,
@@ -52,8 +59,13 @@ const RutinaScreen: React.FC = () => {
     setError: setShowError,
   } = useRutina();
 
-  // Solo números en edad
-  const handleEdadChange = (val: string) => setEdad(val.replace(/[^0-9]/g, ""));
+  const handleEdadChange = (text: string) => {
+    setEdad(text.replace(/[^0-9]/g, ""));
+  };
+
+  const handleSeleccionarDia = (dia: number) => {
+    setDias(dia);
+  };
 
   const onGenerarRutina = async () => {
     if (!userId || !nombre || !edad || !objetivo || !preferenciaSeleccionada || !dias) {
@@ -61,13 +73,11 @@ const RutinaScreen: React.FC = () => {
       return;
     }
     const edadNum = parseInt(edad, 10);
-    const diasNum = parseInt(dias, 10);
-
     if (isNaN(edadNum) || edadNum <= 0) {
       setShowError(true);
       return;
     }
-    if (isNaN(diasNum) || diasNum < 1 || diasNum > 7) {
+    if (dias < 1 || dias > 7) {
       setShowError(true);
       return;
     }
@@ -79,11 +89,35 @@ const RutinaScreen: React.FC = () => {
       edad: edadNum,
       objetivo,
       preferencias: [preferenciaSeleccionada],
-      dias: diasNum,
+      dias,
       lesiones,
     });
-
     if (ok) {
+      const updatedUser = {
+        ...state.user,
+        userId,
+        nombre,
+        objetivo,
+        edad, // string
+        preferencias: [preferenciaSeleccionada],
+        dias: dias?.toString(),
+        lesiones,
+        correoElectronico: state.user?.correoElectronico ?? "",
+        fechaNacimiento: state.user?.fechaNacimiento ?? "",
+        ubicacion: state.user?.ubicacion ?? "",
+        genero: state.user?.genero ?? "",
+        altura: state.user?.altura ?? "",
+        peso: state.user?.peso ?? "",
+        alergias: state.user?.alergias ?? [],
+        presupuesto: state.user?.presupuesto ?? "",
+      };
+      dispatch({
+        type: "SET_USER",
+        payload: updatedUser,
+      });
+      // Guarda en AsyncStorage la última versión del usuario
+      await AsyncStorage.setItem("userProfile", JSON.stringify(updatedUser));
+
       setTimeout(() => {
         setShowSuccess(false);
         navigation.replace("Tabs", { userId });
@@ -91,59 +125,22 @@ const RutinaScreen: React.FC = () => {
     }
   };
 
-  const InputWithIcon = ({
-    icon,
-    placeholder,
-    value,
-    onChangeText,
-    keyboardType = "default",
-    editable = true,
-    multiline = false,
-  }: {
-    icon: keyof typeof Ionicons.glyphMap;
-    placeholder: string;
-    value: string;
-    onChangeText: (text: string) => void;
-    keyboardType?: "default" | "numeric";
-    editable?: boolean;
-    multiline?: boolean;
-  }) => (
-    <View style={styles.inputGroup}>
-      <Ionicons name={icon} size={22} color={PRIMARY_COLOR} style={{ marginRight: 10 }} />
-      <TextInput
-        style={[
-          styles.input,
-          !editable && styles.inputDisabled,
-          multiline && { minHeight: 40, textAlignVertical: "top" },
-        ]}
-        placeholder={placeholder}
-        value={value}
-        onChangeText={onChangeText}
-        keyboardType={keyboardType}
-        editable={editable}
-        placeholderTextColor="#A0A0A0"
-        multiline={multiline}
-        blurOnSubmit={false}
-        returnKeyType={multiline ? "done" : "next"}
-      />
-    </View>
-  );
-
-  const renderDiasSelector = () => (
+  const renderDiasCirculos = () => (
     <View style={styles.diasCirculosContainer}>
       {[1, 2, 3, 4, 5, 6, 7].map((num) => (
         <TouchableOpacity
           key={num}
           style={[
             styles.diaCirculo,
-            dias === num.toString() && styles.diaCirculoSeleccionado,
+            dias === num && styles.diaCirculoSeleccionado,
           ]}
-          onPress={() => setDias(num.toString())}
+          onPress={() => handleSeleccionarDia(num)}
+          activeOpacity={0.85}
         >
           <Text
             style={[
               styles.diaCirculoTexto,
-              dias === num.toString() && styles.diaCirculoTextoSeleccionado,
+              dias === num && styles.diaCirculoTextoSeleccionado,
             ]}
           >
             {num}
@@ -169,77 +166,132 @@ const RutinaScreen: React.FC = () => {
       />
       <KeyboardAvoidingView
         style={{ flex: 1, backgroundColor: BG_COLOR }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : height * 0.05}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
       >
         <ScrollView
           contentContainerStyle={styles.container}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.appName}>MyFitGuide</Text>
+          <Text style={styles.appName}>Rutina IA</Text>
           <ProgressStepper currentStep="Rutina" />
           <Text style={styles.subtitle}>Diseñemos tu rutina ideal</Text>
 
-          <InputWithIcon
-            icon="person-outline"
-            placeholder="Nombre"
+          {/* Nombre - SOLO LECTURA */}
+          <TextInput
+            label="Nombre"
+            mode="outlined"
             value={nombre}
-            onChangeText={() => {}}
+            style={[styles.input, styles.inputDisabled]}
+            left={<TextInput.Icon icon="account" color={PRIMARY_COLOR} />}
             editable={false}
-          />
-          <InputWithIcon
-            icon="calendar-outline"
-            placeholder="Edad"
-            value={edad}
-            onChangeText={handleEdadChange}
-            keyboardType="numeric"
-          />
-          <InputWithIcon
-            icon="flag-outline"
-            placeholder="Objetivo"
-            value={objetivo}
-            onChangeText={() => {}}
-            editable={false}
+            pointerEvents="none"
+            theme={{
+              colors: {
+                text: FIELD_DISABLED_TEXT,
+                primary: PRIMARY_COLOR,
+                background: FIELD_DISABLED_BG,
+                placeholder: FIELD_DISABLED_TEXT,
+              },
+            }}
           />
 
+          {/* Edad */}
+          <TextInput
+            label="Edad"
+            mode="outlined"
+            placeholder="Ejemplo: 22"
+            value={edad}
+            keyboardType="numeric"
+            onChangeText={handleEdadChange}
+            style={styles.input}
+            left={<TextInput.Icon icon="calendar-outline" color={PRIMARY_COLOR} />}
+            theme={{
+              colors: { primary: PRIMARY_COLOR, text: TEXT_COLOR },
+            }}
+            maxLength={2}
+            returnKeyType="done"
+          />
+
+          {/* Objetivo - SOLO LECTURA */}
+          <TextInput
+            label="Objetivo"
+            mode="outlined"
+            value={objetivo}
+            style={[styles.input, styles.inputDisabled]}
+            left={<TextInput.Icon icon="flag-outline" color={PRIMARY_COLOR} />}
+            editable={false}
+            pointerEvents="none"
+            theme={{
+              colors: {
+                text: FIELD_DISABLED_TEXT,
+                primary: PRIMARY_COLOR,
+                background: FIELD_DISABLED_BG,
+                placeholder: FIELD_DISABLED_TEXT,
+              },
+            }}
+          />
+
+          {/* Preferencia de entrenamiento */}
           <Text style={styles.label}>¿Dónde prefieres entrenar?</Text>
           <View style={styles.preferenciaContainer}>
             {opcionesPreferencia.map((item) => (
               <TouchableOpacity
-                key={item}
+                key={item.value}
                 style={[
                   styles.opcion,
-                  preferenciaSeleccionada === item && styles.opcionSeleccionada,
+                  preferenciaSeleccionada === item.value && styles.opcionSeleccionada,
                 ]}
-                onPress={() => setPreferenciaSeleccionada(item)}
+                onPress={() => setPreferenciaSeleccionada(item.value)}
+                activeOpacity={0.85}
               >
+                <Ionicons
+                  name={item.icon as any}
+                  size={23}
+                  color={preferenciaSeleccionada === item.value ? "#fff" : PRIMARY_COLOR}
+                  style={styles.preferenciaIcon}
+                />
                 <Text
                   style={[
                     styles.opcionTexto,
-                    preferenciaSeleccionada === item && styles.opcionTextoActivo,
+                    preferenciaSeleccionada === item.value && styles.opcionTextoActivo,
                   ]}
                 >
-                  {item.toUpperCase()}
+                  {item.label}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
+          {/* Días de entrenamiento */}
           <Text style={styles.label}>¿Cuántos días quieres entrenar?</Text>
-          {renderDiasSelector()}
+          {renderDiasCirculos()}
 
-          <InputWithIcon
-            icon="medkit-outline"
-            placeholder="¿Tienes lesiones? (opcional)"
+          {/* Lesiones */}
+          <TextInput
+            label="¿Tienes lesiones? (opcional)"
+            mode="outlined"
             value={lesiones}
             onChangeText={setLesiones}
-            multiline={true}
+            style={styles.input}
+            left={<TextInput.Icon icon="medical-bag" color={PRIMARY_COLOR} />}
+            theme={{
+              colors: { primary: PRIMARY_COLOR, text: TEXT_COLOR },
+            }}
+            multiline
+            placeholder="Escribe si tienes alguna lesión..."
+            textAlignVertical="top"
           />
 
           <TouchableOpacity
-            style={[styles.boton, isSubmitting && { backgroundColor: "#94d3a2" }]}
+            style={[
+              styles.boton,
+              isSubmitting && { backgroundColor: "#FFF59E" },
+            ]}
             onPress={onGenerarRutina}
             disabled={isSubmitting}
+            activeOpacity={0.85}
           >
             <Text style={styles.botonTexto}>
               {isSubmitting ? "Generando..." : "Generar Rutina"}
@@ -253,8 +305,9 @@ const RutinaScreen: React.FC = () => {
 
 const styles = StyleSheet.create({
   container: {
-    padding: width * 0.05,
-    paddingBottom: 40,
+    flexGrow: 1,
+    padding: 20,
+    backgroundColor: BG_COLOR,
   },
   appName: {
     textAlign: "center",
@@ -266,58 +319,71 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: width * 0.045,
-    color: "#6B7280",
+    color: TEXT_COLOR,
     textAlign: "center",
     marginBottom: 22,
+    fontWeight: "600",
   },
   label: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "700",
     color: TEXT_COLOR,
     marginBottom: 8,
-    marginTop: 10,
-  },
-  inputGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderColor: "#d1d5db",
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    marginBottom: 16,
+    marginTop: 14,
   },
   input: {
-    flex: 1,
+    backgroundColor: "#fff",
+    marginBottom: 14,
+    borderRadius: 10,
     fontSize: 16,
+    borderColor: PRIMARY_COLOR,
+    borderWidth: 1.2,
     color: TEXT_COLOR,
-    paddingVertical: 12,
   },
   inputDisabled: {
-    color: "#6b7280",
+    backgroundColor: FIELD_DISABLED_BG,
+    color: FIELD_DISABLED_TEXT,
+    borderColor: "#FFD70080",
+    opacity: 0.85,
   },
   preferenciaContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 22,
+    marginBottom: 14,
+    marginTop: 2,
+    gap: 9,
+  },
+  preferenciaIcon: {
+    marginRight: 6,
   },
   opcion: {
     flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 13,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 8,
+    flexDirection: "row",
     alignItems: "center",
+    backgroundColor: "#FFFDEB",
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: "#eee",
+    paddingVertical: 12,
+    paddingHorizontal: 6,
+    justifyContent: "center",
+    marginHorizontal: 3,
+    elevation: 1,
+    gap: 5,
   },
   opcionSeleccionada: {
     backgroundColor: PRIMARY_COLOR,
+    borderColor: "#FFC300",
+    elevation: 2,
   },
   opcionTexto: {
-    fontWeight: "600",
-    color: TEXT_COLOR,
+    fontWeight: "700",
+    color: PRIMARY_COLOR,
+    fontSize: 15,
+    letterSpacing: 0.1,
   },
   opcionTextoActivo: {
-    color: "#FFFFFF",
+    color: "#fff",
   },
   diasCirculosContainer: {
     flexDirection: "row",
@@ -341,7 +407,7 @@ const styles = StyleSheet.create({
   },
   diaCirculoSeleccionado: {
     backgroundColor: PRIMARY_COLOR,
-    borderColor: "#009966",
+    borderColor: "#FFC300",
   },
   diaCirculoTexto: {
     fontWeight: "700",
@@ -354,15 +420,21 @@ const styles = StyleSheet.create({
   boton: {
     backgroundColor: PRIMARY_COLOR,
     paddingVertical: 15,
-    borderRadius: 10,
+    borderRadius: 11,
     alignItems: "center",
-    marginTop: 10,
+    marginTop: 20,
     marginBottom: 30,
+    elevation: 2,
+    shadowColor: PRIMARY_COLOR,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
   },
   botonTexto: {
-    color: "#FFFFFF",
-    fontSize: 16,
+    color: TEXT_COLOR,
+    fontSize: 17,
     fontWeight: "bold",
+    letterSpacing: 0.3,
   },
 });
 

@@ -1,3 +1,5 @@
+// hooks/usePerfil.ts
+
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -7,6 +9,22 @@ interface PerfilCompleto {
   rutina?: any;
 }
 
+const ENDPOINT = "http://192.168.1.12:3000/MyFitGuide/usuario-completo";
+
+// ------- Utilitario para usar en login ---------
+export const obtenerPerfilCompleto = async (userId: string): Promise<PerfilCompleto | null> => {
+  try {
+    const res = await fetch(`${ENDPOINT}/${userId}`);
+    if (res.ok) {
+      return await res.json(); // { usuario, dieta, rutina }
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
+// ----------- Hook React para componentes -----------
 export const useUserPerfil = (userIdParam?: string) => {
   const [loading, setLoading] = useState(true);
   const [perfilCompleto, setPerfilCompleto] = useState<PerfilCompleto>({});
@@ -20,10 +38,10 @@ export const useUserPerfil = (userIdParam?: string) => {
       try {
         let userId: string | undefined = userIdParam;
         if (!userId) {
-          const stored = await AsyncStorage.getItem('user');
+          const stored = await AsyncStorage.getItem('userProfile'); // <- corregido aquí
           if (stored) {
             const user = JSON.parse(stored);
-            userId = user._id || user.idUsuario || user.id;
+            userId = user.userId || user._id || user.idUsuario || user.id;
           }
         }
         if (!userId) {
@@ -33,12 +51,12 @@ export const useUserPerfil = (userIdParam?: string) => {
           return;
         }
 
-        const res = await fetch(`http://192.168.1.11:3000/MyFitGuide/usuario-completo/${userId}`);
-        if (res.ok) {
-          const json = await res.json();
-          setPerfilCompleto(json);
+        const perfil = await obtenerPerfilCompleto(userId);
+        if (perfil) {
+          setPerfilCompleto(perfil);
         } else {
           setError('Error al cargar datos');
+          setPerfilCompleto({});
         }
       } catch {
         setError('Error de conexión');

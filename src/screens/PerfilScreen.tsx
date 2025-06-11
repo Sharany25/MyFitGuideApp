@@ -46,6 +46,15 @@ const PerfilScreen: React.FC = () => {
 
   const v = (valor: any) => (valor !== undefined && valor !== null && valor !== '' ? valor : 'N/D');
 
+  // Función para limpiar datos
+  const limpiarDatos = () => {
+    // Aquí reseteas o limpias las variables de estado según sea necesario
+    // Por ejemplo:
+    // setPerfilCompleto(null);
+    // setLoading(false);
+    // setError(null);
+  };
+
   if (loading) {
     return (
       <View style={[styles.loadingBox]}>
@@ -244,97 +253,65 @@ const styles = StyleSheet.create({
   },
   editBtn: {
     flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: PRIMARY_COLOR,
-    paddingHorizontal: 18,
-    paddingVertical: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 16,
-    marginTop: 9,
-    alignSelf: 'center',
-    elevation: 2,
+    marginTop: 8,
+    alignItems: 'center',
   },
   editBtnText: {
     color: '#fff',
-    fontWeight: 'bold',
     fontSize: 15,
-    marginLeft: 5,
-    letterSpacing: 0.2,
+    marginLeft: 6,
   },
   cardBlur: {
-    borderRadius: 18,
     marginBottom: 15,
-    overflow: 'hidden',
-    elevation: 9,
-    shadowColor: SHADOW_COLOR,
-    shadowOpacity: 0.11,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 5 },
-    borderWidth: 1,
-    borderColor: '#e1e9ef',
+    borderRadius: 17,
   },
   cardContent: {
-    paddingVertical: 17,
-    paddingHorizontal: 19,
-    backgroundColor: 'rgba(255,255,255,0.82)',
+    paddingVertical: 18,
+    paddingHorizontal: 18,
   },
   cardSeparator: {
-    height: 18,
-    width: '100%',
-    backgroundColor: 'transparent',
+    height: 10,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 13,
-    gap: 7,
-    alignSelf: 'flex-start',
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-    borderRadius: 13,
+    paddingBottom: 8,
+    marginBottom: 10,
   },
   sectionIcon: {
-    marginRight: 7,
+    marginRight: 10,
   },
   sectionTitle: {
-    fontSize: 17.5,
+    fontSize: 19,
     fontWeight: 'bold',
-    letterSpacing: 0.3,
+    letterSpacing: 0.4,
   },
   labelRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 9,
-    marginTop: 1,
-    borderBottomColor: '#eef2f3',
-    borderBottomWidth: 1,
-    paddingBottom: 6,
-    gap: 2,
+    paddingVertical: 5,
   },
   label: {
-    fontSize: 15.5,
-    color: LABEL_COLOR,
-    fontWeight: '700',
-    width: '50%',
-    textAlign: 'left',
-    lineHeight: 20,
-    letterSpacing: 0.07,
+    fontSize: 16,
+    color: TEXT_COLOR,
+    fontWeight: '500',
+    flex: 1,
   },
   value: {
     fontSize: 16,
-    color: TEXT_COLOR,
-    fontWeight: '700',
-    textAlign: 'right',
-    width: '48%',
-    lineHeight: 20,
-    letterSpacing: 0.1,
+    color: LABEL_COLOR,
+    flex: 2,
   },
   emptyText: {
-    textAlign: 'center',
     color: LABEL_COLOR,
-    fontSize: 14,
+    fontSize: 16,
     fontStyle: 'italic',
-    marginVertical: 10,
+    textAlign: 'center',
   },
 });
 

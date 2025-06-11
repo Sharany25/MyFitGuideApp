@@ -10,25 +10,23 @@ interface ProgressStepperProps {
   currentStep: Step;
 }
 
-const steps: { key: Step; label: string; icon: keyof typeof icons }[] = [
+const steps: { key: Step; label: string; icon: string }[] = [
   { key: 'Registro', label: 'Perfil', icon: 'account' },
   { key: 'Dieta', label: 'Dieta', icon: 'silverware-fork-knife' },
   { key: 'Rutina', label: 'Rutina', icon: 'dumbbell' },
 ];
-
-const icons = {
-  account: 'account',
-  'silverware-fork-knife': 'silverware-fork-knife',
-  dumbbell: 'dumbbell',
-};
 
 const ProgressStepper: React.FC<ProgressStepperProps> = ({ currentStep }) => {
   const currentIndex = steps.findIndex((s) => s.key === currentStep);
 
   return (
     <View style={styles.wrapper}>
-      <View style={[styles.progressBar, { width: `${((currentIndex + 1) / steps.length) * 100}%` }]} />
-
+      <View
+        style={[
+          styles.progressBar,
+          { width: `${((currentIndex + 1) / steps.length) * 100}%` },
+        ]}
+      />
       <View style={styles.container}>
         {steps.map((step, index) => {
           const isCompleted = index < currentIndex;
@@ -49,13 +47,11 @@ const ProgressStepper: React.FC<ProgressStepperProps> = ({ currentStep }) => {
           return (
             <View key={step.key} style={styles.stepItem}>
               <MaterialCommunityIcons
-                name={icons[step.icon]}
+                name={step.icon}
                 size={22}
-                color={iconColor}
+                color={iconColor} 
               />
-              <Text style={textStyle}>
-                {step.label}
-              </Text>
+              <Text style={textStyle}>{step.label}</Text>
             </View>
           );
         })}
