@@ -11,8 +11,8 @@ import {
 } from "react-native";
 import { TextInput } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
-import { useRoute, useNavigation } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
+import type { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/StackNavigator";
 import ProgressStepper from "../components/ProgressStepper";
 import CustomToast from "../components/CustomToast";
@@ -27,7 +27,8 @@ const TEXT_COLOR = "#232946";
 const FIELD_DISABLED_BG = "#FAF7EB";
 const FIELD_DISABLED_TEXT = "#BEBEBE";
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Rutina">;
+type RutinaRouteProp = RouteProp<RootStackParamList, "Rutina">;
+type NavigationProp = StackNavigationProp<RootStackParamList, "Rutina">;
 
 const opcionesPreferencia = [
   { label: "Gimnasio", value: "gimnasio", icon: "barbell-outline" },
@@ -36,13 +37,9 @@ const opcionesPreferencia = [
 ];
 
 const RutinaScreen: React.FC = () => {
-  const route = useRoute();
+  const route = useRoute<RutinaRouteProp>();
   const navigation = useNavigation<NavigationProp>();
-  const { userId, nombre, objetivo } = route.params as {
-    userId: string;
-    nombre: string;
-    objetivo: string;
-  };
+  const { userId, nombre, objetivo } = route.params || { userId: '', nombre: '', objetivo: '' };
 
   const [edad, setEdad] = useState("");
   const [preferenciaSeleccionada, setPreferenciaSeleccionada] = useState("");
@@ -118,6 +115,7 @@ const RutinaScreen: React.FC = () => {
       // Guarda en AsyncStorage la última versión del usuario
       await AsyncStorage.setItem("userProfile", JSON.stringify(updatedUser));
 
+      setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
         navigation.replace("Tabs", { userId });

@@ -33,7 +33,7 @@ export const useHomePerfil = (userIdParam?: string) => {
     setUserId(id);
 
     try {
-      const res = await fetch(`http://192.168.1.12:3000/MyFitGuide/usuario-completo/${id}`);
+      const res = await fetch(`http://192.168.239.234:3000/MyFitGuide/usuario-completo/${id}`);
       if (res.ok) {
         setPerfilCompleto(await res.json());
       }

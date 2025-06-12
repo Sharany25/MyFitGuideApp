@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
-  TextInput,
   ActivityIndicator,
   SafeAreaView,
   Platform,
@@ -14,13 +13,14 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '../context/UserContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 const PRIMARY_COLOR = '#00C27F';
-const SECONDARY_COLOR = '#F0FDF8';
+const GRADIENT_COLORS: ReadonlyArray<string> = ['#22C55E', '#16A34A'];
 
 type NavigationProp = StackNavigationProp<any, any>;
 
@@ -35,7 +35,7 @@ const HomeScreen: React.FC = () => {
     navigation.replace('Login');
   };
 
-  const v = (valor: any) => (valor !== undefined && valor !== null && valor !== '' ? valor : 'N/D');
+  const v = (valor: any) => valor !== undefined && valor !== null && valor !== '' ? valor : 'N/D';
 
   if (state.loading) {
     return (
@@ -52,38 +52,45 @@ const HomeScreen: React.FC = () => {
         contentContainerStyle={{ paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header bienvenido */}
-        <View style={styles.headerCard}>
-          <View style={styles.avatarContainer}>
-            <Ionicons name="person-circle-outline" size={70} color={PRIMARY_COLOR} />
-          </View>
-          <View>
-            <Text style={styles.hello}>
-              ¡Hola, <Text style={{ fontWeight: 'bold' }}>{v(user?.nombre) || 'Usuario'}</Text>!
-            </Text>
-            <Text style={styles.slogan}>Tu bienestar es nuestra meta</Text>
-          </View>
+        {/* Header bienvenido con gradiente e icono perfil como botón */}
+        <View style={{ marginBottom: 16 }}>
+          <LinearGradient
+            colors={GRADIENT_COLORS}
+            style={styles.headerCard}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <TouchableOpacity
+              style={styles.headerContent}
+              activeOpacity={0.78}
+              onPress={() => navigation.navigate('Perfil', { userId: user?.userId })}
+            >
+              <Ionicons name="person-circle-outline" size={67} color="#fff" />
+              <View style={styles.headerTexts}>
+                <Text style={styles.hello} numberOfLines={1} ellipsizeMode="tail">
+                  ¡Hola, <Text style={styles.helloName}>{v(user?.nombre) || 'Usuario'}</Text>!
+                </Text>
+                <Text style={styles.slogan}>Tu bienestar es nuestra meta</Text>
+              </View>
+            </TouchableOpacity>
+          </LinearGradient>
         </View>
-
-        {/* Buscador */}
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar en la app..."
-          placeholderTextColor="#8E8E8E"
-          editable={false}
-        />
 
         {/* Tags */}
         <View style={styles.tagsContainer}>
           <TagButton icon="star" text="Favoritos" />
-          <TagButton icon="time-outline" text="Historial" />
+          <TagButton
+            icon="time-outline"
+            text="Historial"
+            onPress={() => navigation.navigate('Historial', { userId: user?.userId })}
+          />
           <TagButton icon="options-outline" text="Personalización" />
         </View>
 
         {/* Accesos rápidos */}
         <View style={styles.quickAccessRow}>
           <QuickAccessCard
-            icon={<MaterialCommunityIcons name="food-apple" size={34} color={PRIMARY_COLOR} />}
+            icon={<MaterialCommunityIcons name="food-apple" size={40} color={PRIMARY_COLOR} />}
             title="Comidas de la semana"
             desc="Revisa y ajusta tu plan alimenticio."
             onPress={() =>
@@ -92,9 +99,10 @@ const HomeScreen: React.FC = () => {
                 nombre: v(user?.nombre),
               })
             }
+            cardColor="#f0fdfa"
           />
           <QuickAccessCard
-            icon={<Ionicons name="barbell-outline" size={34} color={PRIMARY_COLOR} />}
+            icon={<Ionicons name="barbell" size={40} color={PRIMARY_COLOR} />}
             title="Rutina semanal"
             desc="Verifica o edita tu entrenamiento."
             onPress={() =>
@@ -104,28 +112,52 @@ const HomeScreen: React.FC = () => {
                 objetivo: v(user?.objetivo),
               })
             }
+            cardColor="#f7f9fa"
           />
         </View>
 
-        {/* Info usuario */}
+        {/* Info usuario siempre visible */}
         <View style={styles.profileInfoBox}>
-          <InfoLabel label="Edad" value={v(user?.edad)} />
-          <InfoLabel label="Género" value={v(user?.genero)} />
-          <InfoLabel label="Altura" value={user?.altura ? `${user?.altura} cm` : 'N/D'} />
-          <InfoLabel label="Peso" value={user?.peso ? `${user?.peso} kg` : 'N/D'} />
-          <InfoLabel label="Objetivo" value={v(user?.objetivo)} />
+          <InfoLabel
+            label="Edad"
+            value={v(user?.edad)}
+            icon={<Ionicons name="calendar-outline" size={18} color={PRIMARY_COLOR} />}
+          />
+          <InfoLabel
+            label="Género"
+            value={v(user?.genero)}
+            icon={
+              <Ionicons
+                name={
+                  user?.genero?.toLowerCase() === 'masculino'
+                    ? 'male'
+                    : user?.genero?.toLowerCase() === 'femenino'
+                    ? 'female'
+                    : 'help-outline'
+                }
+                size={18}
+                color={PRIMARY_COLOR}
+              />
+            }
+          />
+          <InfoLabel
+            label="Altura"
+            value={user?.altura ? `${user?.altura} cm` : 'N/D'}
+            icon={<FontAwesome5 name="ruler-vertical" size={16} color={PRIMARY_COLOR} />}
+          />
+          <InfoLabel
+            label="Peso"
+            value={user?.peso ? `${user?.peso} kg` : 'N/D'}
+            icon={<MaterialCommunityIcons name="weight-kilogram" size={18} color={PRIMARY_COLOR} />}
+          />
+          <InfoLabel
+            label="Objetivo"
+            value={v(user?.objetivo)}
+            icon={<Ionicons name="trophy-outline" size={18} color={PRIMARY_COLOR} />}
+          />
         </View>
 
-        {/* Acciones */}
-        <TouchableOpacity
-          style={styles.perfilButton}
-          onPress={() => navigation.navigate('Perfil', { userId: user?.userId })}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="person-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={styles.perfilButtonText}>Ver Perfil</Text>
-        </TouchableOpacity>
-
+        {/* Botón cerrar sesión */}
         <TouchableOpacity style={styles.logoutButton} onPress={cerrarSesion} activeOpacity={0.85}>
           <Ionicons name="log-out-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
           <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
@@ -135,35 +167,65 @@ const HomeScreen: React.FC = () => {
   );
 };
 
-const TagButton = ({ icon, text }: { icon: any; text: string }) => (
-  <TouchableOpacity style={styles.tagButton} activeOpacity={0.75}>
-    <Ionicons name={icon} size={17} color={PRIMARY_COLOR} />
+// Tags
+const TagButton = ({
+  icon,
+  text,
+  onPress,
+}: {
+  icon: any;
+  text: string;
+  onPress?: () => void;
+}) => (
+  <TouchableOpacity style={styles.tagButton} activeOpacity={0.75} onPress={onPress}>
+    <Ionicons name={icon} size={19} color={PRIMARY_COLOR} />
     <Text style={styles.tagText}>{text}</Text>
   </TouchableOpacity>
 );
 
+// Accesos rápidos
 const QuickAccessCard = ({
   icon,
   title,
   desc,
   onPress,
+  cardColor,
 }: {
   icon: React.ReactNode;
   title: string;
   desc: string;
   onPress: () => void;
+  cardColor?: string;
 }) => (
-  <TouchableOpacity style={styles.quickCard} onPress={onPress} activeOpacity={0.8}>
-    <View style={{ marginBottom: 8 }}>{icon}</View>
-    <Text style={styles.quickCardTitle}>{title}</Text>
+  <TouchableOpacity
+    style={[styles.quickCard, { backgroundColor: cardColor }]}
+    onPress={onPress}
+    activeOpacity={0.87}
+  >
+    <View style={{ marginBottom: 12 }}>{icon}</View>
+    <Text style={styles.quickCardTitle} numberOfLines={2} ellipsizeMode="tail">
+      {title}
+    </Text>
     <Text style={styles.quickCardDesc}>{desc}</Text>
   </TouchableOpacity>
 );
 
-const InfoLabel = ({ label, value }: { label: string; value: string | number }) => (
+// Datos usuario
+const InfoLabel = ({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ReactNode;
+}) => (
   <View style={styles.infoBox}>
-    <Text style={styles.infoLabel}>{label}</Text>
-    <Text style={styles.infoValue}>{(value)}</Text> {/* Utilizar la función v para mostrar "N/D" */}
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      {icon}
+      <Text style={styles.infoLabel}>{label}</Text>
+    </View>
+    <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">{value}</Text>
   </View>
 );
 
@@ -181,151 +243,165 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F7F9FA', paddingHorizontal: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   headerCard: {
+    borderRadius: 28,
+    padding: 20,
+    shadowColor: '#14b278',
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+    minHeight: 100,
+    position: 'relative',
+    overflow: 'visible',
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 18,
-    backgroundColor: SECONDARY_COLOR,
-    borderRadius: 18,
-    marginBottom: 15,
-    marginTop: 10,
-    gap: 16,
-    shadowColor: '#00C27F',
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
   },
-  avatarContainer: {
-    marginRight: 6,
+  headerTexts: {
+    flex: 1,
+    marginLeft: 12,
   },
   hello: {
-    fontSize: 22,
-    color: PRIMARY_COLOR,
-    marginBottom: 2,
+    fontSize: 23,
+    color: '#fff',
+    marginBottom: 3,
+    fontWeight: '700',
+    letterSpacing: 0.13,
+  },
+  helloName: {
+    fontWeight: 'bold',
+    color: '#fff',
   },
   slogan: {
-    fontSize: 13,
-    color: '#4B5768',
-    fontWeight: '500',
-    opacity: 0.95,
-  },
-  searchInput: {
-    backgroundColor: '#F1F5F9',
-    padding: 13,
-    borderRadius: 13,
     fontSize: 15,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    color: '#e2ffe5',
+    fontWeight: '600',
+    opacity: 0.97,
+    marginTop: 3,
+    letterSpacing: 0.1,
   },
   tagsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 18,
+    marginBottom: 22,
+    marginTop: 5,
   },
   tagButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#E6F8F1',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    gap: 7,
-    minWidth: 98,
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    minWidth: 110,
     justifyContent: 'center',
   },
   tagText: {
     color: PRIMARY_COLOR,
-    fontSize: 13,
-    fontWeight: '600',
-    marginLeft: 5,
+    fontSize: 15,
+    fontWeight: '700',
+    marginLeft: 7,
+    letterSpacing: 0.14,
   },
   quickAccessRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 14,
-    marginBottom: 17,
+    gap: 20,
+    marginBottom: 25,
   },
   quickCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 18,
-    padding: 16,
+    borderRadius: 23,
+    padding: 23,
     alignItems: 'center',
-    marginHorizontal: 2,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-    minHeight: 132,
+    marginHorizontal: 3,
+    shadowColor: PRIMARY_COLOR,
+    shadowOpacity: 0.09,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 7,
+    minHeight: 156,
+    maxWidth: (width - 50) / 2,
   },
   quickCardTitle: {
     fontWeight: 'bold',
     color: PRIMARY_COLOR,
-    fontSize: 16,
-    marginBottom: 1,
+    fontSize: 18,
+    marginBottom: 3,
     textAlign: 'center',
+    letterSpacing: 0.17,
   },
   quickCardDesc: {
-    color: '#616161',
-    fontSize: 13,
+    color: '#274136',
+    fontSize: 15,
     textAlign: 'center',
-    marginTop: 1,
+    marginTop: 2,
+    opacity: 0.88,
+    fontWeight: '400',
   },
   profileInfoBox: {
     backgroundColor: '#fff',
-    borderRadius: 15,
-    padding: 16,
-    marginBottom: 18,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
+    borderRadius: 20,
+    paddingVertical: 21,
+    paddingHorizontal: 17,
+    marginBottom: 28,
+    shadowColor: PRIMARY_COLOR,
+    shadowOpacity: 0.13,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    gap: 11,
   },
   infoBox: {
+    width: '48%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 11,
+    backgroundColor: '#e6f8f1',
+    borderRadius: 11,
+    paddingVertical: 11,
+    paddingHorizontal: 15,
   },
   infoLabel: {
     color: '#4B5768',
-    fontSize: 15,
-    fontWeight: '500',
+    fontSize: 17,
+    fontWeight: '700',
+    marginLeft: 2,
   },
   infoValue: {
     color: PRIMARY_COLOR,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  perfilButton: {
-    backgroundColor: PRIMARY_COLOR,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 13,
-    marginBottom: 10,
-  },
-  perfilButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '800',
+    maxWidth: '52%',
+    textAlign: 'right',
+    marginLeft: 7,
+    letterSpacing: 0.11,
   },
   logoutButton: {
     backgroundColor: '#E53E3E',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
-    borderRadius: 13,
+    padding: 18,
+    borderRadius: 16,
+    marginTop: 12,
+    marginHorizontal: 7,
+    shadowColor: '#E53E3E',
+    shadowOpacity: 0.14,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 4,
   },
   logoutButtonText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '800',
+    letterSpacing: 0.13,
   },
 });
 

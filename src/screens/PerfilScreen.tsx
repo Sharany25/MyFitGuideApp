@@ -1,3 +1,4 @@
+// PerfilScreen.tsx
 import React, { useRef, useEffect } from 'react';
 import {
   Text,
@@ -7,7 +8,6 @@ import {
   ActivityIndicator,
   Platform,
   View,
-  TouchableOpacity,
   Animated,
 } from 'react-native';
 import { useRoute, RouteProp } from '@react-navigation/native';
@@ -19,13 +19,13 @@ import { BlurView } from 'expo-blur';
 const { width } = Dimensions.get('window');
 const PRIMARY_COLOR = '#00C27F';
 const BG_COLOR = '#F3F8F6';
-const SHADOW_COLOR = '#37dbbc';
 const TEXT_COLOR = '#232946';
 const LABEL_COLOR = '#7a8797';
 
 type PerfilRouteProp = RouteProp<RootStackParamList, 'Perfil'>;
 
 const PerfilScreen: React.FC = () => {
+  // Lee los params SIEMPRE con useRoute (NUNCA por props, para tabs y stacks)
   const route = useRoute<PerfilRouteProp>();
   const userId = route.params?.userId;
   const { perfilCompleto, loading, error } = useUserPerfil(userId);
@@ -44,17 +44,10 @@ const PerfilScreen: React.FC = () => {
     }).start();
   }, []);
 
+  // Utilidad para mostrar "N/D" si no hay datos
   const v = (valor: any) => (valor !== undefined && valor !== null && valor !== '' ? valor : 'N/D');
 
-  // Función para limpiar datos
-  const limpiarDatos = () => {
-    // Aquí reseteas o limpias las variables de estado según sea necesario
-    // Por ejemplo:
-    // setPerfilCompleto(null);
-    // setLoading(false);
-    // setError(null);
-  };
-
+  // ----- LOADING -----
   if (loading) {
     return (
       <View style={[styles.loadingBox]}>
@@ -63,6 +56,7 @@ const PerfilScreen: React.FC = () => {
     );
   }
 
+  // ----- ERROR -----
   if (error) {
     return (
       <View style={[styles.loadingBox]}>
@@ -90,10 +84,6 @@ const PerfilScreen: React.FC = () => {
           {usuario?.nombre ? usuario.nombre : 'Mi Perfil'}
         </Text>
         <Text style={styles.subHeader}>Consulta toda tu información</Text>
-        {/* <TouchableOpacity style={styles.editBtn} activeOpacity={0.7}>
-          <Ionicons name="create-outline" size={17} color="#fff" />
-          <Text style={styles.editBtnText}>Editar</Text>
-        </TouchableOpacity> */}
       </Animated.View>
 
       {/* CARD DATOS PERSONALES */}
@@ -250,20 +240,6 @@ const styles = StyleSheet.create({
     marginBottom: 7,
     marginTop: 3,
     letterSpacing: 0.1,
-  },
-  editBtn: {
-    flexDirection: 'row',
-    backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 16,
-    marginTop: 8,
-    alignItems: 'center',
-  },
-  editBtnText: {
-    color: '#fff',
-    fontSize: 15,
-    marginLeft: 6,
   },
   cardBlur: {
     marginBottom: 15,

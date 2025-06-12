@@ -25,7 +25,7 @@ export const useLogin = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://192.168.1.12:3000/MyFitGuide/Usuarios/login", {
+      const response = await fetch("http://192.168.239.234:3000/MyFitGuide/Usuarios/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -48,5 +48,10 @@ export const useLogin = () => {
     }
   };
 
-  return { login, loading, error, user };
+  return { 
+    login,
+    loading,
+    error,
+    user
+  };
 };

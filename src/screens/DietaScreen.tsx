@@ -11,14 +11,12 @@ import {
 } from 'react-native';
 import { TextInput } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
-import { useRoute, useNavigation } from '@react-navigation/native';
+import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import type { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/StackNavigator';
 import ProgressStepper from '../components/ProgressStepper';
 import CustomToast from '../components/CustomToast';
 import { useDieta } from '../hooks/useDieta';
-
-// IMPORTA TU CONTEXTO GLOBAL
 import { useUser } from '../context/UserContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -29,14 +27,14 @@ const BG_COLOR = '#FFFDEB';
 const MALE_COLOR = '#428AF8';
 const FEMALE_COLOR = '#FF69B4';
 
+type DietaRouteProp = RouteProp<RootStackParamList, 'Dieta'>;
 type NavigationProp = StackNavigationProp<RootStackParamList, 'Dieta'>;
 
 const DietaScreen: React.FC = () => {
-  const route = useRoute();
+  const route = useRoute<DietaRouteProp>();
   const navigation = useNavigation<NavigationProp>();
-  const { userId, nombre } = route.params as { userId: string; nombre: string };
+  const { userId, nombre } = route.params || { userId: '', nombre: '' };
 
-  // ESTADO GLOBAL
   const { state, dispatch } = useUser();
 
   const [peso, setPeso] = useState('');
@@ -86,7 +84,7 @@ const DietaScreen: React.FC = () => {
     });
 
     if (result) {
-      // Guarda datos como string (como espera el context)
+      // Actualiza usuario global y almacenamiento
       const updatedUser = {
         ...state.user,
         userId,
@@ -102,10 +100,7 @@ const DietaScreen: React.FC = () => {
         ubicacion: state.user?.ubicacion ?? '',
         edad: state.user?.edad ?? '',
       };
-      dispatch({
-        type: 'SET_USER',
-        payload: updatedUser,
-      });
+      dispatch({ type: 'SET_USER', payload: updatedUser });
       await AsyncStorage.setItem('userProfile', JSON.stringify(updatedUser));
 
       setShowSuccess(true);
@@ -281,7 +276,6 @@ const DietaScreen: React.FC = () => {
               {loading ? 'Enviando...' : 'Siguiente'}
             </Text>
           </TouchableOpacity>
-          {/* ----------- Fin del formulario ---------- */}
         </ScrollView>
       </KeyboardAvoidingView>
     </>

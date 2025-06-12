@@ -21,7 +21,7 @@ export const useRutina = () => {
     setError(false);
 
     try {
-      const response = await fetch("http://192.168.1.12:3000/MyFitGuide/prueba-rutina", {
+      const response = await fetch("http://192.168.239.234:3000/MyFitGuide/prueba-rutina", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
