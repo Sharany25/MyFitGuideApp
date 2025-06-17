@@ -13,7 +13,6 @@ interface UserData {
   genero?: string;
   altura?: number;
   peso?: number;
-  // agrega más campos si necesitas
 }
 
 export const useLogin = () => {
