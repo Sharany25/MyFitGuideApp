@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { TextInput } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
-import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
+import { useRoute, useNavigation, RouteProp, CommonActions } from "@react-navigation/native";
 import type { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/StackNavigator";
 import ProgressStepper from "../components/ProgressStepper";
@@ -39,7 +39,11 @@ const opcionesPreferencia = [
 const RutinaScreen: React.FC = () => {
   const route = useRoute<RutinaRouteProp>();
   const navigation = useNavigation<NavigationProp>();
-  const { userId, nombre, objetivo } = route.params || { userId: '', nombre: '', objetivo: '' };
+  const { userId, nombre, objetivo } = route.params || {
+    userId: "",
+    nombre: "",
+    objetivo: "",
+  };
 
   const [edad, setEdad] = useState("");
   const [preferenciaSeleccionada, setPreferenciaSeleccionada] = useState("");
@@ -69,18 +73,14 @@ const RutinaScreen: React.FC = () => {
       setShowError(true);
       return;
     }
-    const edadNum = parseInt(edad, 10);
-    if (isNaN(edadNum) || edadNum <= 0) {
-      setShowError(true);
-      return;
-    }
-    if (dias < 1 || dias > 7) {
-      setShowError(true);
-      return;
-    }
-    if (isSubmitting) return;
 
-    const ok = await generarRutina({
+    const edadNum = parseInt(edad, 10);
+    if (isNaN(edadNum) || edadNum <= 0 || dias < 1 || dias > 7 || isSubmitting) {
+      setShowError(true);
+      return;
+    }
+
+    const result = await generarRutina({
       userId,
       nombre,
       edad: edadNum,
@@ -89,13 +89,14 @@ const RutinaScreen: React.FC = () => {
       dias,
       lesiones,
     });
-    if (ok) {
+
+    if (result) {
       const updatedUser = {
         ...state.user,
         userId,
         nombre,
         objetivo,
-        edad, // string
+        edad,
         preferencias: [preferenciaSeleccionada],
         dias: dias?.toString(),
         lesiones,
@@ -108,17 +109,24 @@ const RutinaScreen: React.FC = () => {
         alergias: state.user?.alergias ?? [],
         presupuesto: state.user?.presupuesto ?? "",
       };
-      dispatch({
-        type: "SET_USER",
-        payload: updatedUser,
-      });
-      // Guarda en AsyncStorage la última versión del usuario
+
+      dispatch({ type: "SET_USER", payload: updatedUser });
       await AsyncStorage.setItem("userProfile", JSON.stringify(updatedUser));
 
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
-        navigation.replace("Tabs", { userId });
+        navigation.dispatch(
+          CommonActions.reset({
+            index: 0,
+            routes: [
+              {
+                name: "Tabs",
+                params: { screen: "RutinaIAGenerada", params: { userId } },
+              },
+            ],
+          })
+        );
       }, 1200);
     }
   };
@@ -128,18 +136,12 @@ const RutinaScreen: React.FC = () => {
       {[1, 2, 3, 4, 5, 6, 7].map((num) => (
         <TouchableOpacity
           key={num}
-          style={[
-            styles.diaCirculo,
-            dias === num && styles.diaCirculoSeleccionado,
-          ]}
+          style={[styles.diaCirculo, dias === num && styles.diaCirculoSeleccionado]}
           onPress={() => handleSeleccionarDia(num)}
           activeOpacity={0.85}
         >
           <Text
-            style={[
-              styles.diaCirculoTexto,
-              dias === num && styles.diaCirculoTextoSeleccionado,
-            ]}
+            style={[styles.diaCirculoTexto, dias === num && styles.diaCirculoTextoSeleccionado]}
           >
             {num}
           </Text>
@@ -176,7 +178,6 @@ const RutinaScreen: React.FC = () => {
           <ProgressStepper currentStep="Rutina" />
           <Text style={styles.subtitle}>Diseñemos tu rutina ideal</Text>
 
-          {/* Nombre - SOLO LECTURA */}
           <TextInput
             label="Nombre"
             mode="outlined"
@@ -195,7 +196,6 @@ const RutinaScreen: React.FC = () => {
             }}
           />
 
-          {/* Edad */}
           <TextInput
             label="Edad"
             mode="outlined"
@@ -205,14 +205,11 @@ const RutinaScreen: React.FC = () => {
             onChangeText={handleEdadChange}
             style={styles.input}
             left={<TextInput.Icon icon="calendar-outline" color={PRIMARY_COLOR} />}
-            theme={{
-              colors: { primary: PRIMARY_COLOR, text: TEXT_COLOR },
-            }}
+            theme={{ colors: { primary: PRIMARY_COLOR, text: TEXT_COLOR } }}
             maxLength={2}
             returnKeyType="done"
           />
 
-          {/* Objetivo - SOLO LECTURA */}
           <TextInput
             label="Objetivo"
             mode="outlined"
@@ -231,7 +228,6 @@ const RutinaScreen: React.FC = () => {
             }}
           />
 
-          {/* Preferencia de entrenamiento */}
           <Text style={styles.label}>¿Dónde prefieres entrenar?</Text>
           <View style={styles.preferenciaContainer}>
             {opcionesPreferencia.map((item) => (
@@ -262,11 +258,9 @@ const RutinaScreen: React.FC = () => {
             ))}
           </View>
 
-          {/* Días de entrenamiento */}
           <Text style={styles.label}>¿Cuántos días quieres entrenar?</Text>
           {renderDiasCirculos()}
 
-          {/* Lesiones */}
           <TextInput
             label="¿Tienes lesiones? (opcional)"
             mode="outlined"
@@ -274,19 +268,14 @@ const RutinaScreen: React.FC = () => {
             onChangeText={setLesiones}
             style={styles.input}
             left={<TextInput.Icon icon="medical-bag" color={PRIMARY_COLOR} />}
-            theme={{
-              colors: { primary: PRIMARY_COLOR, text: TEXT_COLOR },
-            }}
+            theme={{ colors: { primary: PRIMARY_COLOR, text: TEXT_COLOR } }}
             multiline
             placeholder="Escribe si tienes alguna lesión..."
             textAlignVertical="top"
           />
 
           <TouchableOpacity
-            style={[
-              styles.boton,
-              isSubmitting && { backgroundColor: "#FFF59E" },
-            ]}
+            style={[styles.boton, isSubmitting && { backgroundColor: "#FFF59E" }]}
             onPress={onGenerarRutina}
             disabled={isSubmitting}
             activeOpacity={0.85}
@@ -425,7 +414,7 @@ const styles = StyleSheet.create({
     elevation: 2,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
+    shadowOpacity: 0.1,
     shadowRadius: 6,
   },
   botonTexto: {

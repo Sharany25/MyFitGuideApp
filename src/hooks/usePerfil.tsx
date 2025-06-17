@@ -9,7 +9,7 @@ interface PerfilCompleto {
   rutina?: any;
 }
 
-const ENDPOINT = "http://192.168.239.234:3000/MyFitGuide/usuario-completo";
+const ENDPOINT = "http://192.168.1.11:3000/MyFitGuide/usuario-completo";
 
 // ------- Utilitario para usar en login ---------
 export const obtenerPerfilCompleto = async (userId: string): Promise<PerfilCompleto | null> => {

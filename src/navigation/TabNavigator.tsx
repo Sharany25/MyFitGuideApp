@@ -4,22 +4,27 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import PerfilScreen from '../screens/PerfilScreen';
-import DietaScreen from '../screens/DietaScreen';
-import RutinaScreen from '../screens/RutinaScreen';
+import DietaIAGenerada from '../screens/DietaIAGenerada';
+import RutinaIAGenerada from '../screens/RutinaIAGenerada';
 import HomeScreen from '../screens/HomeScreen';
 import MapScreen from '../screens/MapScreen';
 
-type TabParamList = {
-  Perfil: undefined;
-  Dieta: undefined;
-  Rutina: undefined;
-  Home: undefined;
-  Map: undefined;
+export type TabParamList = {
+  Perfil: { userId: string };
+  Dieta: { userId: string };
+  RutinaIAGenerada: { userId: string };
+  Home: { userId: string };
+  Map: { userId: string };
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
-const TabNavigator: React.FC = () => {
+interface TabNavigatorProps {
+  route: { params: { userId: string } };
+}
+
+const TabNavigator: React.FC<TabNavigatorProps> = ({ route }) => {
+  const { userId } = route.params;
   const insets = useSafeAreaInsets();
 
   return (
@@ -57,8 +62,8 @@ const TabNavigator: React.FC = () => {
             case 'Dieta':
               iconName = focused ? 'fast-food' : 'fast-food-outline';
               break;
-            case 'Rutina':
-              iconName = focused ? 'barbell' : 'barbell-outline';
+            case 'RutinaIAGenerada':
+              iconName = focused ? 'fitness' : 'fitness-outline';
               break;
             case 'Home':
               iconName = focused ? 'home' : 'home-outline';
@@ -71,13 +76,19 @@ const TabNavigator: React.FC = () => {
         },
       })}
     >
-      <Tab.Screen name="Perfil" component={PerfilScreen} />
-      <Tab.Screen name="Dieta" component={DietaScreen} />
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Rutina" component={RutinaScreen} />
-      <Tab.Screen 
-        name="Map" 
-        component={MapScreen} 
+      <Tab.Screen name="Perfil" component={PerfilScreen} initialParams={{ userId }} />
+      <Tab.Screen name="Dieta" component={DietaIAGenerada} initialParams={{ userId }} />
+      <Tab.Screen name="Home" component={HomeScreen} initialParams={{ userId }} />
+      <Tab.Screen
+        name="RutinaIAGenerada"
+        component={RutinaIAGenerada}
+        initialParams={{ userId }}
+        options={{ tabBarLabel: "Rutina" }}
+      />
+      <Tab.Screen
+        name="Map"
+        component={MapScreen}
+        initialParams={{ userId }}
         options={{ tabBarLabel: 'Gym Cercanos' }}
       />
     </Tab.Navigator>

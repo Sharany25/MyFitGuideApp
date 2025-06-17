@@ -1,32 +1,34 @@
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { useUser } from '../context/UserContext';
 
-// Screens
 import LoginScreen from '../screens/LoginScreen';
 import RegistroScreen from '../screens/RegistroScreen';
 import DietaScreen from '../screens/DietaScreen';
 import RutinaScreen from '../screens/RutinaScreen';
-import TabNavigator from './TabNavigator';
 import PerfilScreen from '../screens/PerfilScreen';
 import HistorialScreen from '../screens/HistorialScreen';
+import TabNavigator, { TabParamList } from './TabNavigator';
+import RutinaIAGenerada from '../screens/RutinaIAGenerada';
+import DietaIAGenerada from '../screens/DietaIAGenerada';
+import ResumenSemanalDieta from '../components/ResumenSemanalDieta';
 
 export type RootStackParamList = {
   Login: undefined;
   Registro: undefined;
   Dieta: { userId: string; nombre: string };
   Rutina: { userId: string; nombre: string; objetivo: string };
-  Tabs: { userId: string };
+  Tabs: { userId: string; screen?: keyof TabParamList };
   Perfil: { userId: string };
   Historial: { userId?: string };
+  RutinaIAGenerada: { userId: string };
+  DietaIAGenerada: { userId: string };
+  ResumenSemanalDieta: { userId: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
 
 const StackNavigator: React.FC = () => {
-  const { state } = useUser();
-
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -37,6 +39,9 @@ const StackNavigator: React.FC = () => {
         <Stack.Screen name="Tabs" component={TabNavigator} />
         <Stack.Screen name="Perfil" component={PerfilScreen} />
         <Stack.Screen name="Historial" component={HistorialScreen} />
+        <Stack.Screen name="RutinaIAGenerada" component={RutinaIAGenerada} />
+        <Stack.Screen name="DietaIAGenerada" component={DietaIAGenerada} />
+        <Stack.Screen name="ResumenSemanalDieta" component={ResumenSemanalDieta} />
       </Stack.Navigator>
     </NavigationContainer>
   );

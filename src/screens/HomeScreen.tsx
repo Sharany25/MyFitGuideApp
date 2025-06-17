@@ -106,10 +106,8 @@ const HomeScreen: React.FC = () => {
             title="Rutina semanal"
             desc="Verifica o edita tu entrenamiento."
             onPress={() =>
-              navigation.navigate('Rutina', {
+              navigation.navigate('RutinaIAGenerada', {
                 userId: user?.userId,
-                nombre: v(user?.nombre),
-                objetivo: v(user?.objetivo),
               })
             }
             cardColor="#f7f9fa"

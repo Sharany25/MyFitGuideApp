@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Linking,
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { useNavigation } from "@react-navigation/native";
@@ -21,7 +22,8 @@ import SuccessToast from "../components/SuccessToast";
 import ErrorToast from "../components/ErrorToast";
 import { useLogin } from "../hooks/useLogin";
 import { useUser } from "../context/UserContext";
-import { obtenerPerfilCompleto } from "../hooks/usePerfil"; // <-- Asegúrate de exportar esta función
+import { obtenerPerfilCompleto } from "../hooks/usePerfil";
+import { MaterialIcons } from "@expo/vector-icons";
 
 const logo = require("../../assets/Logo.png");
 const { width, height } = Dimensions.get("window");
@@ -41,7 +43,6 @@ const LoginScreen: React.FC = () => {
   const { login, loading, error } = useLogin();
   const { dispatch } = useUser();
 
-  // ---- LOGIN PRINCIPAL ----
   const onSubmit = async (data: FormData) => {
     if (!data.email || !data.password) return;
 
@@ -55,13 +56,9 @@ const LoginScreen: React.FC = () => {
     const result = await login(loginData);
 
     if (result) {
-      // 1. Obtener el userId válido
       const userId = result._id || result.idUsuario || result.userId || "";
-
-      // 2. Fetch del perfil completo
       const perfilCompleto = await obtenerPerfilCompleto(userId);
 
-      // 3. Mapping del perfil al UserContext
       let edadStr = "";
       if (perfilCompleto?.usuario?.fechaNacimiento) {
         const fechaNacimiento = new Date(perfilCompleto.usuario.fechaNacimiento);
@@ -90,7 +87,6 @@ const LoginScreen: React.FC = () => {
         lesiones: perfilCompleto?.rutina?.lesiones || "",
       };
 
-      // 4. Guarda en el contexto global y en AsyncStorage
       dispatch({ type: 'SET_USER', payload: userProfile });
       await AsyncStorage.setItem("userProfile", JSON.stringify(userProfile));
 
@@ -199,9 +195,20 @@ const LoginScreen: React.FC = () => {
             <TouchableOpacity style={styles.bottomButton} onPress={() => navigation.navigate("Registro")}>
               <Text style={styles.bottomButtonText}>¿Nuevo usuario? Crear cuenta</Text>
             </TouchableOpacity>
+
+            <View style={styles.helpContainer}>
+              <TouchableOpacity
+                style={styles.helpLinkContainer}
+                onPress={() => Linking.openURL("https://studio--smartbit-health-hub.us-central1.hosted.app/")}
+                activeOpacity={0.7}
+              >
+                <MaterialIcons name="help-outline" size={20} color="#007bff" style={{ marginRight: 6 }} />
+                <Text style={styles.helpLinkText}>Manual de Uso / Preguntas Frecuentes</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingView> 
     </>
   );
 };
@@ -292,6 +299,27 @@ const styles = StyleSheet.create({
     color: PRIMARY_COLOR,
     fontSize: 15,
     fontWeight: "500",
+  },
+  helpContainer: {
+    marginTop: 35,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  helpLinkContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f2f7ff",
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#d6e4ff",
+  },
+  helpLinkText: {
+    color: "#007bff",
+    fontSize: 15,
+    fontWeight: "500",
+    textDecorationLine: "none",
   },
 });
 

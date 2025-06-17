@@ -21,7 +21,7 @@ export const useDieta = () => {
     setSuccess(false);
 
     try {
-      const response = await fetch('http://192.168.239.234:3000/MyFitGuide/prueba-dieta', {
+      const response = await fetch('http://192.168.1.11:3000/MyFitGuide/dieta-ia', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -43,5 +43,63 @@ export const useDieta = () => {
     }
   };
 
-  return { enviarDieta, loading, error, success };
+  const obtenerDietaPorUsuario = async (userId: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`http://192.168.1.11:3000/MyFitGuide/dieta-ia/${userId}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "No se pudo obtener la dieta");
+      }
+
+      return data;
+    } catch (e: any) {
+      setError(e.message || "Error desconocido");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return {
+    enviarDieta,
+    obtenerDietaPorUsuario,
+    loading,
+    error,
+    success,
+    setSuccess,
+    setError,
+  };
+};
+
+// ✅ Nuevo hook separado para el GET
+export const useGetDietaPorUsuario = () => {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const obtenerDietaPorUsuario = async (userId: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`http://192.168.1.11:3000/MyFitGuide/dieta-ia/${userId}`);
+      const result = await response.json();
+
+      if (response.ok) {
+        setData(result);
+      } else {
+        setError(result.message || "Error al obtener dieta");
+      }
+    } catch (e) {
+      setError("No se pudo conectar con el servidor");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { obtenerDietaPorUsuario, data, loading, error };
 };
