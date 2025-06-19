@@ -1,4 +1,3 @@
-// context/UserContext.tsx
 import React, { createContext, useReducer, useEffect, useContext, ReactNode, Dispatch } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -79,12 +78,10 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
     })();
   }, []);
 
-  // Guardar usuario en el storage al actualizar el contexto
   useEffect(() => {
     if (state.user) {
       AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state.user));
     } else {
-      // Si no hay usuario, limpia storage (para evitar quedarte con el anterior)
       AsyncStorage.removeItem(STORAGE_KEY);
     }
   }, [state.user]);
