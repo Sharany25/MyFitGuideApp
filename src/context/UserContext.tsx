@@ -60,7 +60,6 @@ const STORAGE_KEY = 'userProfile';
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(userReducer, initialState);
 
-  // Cargar usuario del storage al inicio
   useEffect(() => {
     (async () => {
       dispatch({ type: 'LOADING' });
