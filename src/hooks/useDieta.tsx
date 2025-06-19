@@ -75,7 +75,6 @@ export const useDieta = () => {
   };
 };
 
-// ✅ Nuevo hook separado para el GET
 export const useGetDietaPorUsuario = () => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
