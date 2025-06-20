@@ -165,7 +165,6 @@ const HomeScreen: React.FC = () => {
   );
 };
 
-// Tags
 const TagButton = ({
   icon,
   text,
@@ -181,7 +180,6 @@ const TagButton = ({
   </TouchableOpacity>
 );
 
-// Accesos rápidos
 const QuickAccessCard = ({
   icon,
   title,
@@ -208,7 +206,6 @@ const QuickAccessCard = ({
   </TouchableOpacity>
 );
 
-// Datos usuario
 const InfoLabel = ({
   label,
   value,

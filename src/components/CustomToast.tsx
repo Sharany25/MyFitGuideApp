@@ -1,4 +1,3 @@
-// components/CustomToast.tsx
 import React, { useEffect, useRef } from "react";
 import { Animated, StyleSheet, Dimensions, PanResponder, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,26 +24,23 @@ const CustomToast: React.FC<CustomToastProps> = ({ message, visible, onHide, typ
       Animated.timing(translateY, {
         toValue: 0,
         duration: 300,
-        useNativeDriver: false, // ¡IMPORTANTE! Para evitar el error.
+        useNativeDriver: false,
       }).start(() => {
-        // Auto-hide después de 3 segundos
         setTimeout(() => {
           hide();
         }, 3000);
       });
     }
-    // eslint-disable-next-line
   }, [visible]);
 
   const hide = () => {
     Animated.timing(translateY, {
       toValue: -100,
       duration: 300,
-      useNativeDriver: false, // ¡IMPORTANTE!
+      useNativeDriver: false,
     }).start(onHide);
   };
 
-  // Permite deslizar hacia arriba para ocultar el Toast
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gesture) => Math.abs(gesture.dy) > 10,

@@ -21,7 +21,6 @@ const BG_COLOR = '#F8FEF7';
 type NavigationProp = any;
 type HistorialRouteProp = RouteProp<RootStackParamList, 'Historial'>;
 
-// Define tipos para dieta/rutina
 type DietaType = {
   genero?: string;
   altura?: number;
@@ -47,7 +46,6 @@ const HistorialScreen: React.FC = () => {
 
   const { perfilCompleto, loading, error } = useUserPerfil(userId);
 
-  // Tab: dietas o rutinas
   const [tab, setTab] = useState<'dietas' | 'rutinas'>('dietas');
 
   const dietas: DietaType[] = perfilCompleto.dieta

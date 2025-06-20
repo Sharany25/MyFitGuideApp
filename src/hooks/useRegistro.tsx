@@ -4,7 +4,7 @@ export interface RegistroPayload {
   nombre: string;
   correoElectronico: string;
   contraseña: string;
-  fechaNacimiento: string; // Formato ISO (YYYY-MM-DD)
+  fechaNacimiento: string;
   ubicacion: string | null;
 }
 

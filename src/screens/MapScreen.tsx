@@ -80,8 +80,7 @@ export default function MapScreen() {
       if (!location || !selectedGym) return;
       setRouteLoading(true);
       try {
-        // OpenRouteService API (requiere key)
-        const apiKey = "5b3ce3597851110001cf6248149e21a82dda488e80568b769c230794"; // Tu key gratuita (1,000 solicitudes/día)
+        const apiKey = "5b3ce3597851110001cf6248149e21a82dda488e80568b769c230794";
         const url = `https://api.openrouteservice.org/v2/directions/foot-walking?api_key=${apiKey}`;
         const body = {
           coordinates: [

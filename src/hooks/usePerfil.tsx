@@ -1,5 +1,3 @@
-// hooks/usePerfil.ts
-
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -11,12 +9,11 @@ interface PerfilCompleto {
 
 const ENDPOINT = "http://192.168.1.11:3000/MyFitGuide/usuario-completo";
 
-// ------- Utilitario para usar en login ---------
 export const obtenerPerfilCompleto = async (userId: string): Promise<PerfilCompleto | null> => {
   try {
     const res = await fetch(`${ENDPOINT}/${userId}`);
     if (res.ok) {
-      return await res.json(); // { usuario, dieta, rutina }
+      return await res.json();
     }
     return null;
   } catch {
@@ -24,7 +21,6 @@ export const obtenerPerfilCompleto = async (userId: string): Promise<PerfilCompl
   }
 };
 
-// ----------- Hook React para componentes -----------
 export const useUserPerfil = (userIdParam?: string) => {
   const [loading, setLoading] = useState(true);
   const [perfilCompleto, setPerfilCompleto] = useState<PerfilCompleto>({});
@@ -38,7 +34,7 @@ export const useUserPerfil = (userIdParam?: string) => {
       try {
         let userId: string | undefined = userIdParam;
         if (!userId) {
-          const stored = await AsyncStorage.getItem('userProfile'); // <- corregido aquí
+          const stored = await AsyncStorage.getItem('userProfile');
           if (stored) {
             const user = JSON.parse(stored);
             userId = user.userId || user._id || user.idUsuario || user.id;

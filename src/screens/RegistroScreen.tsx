@@ -105,7 +105,6 @@
           setShowError(true);
           return;
         }
-        // Guarda en formato ISO para backend y context
         const fechaISO = `${fechaParts[2]}-${fechaParts[1]}-${fechaParts[0]}`;
         if (isNaN(new Date(fechaISO).getTime())) {
           setShowError(true);
@@ -131,10 +130,8 @@
             ubicacion: ubicacion ?? undefined,
           };
 
-          // 1. Actualiza context global
           dispatch({ type: 'SET_USER', payload: userProfile });
 
-          // 2. Guarda en storage para persistencia tras reinicio
           await AsyncStorage.setItem('userProfile', JSON.stringify(userProfile));
 
           setTimeout(() => {

@@ -1,4 +1,3 @@
-// PerfilScreen.tsx
 import React, { useRef, useEffect } from 'react';
 import {
   Text,
@@ -25,7 +24,6 @@ const LABEL_COLOR = '#7a8797';
 type PerfilRouteProp = RouteProp<RootStackParamList, 'Perfil'>;
 
 const PerfilScreen: React.FC = () => {
-  // Lee los params SIEMPRE con useRoute (NUNCA por props, para tabs y stacks)
   const route = useRoute<PerfilRouteProp>();
   const userId = route.params?.userId;
   const { perfilCompleto, loading, error } = useUserPerfil(userId);
@@ -44,10 +42,8 @@ const PerfilScreen: React.FC = () => {
     }).start();
   }, []);
 
-  // Utilidad para mostrar "N/D" si no hay datos
   const v = (valor: any) => (valor !== undefined && valor !== null && valor !== '' ? valor : 'N/D');
 
-  // ----- LOADING -----
   if (loading) {
     return (
       <View style={[styles.loadingBox]}>
@@ -56,7 +52,6 @@ const PerfilScreen: React.FC = () => {
     );
   }
 
-  // ----- ERROR -----
   if (error) {
     return (
       <View style={[styles.loadingBox]}>

@@ -84,17 +84,16 @@ const DietaScreen: React.FC = () => {
     });
 
     if (result) {
-      // Actualiza usuario global y almacenamiento
       const updatedUser = {
         ...state.user,
         userId,
         nombre,
         genero,
-        altura, // string
-        peso, // string
+        altura, 
+        peso, 
         objetivo,
         alergias,
-        presupuesto, // string
+        presupuesto,
         correoElectronico: state.user?.correoElectronico ?? '',
         fechaNacimiento: state.user?.fechaNacimiento ?? '',
         ubicacion: state.user?.ubicacion ?? '',
