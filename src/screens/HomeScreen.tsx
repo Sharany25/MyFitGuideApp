@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   ScrollView,
   View,
@@ -10,6 +10,8 @@ import {
   SafeAreaView,
   Platform,
   StatusBar,
+  Animated,
+  ColorValue,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -17,10 +19,11 @@ import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-ico
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUser } from '../context/UserContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import LogoutModal from '../components/LogoutModal';
 
 const { width } = Dimensions.get('window');
 const PRIMARY_COLOR = '#00C27F';
-const GRADIENT_COLORS: ReadonlyArray<string> = ['#22C55E', '#16A34A'];
+const GRADIENT_COLORS: [ColorValue, ColorValue] = ['#22C55E', '#16A34A'];
 
 type NavigationProp = StackNavigationProp<any, any>;
 
@@ -29,13 +32,24 @@ const HomeScreen: React.FC = () => {
   const { state, dispatch } = useUser();
   const user = state.user;
 
+  const [modalVisible, setModalVisible] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
+
   const cerrarSesion = async () => {
     await AsyncStorage.removeItem('userProfile');
     dispatch({ type: 'CLEAR_USER' });
     navigation.replace('Login');
   };
 
-  const v = (valor: any) => valor !== undefined && valor !== null && valor !== '' ? valor : 'N/D';
+  const v = (valor: any) => (valor !== undefined && valor !== null && valor !== '' ? valor : 'N/D');
 
   if (state.loading) {
     return (
@@ -49,11 +63,11 @@ const HomeScreen: React.FC = () => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 50 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header bienvenido con gradiente e icono perfil como botón */}
-        <View style={{ marginBottom: 16 }}>
+        {/* Header animado */}
+        <Animated.View style={{ marginBottom: 16, opacity: fadeAnim }}>
           <LinearGradient
             colors={GRADIENT_COLORS}
             style={styles.headerCard}
@@ -67,25 +81,34 @@ const HomeScreen: React.FC = () => {
             >
               <Ionicons name="person-circle-outline" size={67} color="#fff" />
               <View style={styles.headerTexts}>
-                <Text style={styles.hello} numberOfLines={1} ellipsizeMode="tail">
-                  ¡Hola, <Text style={styles.helloName}>{v(user?.nombre) || 'Usuario'}</Text>!
+                <Text style={styles.hello}>
+                  ¡Hola, <Text style={styles.helloName}>{v(user?.nombre)}</Text>!
                 </Text>
                 <Text style={styles.slogan}>Tu bienestar es nuestra meta</Text>
               </View>
             </TouchableOpacity>
           </LinearGradient>
-        </View>
+        </Animated.View>
 
-        {/* Tags */}
-        <View style={styles.tagsContainer}>
-          <TagButton icon="star" text="Favoritos" />
-          <TagButton
-            icon="time-outline"
-            text="Historial"
-            onPress={() => navigation.navigate('Historial', { userId: user?.userId })}
-          />
-          <TagButton icon="options-outline" text="Personalización" />
-        </View>
+        {/* Tags como tarjeta agrupada */}
+        <Animated.View style={{ opacity: fadeAnim }}>
+          <View style={styles.tagsCard}>
+            <TouchableOpacity
+              style={styles.tagItem}
+              onPress={() => navigation.navigate('Favoritos', { userId: user?.userId })}
+            >
+              <Ionicons name="star" size={18} color={PRIMARY_COLOR} />
+              <Text style={styles.tagItemText}>Favoritos</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.tagItem}
+              onPress={() => navigation.navigate('Historial', { userId: user?.userId })}
+            >
+              <Ionicons name="time-outline" size={18} color={PRIMARY_COLOR} />
+              <Text style={styles.tagItemText}>Historial</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
 
         {/* Accesos rápidos */}
         <View style={styles.quickAccessRow}>
@@ -105,16 +128,12 @@ const HomeScreen: React.FC = () => {
             icon={<Ionicons name="barbell" size={40} color={PRIMARY_COLOR} />}
             title="Rutina semanal"
             desc="Verifica o edita tu entrenamiento."
-            onPress={() =>
-              navigation.navigate('RutinaIAGenerada', {
-                userId: user?.userId,
-              })
-            }
+            onPress={() => navigation.navigate('RutinaIAGenerada', { userId: user?.userId })}
             cardColor="#f7f9fa"
           />
         </View>
 
-        {/* Info usuario siempre visible */}
+        {/* Información del perfil */}
         <View style={styles.profileInfoBox}>
           <InfoLabel
             label="Edad"
@@ -154,32 +173,24 @@ const HomeScreen: React.FC = () => {
             icon={<Ionicons name="trophy-outline" size={18} color={PRIMARY_COLOR} />}
           />
         </View>
-
-        {/* Botón cerrar sesión */}
-        <TouchableOpacity style={styles.logoutButton} onPress={cerrarSesion} activeOpacity={0.85}>
-          <Ionicons name="log-out-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
-          <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
-        </TouchableOpacity>
       </ScrollView>
+
+      {/* Botón logout */}
+      <TouchableOpacity style={styles.fabLogout} onPress={() => setModalVisible(true)}>
+        <Ionicons name="exit-outline" size={28} color="#fff" />
+      </TouchableOpacity>
+
+      {/* Modal */}
+      <LogoutModal
+        visible={modalVisible}
+        onClose={() => setModalVisible(false)}
+        onConfirm={cerrarSesion}
+      />
     </SafeAreaView>
   );
 };
 
-const TagButton = ({
-  icon,
-  text,
-  onPress,
-}: {
-  icon: any;
-  text: string;
-  onPress?: () => void;
-}) => (
-  <TouchableOpacity style={styles.tagButton} activeOpacity={0.75} onPress={onPress}>
-    <Ionicons name={icon} size={19} color={PRIMARY_COLOR} />
-    <Text style={styles.tagText}>{text}</Text>
-  </TouchableOpacity>
-);
-
+// REUTILIZABLES
 const QuickAccessCard = ({
   icon,
   title,
@@ -199,28 +210,20 @@ const QuickAccessCard = ({
     activeOpacity={0.87}
   >
     <View style={{ marginBottom: 12 }}>{icon}</View>
-    <Text style={styles.quickCardTitle} numberOfLines={2} ellipsizeMode="tail">
-      {title}
-    </Text>
+    <Text style={styles.quickCardTitle}>{title}</Text>
     <Text style={styles.quickCardDesc}>{desc}</Text>
   </TouchableOpacity>
 );
 
-const InfoLabel = ({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ReactNode;
-}) => (
+const InfoLabel = ({ label, value, icon }: { label: string; value: string | number; icon: React.ReactNode }) => (
   <View style={styles.infoBox}>
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
       {icon}
       <Text style={styles.infoLabel}>{label}</Text>
     </View>
-    <Text style={styles.infoValue} numberOfLines={1} ellipsizeMode="tail">{value}</Text>
+    <Text style={styles.infoValue} numberOfLines={1}>
+      {value}
+    </Text>
   </View>
 );
 
@@ -228,175 +231,124 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F7F9FA',
-    paddingTop:
-      Platform.OS === 'android'
-        ? StatusBar.currentHeight
-          ? StatusBar.currentHeight + 12
-          : 22
-        : 16,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight ?? 22 : 16,
   },
   container: { flex: 1, backgroundColor: '#F7F9FA', paddingHorizontal: 16 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   headerCard: {
-    borderRadius: 28,
-    padding: 20,
-    shadowColor: '#14b278',
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 8,
-    minHeight: 100,
-    position: 'relative',
-    overflow: 'visible',
+    borderRadius: 20,
+    padding: 16,
+    marginHorizontal: 4,
+    backgroundColor: '#00C27F',
+    marginTop: 10,
+    elevation: 6,
+    marginBottom: 10,
+    shadowColor: '#00C27F',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingTop: 10,
   },
   headerTexts: {
     flex: 1,
     marginLeft: 12,
   },
-  hello: {
-    fontSize: 23,
-    color: '#fff',
-    marginBottom: 3,
-    fontWeight: '700',
-    letterSpacing: 0.13,
-  },
-  helloName: {
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  slogan: {
-    fontSize: 15,
-    color: '#e2ffe5',
-    fontWeight: '600',
-    opacity: 0.97,
-    marginTop: 3,
-    letterSpacing: 0.1,
-  },
-  tagsContainer: {
+  hello: { fontSize: 23, color: '#fff', fontWeight: '700' },
+  helloName: { fontWeight: 'bold', color: '#fff' },
+  slogan: { fontSize: 15, color: '#e2ffe5', fontWeight: '600', opacity: 0.97, marginTop: 3 },
+
+  tagsCard: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 22,
-    marginTop: 5,
+    justifyContent: 'space-around',
+    backgroundColor: '#ffffff',
+    paddingVertical: 14,
+    marginHorizontal: 4,
+    borderRadius: 18,
+    marginTop: 8,
+    marginBottom: 26,
+    shadowColor: '#00C27F',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
-  tagButton: {
+  tagItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E6F8F1',
-    borderRadius: 16,
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-    minWidth: 110,
-    justifyContent: 'center',
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
   },
-  tagText: {
+  tagItemText: {
+    marginLeft: 8,
+    fontWeight: '700',
     color: PRIMARY_COLOR,
     fontSize: 15,
-    fontWeight: '700',
-    marginLeft: 7,
-    letterSpacing: 0.14,
   },
-  quickAccessRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 20,
-    marginBottom: 25,
-  },
+
+  quickAccessRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 20, marginBottom: 25 },
   quickCard: {
     flex: 1,
-    borderRadius: 23,
-    padding: 23,
+    borderRadius: 18,
+    padding: 18,
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    elevation: 4,
     marginHorizontal: 3,
-    shadowColor: PRIMARY_COLOR,
-    shadowOpacity: 0.09,
-    shadowRadius: 12,
+    shadowColor: '#00C27F',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
-    elevation: 7,
-    minHeight: 156,
-    maxWidth: (width - 50) / 2,
+    minHeight: 140,
   },
-  quickCardTitle: {
-    fontWeight: 'bold',
-    color: PRIMARY_COLOR,
-    fontSize: 18,
-    marginBottom: 3,
-    textAlign: 'center',
-    letterSpacing: 0.17,
-  },
-  quickCardDesc: {
-    color: '#274136',
-    fontSize: 15,
-    textAlign: 'center',
-    marginTop: 2,
-    opacity: 0.88,
-    fontWeight: '400',
-  },
+  quickCardTitle: { fontWeight: 'bold', color: PRIMARY_COLOR, fontSize: 18, textAlign: 'center' },
+  quickCardDesc: { color: '#274136', fontSize: 15, textAlign: 'center', opacity: 0.88, fontWeight: '400' },
   profileInfoBox: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    paddingVertical: 21,
-    paddingHorizontal: 17,
-    marginBottom: 28,
-    shadowColor: PRIMARY_COLOR,
-    shadowOpacity: 0.13,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 11,
+    gap: 10,
+    padding: 15,
+    borderRadius: 18,
+    backgroundColor: '#ffffff',
+    elevation: 3,
+    shadowColor: '#00C27F',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    marginTop: 20,
+    marginBottom: 40,
   },
   infoBox: {
     width: '48%',
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 11,
-    backgroundColor: '#e6f8f1',
-    borderRadius: 11,
-    paddingVertical: 11,
-    paddingHorizontal: 15,
-  },
-  infoLabel: {
-    color: '#4B5768',
-    fontSize: 17,
-    fontWeight: '700',
-    marginLeft: 2,
-  },
-  infoValue: {
-    color: PRIMARY_COLOR,
-    fontSize: 18,
-    fontWeight: '800',
-    maxWidth: '52%',
-    textAlign: 'right',
-    marginLeft: 7,
-    letterSpacing: 0.11,
-  },
-  logoutButton: {
-    backgroundColor: '#E53E3E',
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 18,
-    borderRadius: 16,
-    marginTop: 12,
-    marginHorizontal: 7,
-    shadowColor: '#E53E3E',
-    shadowOpacity: 0.14,
-    shadowRadius: 7,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 4,
+    backgroundColor: '#e9f9f3',
+    padding: 12,
+    borderRadius: 12,
   },
-  logoutButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: 0.13,
+  infoLabel: { color: '#4B5768', fontSize: 17, fontWeight: '700' },
+  infoValue: { color: PRIMARY_COLOR, fontSize: 18, fontWeight: '800', maxWidth: '52%', textAlign: 'right' },
+  fabLogout: {
+    position: 'absolute',
+    bottom: 28,
+    right: 20,
+    backgroundColor: '#E53E3E',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 5,
   },
 });
 

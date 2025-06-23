@@ -12,6 +12,7 @@ import TabNavigator, { TabParamList } from './TabNavigator';
 import RutinaIAGenerada from '../screens/RutinaIAGenerada';
 import DietaIAGenerada from '../screens/DietaIAGenerada';
 import ResumenSemanalDieta from '../components/ResumenSemanalDieta';
+import FavoritosScreen from '../screens/FavoritosScreen';
 
 export type RootStackParamList = {
   Login: undefined;
@@ -24,6 +25,7 @@ export type RootStackParamList = {
   RutinaIAGenerada: { userId: string };
   DietaIAGenerada: { userId: string };
   ResumenSemanalDieta: { userId: string };
+  Favoritos: { userId: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -42,6 +44,7 @@ const StackNavigator: React.FC = () => {
         <Stack.Screen name="RutinaIAGenerada" component={RutinaIAGenerada} />
         <Stack.Screen name="DietaIAGenerada" component={DietaIAGenerada} />
         <Stack.Screen name="ResumenSemanalDieta" component={ResumenSemanalDieta} />
+        <Stack.Screen name="Favoritos" component={FavoritosScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

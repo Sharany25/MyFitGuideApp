@@ -13,6 +13,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "../context/UserContext";
 import { useRutina } from "../hooks/useRutina";
+import { useFavoritos } from "../hooks/useFavoritos";
 
 const { width } = Dimensions.get("window");
 
@@ -30,24 +31,34 @@ const RutinaIAGenerada: React.FC = () => {
   const { state } = useUser();
   const userId = state.user?.userId || "";
   const { obtenerRutinaPorId, loading, error } = useRutina();
+  const { favoritos, getFavoritos, toggleFavorito } = useFavoritos();
 
   const [rutinaData, setRutinaData] = useState<any[]>([]);
   const [selectedDiaIndex, setSelectedDiaIndex] = useState(0);
-  const [favoritos, setFavoritos] = useState<{ [key: string]: boolean }>({});
+  const [favoritosLocal, setFavoritosLocal] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     const fetchData = async () => {
       if (!userId) return;
+
       const result = await obtenerRutinaPorId(userId);
       if (result?.rutina?.rutina) {
         setRutinaData(result.rutina.rutina);
       }
+
+      const favs = await getFavoritos(userId);
+      const favMap: { [key: string]: boolean } = {};
+      favs.forEach((ej: string) => (favMap[ej] = true));
+      setFavoritosLocal(favMap);
     };
+
     fetchData();
   }, [userId]);
 
-  const toggleFavorito = (nombre: string) => {
-    setFavoritos((prev) => ({ ...prev, [nombre]: !prev[nombre] }));
+  const handleToggleFavorito = async (nombre: string) => {
+    const marcado = !favoritosLocal[nombre];
+    setFavoritosLocal((prev) => ({ ...prev, [nombre]: marcado }));
+    await toggleFavorito(userId, nombre, marcado);
   };
 
   const rutinaDelDia = rutinaData.length > 0 ? rutinaData[selectedDiaIndex] : null;
@@ -97,11 +108,11 @@ const RutinaIAGenerada: React.FC = () => {
               <View key={i} style={styles.ejercicioBox}>
                 <View style={styles.headerRow}>
                   <Text style={styles.ejercicioNombre}>🏋️‍♀️ {ejercicio.nombre}</Text>
-                  <TouchableOpacity onPress={() => toggleFavorito(ejercicio.nombre)}>
+                  <TouchableOpacity onPress={() => handleToggleFavorito(ejercicio.nombre)}>
                     <Ionicons
-                      name={favoritos[ejercicio.nombre] ? "star" : "star-outline"}
+                      name={favoritosLocal[ejercicio.nombre] ? "star" : "star-outline"}
                       size={24}
-                      color={favoritos[ejercicio.nombre] ? COLORS.primary : "#ccc"}
+                      color={favoritosLocal[ejercicio.nombre] ? COLORS.primary : "#ccc"}
                       style={{ marginLeft: 8 }}
                     />
                   </TouchableOpacity>
