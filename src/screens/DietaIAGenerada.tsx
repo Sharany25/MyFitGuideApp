@@ -14,6 +14,8 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/StackNavigator';
 import { useDieta } from '../hooks/useDieta';
+import { Ionicons } from '@expo/vector-icons'; // Para el ícono de estrella
+import { useFavoritos } from '../hooks/useFavoritos'; // Importa el hook para manejar favoritos
 
 const { width } = Dimensions.get('window');
 
@@ -41,8 +43,11 @@ const DietaIAGenerada = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { userId } = route.params as Params;
   const { obtenerDietaPorUsuario, loading, error } = useDieta();
+  const { ComidasFavoritas } = useFavoritos();  // Usa el hook para manejar comidas favoritas
+
   const [data, setData] = useState<any>(null);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
+  const [favoritos, setFavoritos] = useState<string[]>([]); // Estado para las comidas favoritas
 
   useEffect(() => {
     const fetchData = async () => {
@@ -51,6 +56,14 @@ const DietaIAGenerada = () => {
     };
     fetchData();
   }, [userId]);
+
+  const toggleComidaFavorita = async (comida: string) => {
+    setFavoritos(prev =>
+      prev.includes(comida) ? prev.filter(item => item !== comida) : [...prev, comida]
+    );
+    // Enviar al backend que la comida se marca/desmarca como favorita
+    await ComidasFavoritas(userId, comida, !favoritos.includes(comida));  // El tercer parámetro indica si marca como favorito
+  };
 
   if (loading) {
     return (
@@ -130,6 +143,16 @@ const DietaIAGenerada = () => {
               <Text style={styles.comidaSub}>Calorías: {comida.calorias} kcal</Text>
               <Text style={styles.comidaSub}>Costo: ${comida.costo} MXN</Text>
             </View>
+            <TouchableOpacity
+              style={styles.favoriteButton}
+              onPress={() => toggleComidaFavorita(comida.platillo)}
+            >
+              <Ionicons
+                name={favoritos.includes(comida.platillo) ? 'star' : 'star-outline'}
+                size={24}
+                color={favoritos.includes(comida.platillo) ? COLORS.primary : '#ccc'}
+              />
+            </TouchableOpacity>
           </View>
         ))}
 
@@ -269,6 +292,15 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     color: '#777',
     marginTop: 12,
+  },
+  favoriteButton: {
+    marginTop: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 30,
+    width: 30,
+    borderRadius: 15,
+    backgroundColor: '#eee',
   },
   centered: {
     flex: 1,

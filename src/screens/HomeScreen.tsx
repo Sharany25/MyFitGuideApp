@@ -190,7 +190,6 @@ const HomeScreen: React.FC = () => {
   );
 };
 
-// REUTILIZABLES
 const QuickAccessCard = ({
   icon,
   title,

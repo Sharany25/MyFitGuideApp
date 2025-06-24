@@ -31,7 +31,7 @@ const RutinaIAGenerada: React.FC = () => {
   const { state } = useUser();
   const userId = state.user?.userId || "";
   const { obtenerRutinaPorId, loading, error } = useRutina();
-  const { favoritos, getFavoritos, toggleFavorito } = useFavoritos();
+  const { favoritos, getFavoritos, EjerciciosFavoritos } = useFavoritos();  // Usamos la función ejerciciosFavoritos
 
   const [rutinaData, setRutinaData] = useState<any[]>([]);
   const [selectedDiaIndex, setSelectedDiaIndex] = useState(0);
@@ -46,9 +46,11 @@ const RutinaIAGenerada: React.FC = () => {
         setRutinaData(result.rutina.rutina);
       }
 
-      const favs = await getFavoritos(userId);
+      // Llamada a getFavoritos solo con userId
+      const favs = await getFavoritos(userId);  // Eliminado el tipo
       const favMap: { [key: string]: boolean } = {};
-      favs.forEach((ej: string) => (favMap[ej] = true));
+      favs.ejercicios.forEach((ej: string) => (favMap[ej] = true)); // Añadimos los ejercicios favoritos
+      favs.comidas.forEach((comida: string) => (favMap[comida] = true)); // Añadimos las comidas favoritas
       setFavoritosLocal(favMap);
     };
 
@@ -58,7 +60,7 @@ const RutinaIAGenerada: React.FC = () => {
   const handleToggleFavorito = async (nombre: string) => {
     const marcado = !favoritosLocal[nombre];
     setFavoritosLocal((prev) => ({ ...prev, [nombre]: marcado }));
-    await toggleFavorito(userId, nombre, marcado);
+    await EjerciciosFavoritos(userId, nombre, marcado);  // Llamamos a la función ejerciciosFavoritos del hook
   };
 
   const rutinaDelDia = rutinaData.length > 0 ? rutinaData[selectedDiaIndex] : null;

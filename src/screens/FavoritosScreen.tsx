@@ -2,14 +2,16 @@ import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
-  ScrollView,
   StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  TouchableOpacity,
+  Dimensions,
   Platform,
   StatusBar,
-  TouchableOpacity,
   Animated,
 } from "react-native";
-import { useUser } from "../context/UserContext";
+import { useRoute } from "@react-navigation/native";  // Usamos useRoute para obtener los parámetros
 import { useFavoritos } from "../hooks/useFavoritos";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -25,96 +27,144 @@ const COLORS = {
 };
 
 const FavoritosScreen = () => {
-  const { state } = useUser();
-  const userId = state.user?.userId || "";
-  const { getFavoritos, toggleFavorito } = useFavoritos();
+  const route = useRoute();  // Usamos useRoute para obtener los parámetros
+  const { userId } = route.params as { userId: string };  // Accedemos al userId
 
-  const [favoritos, setFavoritos] = useState<string[]>([]);
+  const { getFavoritos, EjerciciosFavoritos, ComidasFavoritas } = useFavoritos();
+
+  const [favoritosEjercicios, setFavoritosEjercicios] = useState<string[]>([]); // Estado para ejercicios favoritos
+  const [favoritosComidas, setFavoritosComidas] = useState<string[]>([]); // Estado para comidas favoritas
   const [fadeAnim] = useState(new Animated.Value(0));
 
   const [dialogVisible, setDialogVisible] = useState(false);
-  const [ejercicioSeleccionado, setEjercicioSeleccionado] = useState<string | null>(null);
+  const [itemSeleccionado, setItemSeleccionado] = useState<string | null>(null);
+  const [tipoItemSeleccionado, setTipoItemSeleccionado] = useState<"ejercicio" | "comida">("ejercicio");
 
+  // useEffect que se dispara cuando se carga la pantalla
   useEffect(() => {
     cargarFavoritos();
   }, [userId]);
 
   const cargarFavoritos = async () => {
-    const data = await getFavoritos(userId);
-    setFavoritos(data);
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 400,
-      useNativeDriver: true,
-    }).start();
+    try {
+      // Cargar todos los favoritos
+      const data = await getFavoritos(userId); // Llamada al nuevo método GET
+      setFavoritosEjercicios(data.ejercicios || []);
+      setFavoritosComidas(data.comidas || []);
+
+      // Animación de entrada
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }).start();
+    } catch (error) {
+      console.error("Error al cargar los favoritos", error);
+    }
   };
 
-  const confirmarEliminar = (ejercicio: string) => {
-    setEjercicioSeleccionado(ejercicio);
+  const confirmarEliminar = (item: string, tipo: "ejercicio" | "comida") => {
+    setItemSeleccionado(item);
+    setTipoItemSeleccionado(tipo);
     setDialogVisible(true);
   };
 
   const ejecutarEliminacion = async () => {
-    if (ejercicioSeleccionado) {
-      await toggleFavorito(userId, ejercicioSeleccionado, false);
+    if (itemSeleccionado && tipoItemSeleccionado) {
+      if (tipoItemSeleccionado === "ejercicio") {
+        await EjerciciosFavoritos(userId, itemSeleccionado, false); // Eliminar ejercicio
+        setFavoritosEjercicios(favoritosEjercicios.filter(ej => ej !== itemSeleccionado)); // Actualizar estado
+      } else {
+        await ComidasFavoritas(userId, itemSeleccionado, false); // Eliminar comida
+        setFavoritosComidas(favoritosComidas.filter(c => c !== itemSeleccionado)); // Actualizar estado
+      }
+
       setDialogVisible(false);
-      setEjercicioSeleccionado(null);
-      cargarFavoritos();
+      setItemSeleccionado(null);
+      setTipoItemSeleccionado("ejercicio"); // Default a "ejercicio" después de eliminar
     }
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
-    >
+    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Ionicons name="star" size={36} color={COLORS.primary} />
-        <Text style={styles.title}>Mis Ejercicios Favoritos</Text>
-        <Text style={styles.subtitle}>
-          ¡Administra tus favoritos y mantente motivado!
-        </Text>
+        <Text style={styles.title}>Mis Favoritos</Text>
+        <Text style={styles.subtitle}>¡Administra tus favoritos y mantente motivado!</Text>
       </View>
 
-      {favoritos.length === 0 ? (
-        <Text style={styles.empty}>No has agregado ejercicios favoritos aún.</Text>
+      {favoritosEjercicios.length === 0 && favoritosComidas.length === 0 ? (
+        <Text style={styles.empty}>No has agregado favoritos aún.</Text>
       ) : (
-        favoritos.map((ejercicio, index) => (
-          <Animated.View key={index} style={[styles.card, { opacity: fadeAnim }]}>
-            <LinearGradient
-              colors={["#e0fdf4", "#f0fff8"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.gradient}
-            >
-              <View style={styles.cardRow}>
-                <Ionicons
-                  name="barbell"
-                  size={30}
-                  color={COLORS.primary}
-                  style={styles.cardIcon}
-                />
-                <View style={styles.textContainer}>
-                  <Text style={styles.ejercicio}>{ejercicio}</Text>
-                  <Text style={styles.cardText}>
-                    ¡Este ejercicio está entre tus favoritos!
-                  </Text>
+        <>
+          {/* Mostrar favoritos de ejercicios */}
+          {favoritosEjercicios.map((item, index) => (
+            <Animated.View key={index} style={[styles.card, { opacity: fadeAnim }]}>
+              <LinearGradient
+                colors={["#e0fdf4", "#f0fff8"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.gradient}
+              >
+                <View style={styles.cardRow}>
+                  <Ionicons
+                    name="barbell"
+                    size={30}
+                    color={COLORS.primary}
+                    style={styles.cardIcon}
+                  />
+                  <View style={styles.textContainer}>
+                    <Text style={styles.item}>{item}</Text>
+                    <Text style={styles.cardText}>
+                      ¡Este ejercicio está entre tus favoritos!
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={() => confirmarEliminar(item, "ejercicio")}>
+                    <Ionicons name="trash-outline" size={24} color="#dc2626" />
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity onPress={() => confirmarEliminar(ejercicio)}>
-                  <Ionicons name="trash-outline" size={24} color="#dc2626" />
-                </TouchableOpacity>
-              </View>
-            </LinearGradient>
-          </Animated.View>
-        ))
+              </LinearGradient>
+            </Animated.View>
+          ))}
+
+          {/* Mostrar favoritos de comidas */}
+          {favoritosComidas.map((item, index) => (
+            <Animated.View key={index} style={[styles.card, { opacity: fadeAnim }]}>
+              <LinearGradient
+                colors={["#e0fdf4", "#f0fff8"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.gradient}
+              >
+                <View style={styles.cardRow}>
+                  <Ionicons
+                    name="fast-food"
+                    size={30}
+                    color={COLORS.primary}
+                    style={styles.cardIcon}
+                  />
+                  <View style={styles.textContainer}>
+                    <Text style={styles.item}>{item}</Text>
+                    <Text style={styles.cardText}>
+                      ¡Esta comida está entre tus favoritos!
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={() => confirmarEliminar(item, "comida")}>
+                    <Ionicons name="trash-outline" size={24} color="#dc2626" />
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+            </Animated.View>
+          ))}
+        </>
       )}
 
       <ConfirmDialog
         visible={dialogVisible}
         onCancel={() => setDialogVisible(false)}
         onConfirm={ejecutarEliminacion}
-        title="Quitar de favoritos"
-        message={`¿Deseas quitar "${ejercicioSeleccionado}" de tus favoritos?`}
+        title={`Quitar de favoritos`}
+        message={`¿Deseas quitar "${itemSeleccionado}" de tus favoritos?`}
         confirmText="Sí, quitar"
         cancelText="Cancelar"
       />
@@ -174,7 +224,7 @@ const styles = StyleSheet.create({
   textContainer: {
     flex: 1,
   },
-  ejercicio: {
+  item: {
     fontSize: 18,
     fontWeight: "700",
     color: COLORS.text,
