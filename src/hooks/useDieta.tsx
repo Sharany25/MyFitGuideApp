@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "../api/api";
 
 interface DietaData {
   userId: string;
@@ -21,7 +22,7 @@ export const useDieta = () => {
     setSuccess(false);
 
     try {
-      const response = await fetch('http://192.168.1.11:3000/MyFitGuide/dieta-ia', {
+      const response = await fetch(`${API_URL}dieta-ia`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -48,7 +49,7 @@ export const useDieta = () => {
     setError(null);
 
     try {
-      const response = await fetch(`http://192.168.1.11:3000/MyFitGuide/dieta-ia/${userId}`);
+      const response = await fetch(`${API_URL}dieta-ia/${userId}`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -85,7 +86,7 @@ export const useGetDietaPorUsuario = () => {
     setError(null);
 
     try {
-      const response = await fetch(`http://192.168.1.11:3000/MyFitGuide/dieta-ia/${userId}`);
+      const response = await fetch(`${API_URL}dieta-ia/${userId}`);
       const result = await response.json();
 
       if (response.ok) {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { API_URL } from '../api/api';
 
 export interface RegistroPayload {
   nombre: string;
@@ -19,7 +20,7 @@ export const useRegistro = () => {
     setError(false);
 
     try {
-      const response = await fetch('http://192.168.1.11:3000/MyFitGuide/Usuarios', {
+      const response = await fetch(`${API_URL}Usuarios`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -34,7 +35,7 @@ export const useRegistro = () => {
       setSuccess(true);
 
       return data._id || data.idUsuario || data.id || null;
-    } catch (err) {
+    } catch {
       setError(true);
       return null;
     } finally {

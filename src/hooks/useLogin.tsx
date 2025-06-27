@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "../api/api";
 
 interface LoginData {
   correoElectronico: string;
@@ -24,7 +25,7 @@ export const useLogin = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch("http://192.168.1.11:3000/MyFitGuide/Usuarios/login", {
+      const response = await fetch(`${API_URL}Usuarios/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

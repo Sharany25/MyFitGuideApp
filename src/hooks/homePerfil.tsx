@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../api/api';
 
 interface PerfilCompleto {
   usuario?: any;
@@ -33,11 +34,12 @@ export const useHomePerfil = (userIdParam?: string) => {
     setUserId(id);
 
     try {
-      const res = await fetch(`http://192.168.1.11:3000/MyFitGuide/usuario-completo/${id}`);
+      const res = await fetch(`${API_URL}usuario-completo/${id}`);
       if (res.ok) {
         setPerfilCompleto(await res.json());
       }
-    } catch (e) {}
+    } catch (e) {
+    }
     setLoading(false);
     setTimeout(() => setRefreshing(false), 600);
   }, [userIdParam]);

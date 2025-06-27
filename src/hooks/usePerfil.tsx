@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '../api/api';
 
 interface PerfilCompleto {
   usuario?: any;
@@ -7,11 +8,9 @@ interface PerfilCompleto {
   rutina?: any;
 }
 
-const ENDPOINT = "http://192.168.1.11:3000/MyFitGuide/usuario-completo";
-
 export const obtenerPerfilCompleto = async (userId: string): Promise<PerfilCompleto | null> => {
   try {
-    const res = await fetch(`${ENDPOINT}/${userId}`);
+    const res = await fetch(`${API_URL}usuario-completo/${userId}`);
     if (res.ok) {
       return await res.json();
     }

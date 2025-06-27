@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { API_URL } from "../api/api";
 
 export interface RutinaPayload {
   userId: string;
@@ -29,8 +30,6 @@ export interface RutinaResponse {
   creado: string;
 }
 
-const API_BASE_URL = "http://192.168.1.11:3000/MyFitGuide";
-
 export const useRutina = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -44,7 +43,7 @@ export const useRutina = () => {
     setErrorMessage(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/rutinas-ia`, {
+      const response = await fetch(`${API_URL}rutinas-ia`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -52,7 +51,6 @@ export const useRutina = () => {
 
       if (!response.ok) {
         const errText = await response.text();
-        console.error("❌ Error en POST rutina:", response.status, errText);
         setError(true);
         setErrorMessage(errText);
         return null;
@@ -61,8 +59,7 @@ export const useRutina = () => {
       await new Promise((res) => setTimeout(res, 800));
 
       return await obtenerRutinaPorId(payload.userId);
-    } catch (err) {
-      console.error("❌ Error al generar rutina (catch):", err);
+    } catch {
       setError(true);
       setErrorMessage("No se pudo conectar con el servidor.");
       return null;
@@ -78,11 +75,10 @@ export const useRutina = () => {
     setErrorMessage(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/rutinas-ia/${userId}`);
+      const response = await fetch(`${API_URL}rutinas-ia/${userId}`);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Error al obtener rutina por ID:", response.status, errorText);
         setError(true);
         setErrorMessage(errorText);
         return null;
@@ -91,8 +87,7 @@ export const useRutina = () => {
       const data: RutinaResponse = await response.json();
       setSuccess(true);
       return data;
-    } catch (err) {
-      console.error("Error en obtenerRutinaPorId (catch):", err);
+    } catch {
       setError(true);
       setErrorMessage("No se pudo conectar con el servidor.");
       return null;
