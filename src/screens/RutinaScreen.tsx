@@ -20,12 +20,11 @@ import { useRutina } from "../hooks/useRutina";
 import { useUser } from "../context/UserContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const { width } = Dimensions.get("window");
-const PRIMARY_COLOR = "#FFD700";
-const BG_COLOR = "#FFFDEB";
+const { width, height } = Dimensions.get("window");
+const PRIMARY_COLOR = "#28a745";
 const TEXT_COLOR = "#232946";
-const FIELD_DISABLED_BG = "#FAF7EB";
-const FIELD_DISABLED_TEXT = "#BEBEBE";
+const FIELD_DISABLED_BG = "#F4F4F4";
+const FIELD_DISABLED_TEXT = "#A4A4A4";
 
 type RutinaRouteProp = RouteProp<RootStackParamList, "Rutina">;
 type NavigationProp = StackNavigationProp<RootStackParamList, "Rutina">;
@@ -62,10 +61,6 @@ const RutinaScreen: React.FC = () => {
 
   const handleEdadChange = (text: string) => {
     setEdad(text.replace(/[^0-9]/g, ""));
-  };
-
-  const handleSeleccionarDia = (dia: number) => {
-    setDias(dia);
   };
 
   const onGenerarRutina = async () => {
@@ -131,24 +126,58 @@ const RutinaScreen: React.FC = () => {
     }
   };
 
-  const renderDiasCirculos = () => (
-    <View style={styles.diasCirculosContainer}>
-      {[1, 2, 3, 4, 5, 6, 7].map((num) => (
-        <TouchableOpacity
-          key={num}
-          style={[styles.diaCirculo, dias === num && styles.diaCirculoSeleccionado]}
-          onPress={() => handleSeleccionarDia(num)}
-          activeOpacity={0.85}
-        >
-          <Text
-            style={[styles.diaCirculoTexto, dias === num && styles.diaCirculoTextoSeleccionado]}
-          >
-            {num}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
+  // Días en grid responsivo (4+3)
+  const renderDiasGrid = () => {
+    const items = [1, 2, 3, 4, 5, 6, 7];
+    return (
+      <View style={styles.diasGridContainer}>
+        <View style={styles.diasGridRow}>
+          {items.slice(0, 4).map((num) => (
+            <TouchableOpacity
+              key={num}
+              style={[
+                styles.diaCirculo,
+                dias === num && styles.diaCirculoSeleccionado,
+              ]}
+              onPress={() => setDias(num)}
+              activeOpacity={0.85}
+            >
+              <Text
+                style={[
+                  styles.diaCirculoTexto,
+                  dias === num && styles.diaCirculoTextoSeleccionado,
+                ]}
+              >
+                {num}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        <View style={styles.diasGridRow}>
+          {items.slice(4).map((num) => (
+            <TouchableOpacity
+              key={num}
+              style={[
+                styles.diaCirculo,
+                dias === num && styles.diaCirculoSeleccionado,
+              ]}
+              onPress={() => setDias(num)}
+              activeOpacity={0.85}
+            >
+              <Text
+                style={[
+                  styles.diaCirculoTexto,
+                  dias === num && styles.diaCirculoTextoSeleccionado,
+                ]}
+              >
+                {num}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  };
 
   return (
     <>
@@ -165,263 +194,348 @@ const RutinaScreen: React.FC = () => {
         type="error"
       />
       <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: BG_COLOR }}
+        style={styles.keyboard}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 20}
       >
         <ScrollView
-          contentContainerStyle={styles.container}
+          contentContainerStyle={styles.scrollContainer}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.appName}>Rutina IA</Text>
-          <ProgressStepper currentStep="Rutina" />
-          <Text style={styles.subtitle}>Diseñemos tu rutina ideal</Text>
+          <View style={styles.card}>
+            <Text style={styles.appName}>MyFitGuide</Text>
+            <ProgressStepper currentStep="Rutina" />
+            <Text style={styles.subtitle}>Diseñemos tu rutina ideal</Text>
 
-          <TextInput
-            label="Nombre"
-            mode="outlined"
-            value={nombre}
-            style={[styles.input, styles.inputDisabled]}
-            left={<TextInput.Icon icon="account" color={PRIMARY_COLOR} />}
-            editable={false}
-            pointerEvents="none"
-            theme={{
-              colors: {
-                text: FIELD_DISABLED_TEXT,
-                primary: PRIMARY_COLOR,
-                background: FIELD_DISABLED_BG,
-                placeholder: FIELD_DISABLED_TEXT,
-              },
-            }}
-          />
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Nombre</Text>
+              <TextInput
+                mode="flat"
+                label=""
+                value={nombre}
+                style={[styles.input, styles.inputDisabled]}
+                left={<TextInput.Icon icon="account" color={PRIMARY_COLOR} />}
+                editable={false}
+                pointerEvents="none"
+                theme={{
+                  colors: {
+                    text: FIELD_DISABLED_TEXT,
+                    primary: PRIMARY_COLOR,
+                    background: FIELD_DISABLED_BG,
+                    placeholder: FIELD_DISABLED_TEXT,
+                  },
+                }}
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Edad</Text>
+              <TextInput
+                mode="flat"
+                label=""
+                placeholder="Ejemplo: 22"
+                value={edad}
+                keyboardType="numeric"
+                onChangeText={handleEdadChange}
+                style={styles.input}
+                left={<TextInput.Icon icon="calendar-outline" color={PRIMARY_COLOR} />}
+                theme={{ colors: { primary: PRIMARY_COLOR, text: TEXT_COLOR } }}
+                maxLength={2}
+                returnKeyType="done"
+              />
+            </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Objetivo</Text>
+              <TextInput
+                mode="flat"
+                label=""
+                value={objetivo}
+                style={[styles.input, styles.inputDisabled]}
+                left={<TextInput.Icon icon="flag-outline" color={PRIMARY_COLOR} />}
+                editable={false}
+                pointerEvents="none"
+                theme={{
+                  colors: {
+                    text: FIELD_DISABLED_TEXT,
+                    primary: PRIMARY_COLOR,
+                    background: FIELD_DISABLED_BG,
+                    placeholder: FIELD_DISABLED_TEXT,
+                  },
+                }}
+              />
+            </View>
 
-          <TextInput
-            label="Edad"
-            mode="outlined"
-            placeholder="Ejemplo: 22"
-            value={edad}
-            keyboardType="numeric"
-            onChangeText={handleEdadChange}
-            style={styles.input}
-            left={<TextInput.Icon icon="calendar-outline" color={PRIMARY_COLOR} />}
-            theme={{ colors: { primary: PRIMARY_COLOR, text: TEXT_COLOR } }}
-            maxLength={2}
-            returnKeyType="done"
-          />
-
-          <TextInput
-            label="Objetivo"
-            mode="outlined"
-            value={objetivo}
-            style={[styles.input, styles.inputDisabled]}
-            left={<TextInput.Icon icon="flag-outline" color={PRIMARY_COLOR} />}
-            editable={false}
-            pointerEvents="none"
-            theme={{
-              colors: {
-                text: FIELD_DISABLED_TEXT,
-                primary: PRIMARY_COLOR,
-                background: FIELD_DISABLED_BG,
-                placeholder: FIELD_DISABLED_TEXT,
-              },
-            }}
-          />
-
-          <Text style={styles.label}>¿Dónde prefieres entrenar?</Text>
-          <View style={styles.preferenciaContainer}>
-            {opcionesPreferencia.map((item) => (
-              <TouchableOpacity
-                key={item.value}
-                style={[
-                  styles.opcion,
-                  preferenciaSeleccionada === item.value && styles.opcionSeleccionada,
-                ]}
-                onPress={() => setPreferenciaSeleccionada(item.value)}
-                activeOpacity={0.85}
-              >
-                <Ionicons
-                  name={item.icon as any}
-                  size={23}
-                  color={preferenciaSeleccionada === item.value ? "#fff" : PRIMARY_COLOR}
-                  style={styles.preferenciaIcon}
-                />
-                <Text
+            <Text style={styles.label}>¿Dónde prefieres entrenar?</Text>
+            <View style={styles.preferenciaGridContainer}>
+              {opcionesPreferencia.map((item) => (
+                <TouchableOpacity
+                  key={item.value}
                   style={[
-                    styles.opcionTexto,
-                    preferenciaSeleccionada === item.value && styles.opcionTextoActivo,
+                    styles.preferenciaCard,
+                    preferenciaSeleccionada === item.value && styles.preferenciaCardActiva,
                   ]}
+                  onPress={() => setPreferenciaSeleccionada(item.value)}
+                  activeOpacity={0.85}
                 >
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Ionicons
+                    name={item.icon as any}
+                    size={30}
+                    color={preferenciaSeleccionada === item.value ? "#fff" : PRIMARY_COLOR}
+                    style={{ marginBottom: 5 }}
+                  />
+                  <Text
+                    style={[
+                      styles.preferenciaCardTexto,
+                      preferenciaSeleccionada === item.value && styles.preferenciaCardTextoActivo,
+                    ]}
+                  >
+                    {item.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.label}>¿Cuántos días quieres entrenar?</Text>
+            {renderDiasGrid()}
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>¿Tienes lesiones? (opcional)</Text>
+              <View style={styles.lesionesBox}>
+                <Ionicons name="medkit" size={24} color={PRIMARY_COLOR} style={styles.lesionesIcon} />
+                <TextInput
+                  mode="flat"
+                  label=""
+                  value={lesiones}
+                  onChangeText={setLesiones}
+                  style={styles.lesionesInput}
+                  theme={{
+                    colors: { primary: PRIMARY_COLOR, text: TEXT_COLOR, placeholder: "#B6B6B6" },
+                  }}
+                  multiline
+                  placeholder="Escribe si tienes alguna lesión..."
+                  placeholderTextColor="#B6B6B6"
+                  textAlignVertical="top"
+                  underlineColor="transparent"
+                  underlineColorAndroid="transparent"
+                  numberOfLines={3}
+                  blurOnSubmit
+                />
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[styles.boton, isSubmitting && { backgroundColor: "#92dda6" }]}
+              onPress={onGenerarRutina}
+              disabled={isSubmitting}
+              activeOpacity={0.9}
+            >
+              <Text style={styles.botonTexto}>
+                {isSubmitting ? "Generando..." : "Generar Rutina"}
+              </Text>
+            </TouchableOpacity>
           </View>
-
-          <Text style={styles.label}>¿Cuántos días quieres entrenar?</Text>
-          {renderDiasCirculos()}
-
-          <TextInput
-            label="¿Tienes lesiones? (opcional)"
-            mode="outlined"
-            value={lesiones}
-            onChangeText={setLesiones}
-            style={styles.input}
-            left={<TextInput.Icon icon="medical-bag" color={PRIMARY_COLOR} />}
-            theme={{ colors: { primary: PRIMARY_COLOR, text: TEXT_COLOR } }}
-            multiline
-            placeholder="Escribe si tienes alguna lesión..."
-            textAlignVertical="top"
-          />
-
-          <TouchableOpacity
-            style={[styles.boton, isSubmitting && { backgroundColor: "#FFF59E" }]}
-            onPress={onGenerarRutina}
-            disabled={isSubmitting}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.botonTexto}>
-              {isSubmitting ? "Generando..." : "Generar Rutina"}
-            </Text>
-          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </>
   );
 };
 
+const CARD_SIZE = width < 400 ? width * 0.25 : 90;
+const CARD_FONT = width < 400 ? 13 : 15;
+const CIRC_SIZE = width < 380 ? 37 : 45;
+const CIRC_FONT = width < 380 ? 17 : 20;
+
 const styles = StyleSheet.create({
-  container: {
+  keyboard: {
+    flex: 1,
+    backgroundColor: "#f0f0f0",
+  },
+  scrollContainer: {
     flexGrow: 1,
+    justifyContent: "center",
     padding: 20,
-    backgroundColor: BG_COLOR,
+    paddingBottom: 80,
+    minHeight: height,
+  },
+  card: {
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: "#fff",
+    padding: 25,
+    borderRadius: 15,
+    alignSelf: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    marginTop: 20,
+    marginBottom: 30,
   },
   appName: {
-    textAlign: "center",
-    fontSize: width * 0.08,
-    fontWeight: "bold",
+    fontWeight: "700",
     color: PRIMARY_COLOR,
-    marginBottom: 12,
-    marginTop: 10,
+    textAlign: "center",
+    fontSize: width * 0.07,
+    marginBottom: 10,
+    marginTop: 0,
   },
   subtitle: {
     fontSize: width * 0.045,
     color: TEXT_COLOR,
     textAlign: "center",
-    marginBottom: 22,
-    fontWeight: "600",
+    marginBottom: 20,
+    fontWeight: "500",
   },
   label: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: TEXT_COLOR,
-    marginBottom: 8,
-    marginTop: 14,
+    fontSize: width * 0.04,
+    fontWeight: "500",
+    color: "#333",
+    marginBottom: 6,
+    marginTop: 7,
+  },
+  inputContainer: {
+    marginBottom: 10,
   },
   input: {
-    backgroundColor: "#fff",
-    marginBottom: 14,
+    height: 48,
+    borderWidth: 1,
+    borderColor: "#ccc",
     borderRadius: 10,
+    paddingHorizontal: 15,
+    backgroundColor: "#fff",
     fontSize: 16,
-    borderColor: PRIMARY_COLOR,
-    borderWidth: 1.2,
-    color: TEXT_COLOR,
+    marginBottom: 0,
+    justifyContent: "center",
   },
   inputDisabled: {
     backgroundColor: FIELD_DISABLED_BG,
     color: FIELD_DISABLED_TEXT,
-    borderColor: "#FFD70080",
-    opacity: 0.85,
+    borderColor: "#eee",
+    opacity: 0.8,
   },
-  preferenciaContainer: {
+  // PREFERENCIAS GRID
+  preferenciaGridContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 14,
-    marginTop: 2,
-    gap: 9,
-  },
-  preferenciaIcon: {
-    marginRight: 6,
-  },
-  opcion: {
-    flex: 1,
-    flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFDEB",
-    borderRadius: 9,
+    marginBottom: 22,
+    marginTop: 10,
+    gap: 10,
+  },
+  preferenciaCard: {
+    width: CARD_SIZE,
+    height: CARD_SIZE + 12,
+    backgroundColor: "#f8f8f8",
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 2,
     borderColor: "#eee",
-    paddingVertical: 12,
-    paddingHorizontal: 6,
-    justifyContent: "center",
-    marginHorizontal: 3,
-    elevation: 1,
-    gap: 5,
-  },
-  opcionSeleccionada: {
-    backgroundColor: PRIMARY_COLOR,
-    borderColor: "#FFC300",
     elevation: 2,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    gap: 1,
   },
-  opcionTexto: {
+  preferenciaCardActiva: {
+    backgroundColor: PRIMARY_COLOR,
+    borderColor: PRIMARY_COLOR,
+    elevation: 3,
+  },
+  preferenciaCardTexto: {
     fontWeight: "700",
     color: PRIMARY_COLOR,
-    fontSize: 15,
-    letterSpacing: 0.1,
+    fontSize: CARD_FONT,
+    textAlign: "center",
+    marginTop: 3,
+    letterSpacing: 0.08,
   },
-  opcionTextoActivo: {
+  preferenciaCardTextoActivo: {
     color: "#fff",
   },
-  diasCirculosContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
+  // DIAS EN GRID
+  diasGridContainer: {
+    flexDirection: "column",
     alignItems: "center",
     marginBottom: 18,
     marginTop: 8,
     gap: 7,
   },
+  diasGridRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 7,
+  },
   diaCirculo: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: CIRC_SIZE,
+    height: CIRC_SIZE,
+    borderRadius: CIRC_SIZE / 2,
     borderWidth: 2,
     borderColor: PRIMARY_COLOR,
     backgroundColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
-    marginHorizontal: 4,
+    marginHorizontal: 3,
     elevation: 2,
   },
   diaCirculoSeleccionado: {
     backgroundColor: PRIMARY_COLOR,
-    borderColor: "#FFC300",
+    borderColor: PRIMARY_COLOR,
   },
   diaCirculoTexto: {
     fontWeight: "700",
     color: PRIMARY_COLOR,
-    fontSize: 18,
+    fontSize: CIRC_FONT,
+    textAlign: "center",
   },
   diaCirculoTextoSeleccionado: {
     color: "#fff",
   },
+  // INPUT LESIONES mejorado
+  lesionesBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    borderWidth: 2,
+    borderColor: PRIMARY_COLOR,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 15,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    minHeight: 70,
+    marginTop: 2,
+    marginBottom: 5,
+  },
+  lesionesIcon: {
+    marginTop: 2,
+    marginRight: 8,
+  },
+  lesionesInput: {
+    flex: 1,
+    minHeight: 45,
+    maxHeight: 100,
+    fontSize: 16,
+    backgroundColor: "transparent",
+    paddingTop: 0,
+    paddingBottom: 0,
+    marginBottom: 0,
+    marginTop: 0,
+  },
   boton: {
     backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 15,
-    borderRadius: 11,
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: "center",
-    marginTop: 20,
-    marginBottom: 30,
+    marginTop: 25,
     elevation: 2,
     shadowColor: PRIMARY_COLOR,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.10,
     shadowRadius: 6,
   },
   botonTexto: {
-    color: TEXT_COLOR,
-    fontSize: 17,
-    fontWeight: "bold",
-    letterSpacing: 0.3,
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
+    letterSpacing: 0.2,
   },
 });
 

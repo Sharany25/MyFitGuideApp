@@ -14,8 +14,9 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/StackNavigator';
 import { useDieta } from '../hooks/useDieta';
-import { Ionicons } from '@expo/vector-icons'; // Para el ícono de estrella
-import { useFavoritos } from '../hooks/useFavoritos'; // Importa el hook para manejar favoritos
+import { Ionicons } from '@expo/vector-icons';
+import { useFavoritos } from '../hooks/useFavoritos';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -43,26 +44,39 @@ const DietaIAGenerada = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { userId } = route.params as Params;
   const { obtenerDietaPorUsuario, loading, error } = useDieta();
-  const { ComidasFavoritas } = useFavoritos();  // Usa el hook para manejar comidas favoritas
+  const { ComidasFavoritas } = useFavoritos();
 
   const [data, setData] = useState<any>(null);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
-  const [favoritos, setFavoritos] = useState<string[]>([]); // Estado para las comidas favoritas
+  const [favoritos, setFavoritos] = useState<string[]>([]);
+  const FAVORITOS_KEY = `favoritosComidas_${userId}`;
 
+  // Carga datos y favoritos locales al inicio
   useEffect(() => {
     const fetchData = async () => {
       const result = await obtenerDietaPorUsuario(userId);
       if (result) setData(result);
+      try {
+        const favs = await AsyncStorage.getItem(FAVORITOS_KEY);
+        if (favs) setFavoritos(JSON.parse(favs));
+      } catch (e) {}
     };
     fetchData();
   }, [userId]);
 
+  // Cada vez que cambian los favoritos, se guardan localmente
+  useEffect(() => {
+    AsyncStorage.setItem(FAVORITOS_KEY, JSON.stringify(favoritos));
+  }, [favoritos]);
+
   const toggleComidaFavorita = async (comida: string) => {
-    setFavoritos(prev =>
-      prev.includes(comida) ? prev.filter(item => item !== comida) : [...prev, comida]
-    );
-    // Enviar al backend que la comida se marca/desmarca como favorita
-    await ComidasFavoritas(userId, comida, !favoritos.includes(comida));  // El tercer parámetro indica si marca como favorito
+    const yaEsFavorita = favoritos.includes(comida);
+    const nuevosFavs = yaEsFavorita
+      ? favoritos.filter(item => item !== comida)
+      : [...favoritos, comida];
+    setFavoritos(nuevosFavs);
+    await AsyncStorage.setItem(FAVORITOS_KEY, JSON.stringify(nuevosFavs));
+    await ComidasFavoritas(userId, comida, !yaEsFavorita); // sigue mandando a la API
   };
 
   if (loading) {
@@ -89,22 +103,24 @@ const DietaIAGenerada = () => {
     <View style={styles.progressContainer}>
       <View style={styles.progressLabelRow}>
         <Text style={styles.progressLabel}>{label}</Text>
-        <Text style={styles.progressValue}>{value}/{max}{label === 'Calorías' ? ' kcal' : 'g'}</Text>
+        <Text style={styles.progressValue}>
+          {value}/{max}{label === 'Calorías' ? ' kcal' : 'g'}
+        </Text>
       </View>
       <View style={styles.progressBarBackground}>
-        <View style={[styles.progressBarFill, { width: `${(value / max) * 100}%`, backgroundColor: color }]} />
+        <View style={[styles.progressBarFill, { width: `${Math.min((value / max) * 100, 100)}%`, backgroundColor: color }]} />
       </View>
     </View>
   );
 
   return (
     <View style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 30 }}>
         <TouchableOpacity
           style={styles.resumenButton}
           onPress={() => navigation.navigate('ResumenSemanalDieta', { userId })}
         >
-          <Text style={styles.resumenButtonText}>🔍 Ver solo resumen semanal</Text>
+          <Text style={styles.resumenButtonText}>🔍 Ver resumen semanal</Text>
         </TouchableOpacity>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.daySelector}>
@@ -113,6 +129,7 @@ const DietaIAGenerada = () => {
               key={index}
               style={[styles.dayButton, selectedDayIndex === index && styles.dayButtonSelected]}
               onPress={() => setSelectedDayIndex(index)}
+              activeOpacity={0.85}
             >
               <Text style={[styles.dayText, selectedDayIndex === index && styles.dayTextSelected]}>
                 {DIAS_SEMANA[index]}
@@ -132,27 +149,39 @@ const DietaIAGenerada = () => {
         <Text style={styles.sectionTitle}>Comidas del día</Text>
         {diaActual.comidas.map((comida: any, index: number) => (
           <View key={index} style={styles.comidaCard}>
-            <Text style={styles.comidaTipo}>🍽️ {comida.tipo.toUpperCase()}</Text>
+            <View style={styles.cardHeaderRow}>
+              <Text style={styles.comidaTipo}>🍽️ {comida.tipo.toUpperCase()}</Text>
+              <TouchableOpacity
+                style={[
+                  styles.favoriteButton,
+                  favoritos.includes(comida.platillo) && styles.favoriteButtonActive
+                ]}
+                onPress={() => toggleComidaFavorita(comida.platillo)}
+                activeOpacity={0.7}
+              >
+                <Ionicons
+                  name={favoritos.includes(comida.platillo) ? 'star' : 'star-outline'}
+                  size={22}
+                  color={favoritos.includes(comida.platillo) ? COLORS.primary : '#bdbdbd'}
+                />
+              </TouchableOpacity>
+            </View>
             <Text style={styles.comidaPlatillo}>{comida.platillo}</Text>
             <View style={styles.comidaDetalle}>
               <Text style={styles.comidaSub}>Ingredientes:</Text>
               {comida.ingredientes.map((ing: any, i: number) => (
-                <Text key={i} style={styles.ingrediente}>- {ing.nombre}: {ing.cantidad}</Text>
+                <Text key={i} style={styles.ingrediente}>
+                  - {ing.nombre}: {ing.cantidad}
+                </Text>
               ))}
-              <Text style={styles.comidaSub}>Macros: P: {comida.macros.proteinas}g, C: {comida.macros.carbohidratos}g, G: {comida.macros.grasas}g</Text>
+              <Text style={styles.comidaSub}>
+                Macros: <Text style={{ color: COLORS.prot }}>P: {comida.macros.proteinas}g</Text>,
+                <Text style={{ color: COLORS.carb }}> C: {comida.macros.carbohidratos}g</Text>,
+                <Text style={{ color: COLORS.fat }}> G: {comida.macros.grasas}g</Text>
+              </Text>
               <Text style={styles.comidaSub}>Calorías: {comida.calorias} kcal</Text>
               <Text style={styles.comidaSub}>Costo: ${comida.costo} MXN</Text>
             </View>
-            <TouchableOpacity
-              style={styles.favoriteButton}
-              onPress={() => toggleComidaFavorita(comida.platillo)}
-            >
-              <Ionicons
-                name={favoritos.includes(comida.platillo) ? 'star' : 'star-outline'}
-                size={24}
-                color={favoritos.includes(comida.platillo) ? COLORS.primary : '#ccc'}
-              />
-            </TouchableOpacity>
           </View>
         ))}
 
@@ -166,61 +195,80 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.bg,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 40,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? 35) : 38,
   },
   container: {
     flex: 1,
-    padding: 16,
+    padding: 14,
   },
   resumenButton: {
     backgroundColor: COLORS.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    borderRadius: 13,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 17,
     alignSelf: 'center',
     elevation: 3,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
   resumenButtonText: {
     color: 'white',
     fontWeight: '600',
-    fontSize: 15,
+    fontSize: 16,
+    letterSpacing: 0.1,
   },
   daySelector: {
     flexDirection: 'row',
-    marginBottom: 14,
+    marginBottom: 18,
+    paddingVertical: 7,
+    paddingHorizontal: 2,
+    backgroundColor: COLORS.soft,
+    borderRadius: 17,
   },
   dayButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    backgroundColor: COLORS.soft,
-    marginHorizontal: 5,
+    paddingVertical: 9,
+    paddingHorizontal: 18,
+    borderRadius: 18,
+    backgroundColor: COLORS.bg,
+    marginHorizontal: 3,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    elevation: 1,
   },
   dayButtonSelected: {
     backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
   },
   dayText: {
-    fontWeight: '600',
-    fontSize: 14,
-    color: COLORS.secondary,
+    fontWeight: '700',
+    fontSize: 15,
+    color: COLORS.primary,
   },
   dayTextSelected: {
     color: '#fff',
   },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.secondary,
     marginVertical: 10,
+    marginTop: 16,
+    letterSpacing: 0.04,
   },
   summaryCard: {
     backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 14,
+    padding: 17,
     marginBottom: 16,
     elevation: 2,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
   },
   progressContainer: {
     marginBottom: 14,
@@ -228,57 +276,68 @@ const styles = StyleSheet.create({
   progressLabelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 1,
   },
   progressLabel: {
     fontWeight: 'bold',
     fontSize: 13,
   },
   progressBarBackground: {
-    height: 10,
+    height: 11,
     backgroundColor: '#ddd',
-    borderRadius: 6,
+    borderRadius: 7,
     marginTop: 4,
     overflow: 'hidden',
   },
   progressBarFill: {
-    height: 10,
-    borderRadius: 6,
+    height: 11,
+    borderRadius: 7,
   },
   progressValue: {
     fontSize: 12,
     color: '#555',
-    marginTop: 4,
     textAlign: 'right',
   },
   comidaCard: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 13,
     padding: 16,
     marginBottom: 14,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.08,
+    shadowRadius: 7,
+    shadowOffset: { width: 0, height: 3 },
     elevation: 2,
+    borderWidth: 1,
+    borderColor: '#d5f6ea',
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 7,
   },
   comidaTipo: {
-    fontWeight: 'bold',
-    fontSize: 15,
+    fontWeight: '700',
+    fontSize: 15.5,
     color: COLORS.primary,
-    marginBottom: 4,
+    marginBottom: 0,
+    letterSpacing: 0.04,
   },
   comidaPlatillo: {
-    fontSize: 16,
+    fontSize: 16.5,
     fontWeight: '500',
-    marginBottom: 6,
+    marginBottom: 7,
     color: COLORS.secondary,
+    letterSpacing: 0.06,
   },
   comidaDetalle: {
     marginLeft: 6,
+    marginTop: 2,
   },
   comidaSub: {
     fontSize: 13,
-    marginTop: 4,
+    marginTop: 3,
     color: COLORS.text,
   },
   ingrediente: {
@@ -291,16 +350,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontStyle: 'italic',
     color: '#777',
-    marginTop: 12,
+    marginTop: 14,
+    marginBottom: 8,
   },
   favoriteButton: {
-    marginTop: 10,
+    marginLeft: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 30,
-    width: 30,
-    borderRadius: 15,
-    backgroundColor: '#eee',
+    height: 32,
+    width: 32,
+    borderRadius: 16,
+    backgroundColor: '#f3f7f5',
+    borderWidth: 1,
+    borderColor: '#e1efe7',
+    elevation: 1,
+  },
+  favoriteButtonActive: {
+    backgroundColor: '#d0f9e5',
+    borderColor: COLORS.primary,
   },
   centered: {
     flex: 1,
