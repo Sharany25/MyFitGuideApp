@@ -11,6 +11,15 @@ interface DietaData {
   presupuesto: number;
 }
 
+interface UpdateDietaData {
+  genero?: 'masculino' | 'femenino';
+  altura?: number;
+  peso?: number;
+  objetivo?: string;
+  alergias?: string[];
+  presupuesto?: number;
+}
+
 export const useDieta = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,9 +74,38 @@ export const useDieta = () => {
     }
   };
 
+  const updateDieta = async (userId: string, data: UpdateDietaData) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const response = await fetch(`${API_URL}dieta-ia/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
+
+      if (response.ok) {
+        setSuccess(true);
+        return result;
+      } else {
+        setError(result.message || "Error al actualizar dieta");
+        return null;
+      }
+    } catch (e) {
+      setError("Hubo un problema al actualizar la dieta");
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return {
     enviarDieta,
     obtenerDietaPorUsuario,
+    updateDieta,
     loading,
     error,
     success,

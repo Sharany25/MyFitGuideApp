@@ -35,18 +35,19 @@ const TabNavigator: React.FC<TabNavigatorProps> = ({ route }) => {
         tabBarActiveTintColor: '#00C27F',
         tabBarInactiveTintColor: '#B0B0B0',
         tabBarStyle: {
-          height: 62 + insets.bottom,
+          minHeight: 56 + insets.bottom,
           borderTopLeftRadius: 18,
           borderTopRightRadius: 18,
           backgroundColor: '#fff',
-          borderTopWidth: 0.5,
-          borderColor: '#e7e7e7',
+          // Elimina cualquier border
+          borderTopWidth: 0,
+          borderColor: 'transparent',
           elevation: 12,
           shadowColor: '#000',
-          shadowOpacity: 0.1,
+          shadowOpacity: 0.07,
           shadowOffset: { width: 0, height: -1 },
           shadowRadius: 6,
-          paddingBottom: insets.bottom > 0 ? insets.bottom : 6,
+          paddingBottom: insets.bottom,
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -83,7 +84,7 @@ const TabNavigator: React.FC<TabNavigatorProps> = ({ route }) => {
         name="RutinaIAGenerada"
         component={RutinaIAGenerada}
         initialParams={{ userId }}
-        options={{ tabBarLabel: "Rutina" }}
+        options={{ tabBarLabel: 'Rutina' }}
       />
       <Tab.Screen
         name="Map"
