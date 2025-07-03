@@ -4,13 +4,14 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  ActivityIndicator,
   TouchableOpacity,
   TextInput,
   Platform,
   KeyboardAvoidingView,
   Keyboard,
   Dimensions,
+  Animated,
+  Easing,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -42,6 +43,53 @@ const COLORS = {
 };
 
 const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
+// --- Loader bonito para "Cargando dieta generada..."
+const alimentos = [
+  'nutrition-outline',
+  'restaurant',
+  'fast-food-outline',
+  'leaf-outline',
+  'water-outline',
+];
+
+const LoadingDieta = ({ text = "Cargando dieta generada..." }) => {
+  const spinValue = useRef(new Animated.Value(0)).current;
+  const [iconIdx, setIconIdx] = useState(0);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1400,
+        easing: Easing.inOut(Easing.ease),
+        useNativeDriver: true,
+      })
+    ).start();
+
+    const interval = setInterval(() => {
+      setIconIdx(prev => (prev + 1) % alimentos.length);
+    }, 850);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  return (
+    <View style={styles.loadingContainer}>
+      <Animated.View style={{ transform: [{ rotate: spin }], alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={alimentos[iconIdx] as any} size={SCREEN_WIDTH * 0.19} color={COLORS.primary} />
+      </Animated.View>
+      <Text style={styles.loadingText}>{text}</Text>
+      <Text style={styles.loadingSub}>Por favor espera unos segundos...</Text>
+    </View>
+  );
+};
+// ---
 
 interface Params {
   userId: string;
@@ -77,10 +125,12 @@ const DietaIAGenerada = () => {
       } catch (e) {}
     };
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   useEffect(() => {
     AsyncStorage.setItem(FAVORITOS_KEY, JSON.stringify(favoritos));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [favoritos]);
 
   useEffect(() => {
@@ -149,10 +199,7 @@ const DietaIAGenerada = () => {
   if (loading || platilloLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={{ marginTop: 12, fontWeight: 'bold', color: COLORS.text }}>Cargando dieta generada...</Text>
-        </View>
+        <LoadingDieta />
       </SafeAreaView>
     );
   }
@@ -368,7 +415,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
-    backgroundColor: 'transparent', // <-- Importante para NO agregar blanco aquí
+    backgroundColor: 'transparent',
   },
   resumenButton: {
     flexDirection: 'row',
@@ -592,6 +639,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 8,
     fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: COLORS.bg,
+  },
+  loadingText: {
+    marginTop: 28,
+    fontWeight: 'bold',
+    fontSize: SCREEN_WIDTH * 0.056,
+    color: COLORS.text,
+    textAlign: 'center',
+    letterSpacing: 0.1,
+  },
+  loadingSub: {
+    marginTop: 10,
+    fontSize: SCREEN_WIDTH * 0.041,
+    color: COLORS.sub,
+    fontWeight: '500',
+    textAlign: 'center',
+    letterSpacing: 0.04,
   },
 });
 

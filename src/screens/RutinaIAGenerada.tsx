@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   Dimensions,
   Platform,
   StatusBar,
+  Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useUser } from "../context/UserContext";
@@ -31,6 +31,58 @@ const DIAS_SEMANA = [
   "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo",
 ];
 
+const iconosLoader = [
+  "barbell-outline",
+  "fitness-outline",
+  "body-outline",
+  "flash-outline",
+  "star-outline",
+];
+
+const LoaderAlert = ({
+  text = "Cargando rutina personalizada...",
+  sub = "Esto puede tardar unos segundos.",
+}) => {
+  const spinValue = useRef(new Animated.Value(0)).current;
+  const [iconIdx, setIconIdx] = useState(0);
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 1200,
+        useNativeDriver: true,
+      })
+    ).start();
+
+    const interval = setInterval(() => {
+      setIconIdx((prev) => (prev + 1) % iconosLoader.length);
+    }, 650);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ["0deg", "360deg"],
+  });
+
+  return (
+    <View style={loaderAlertStyles.container}>
+      <Animated.View
+        style={{
+          transform: [{ rotate: spin }],
+          marginBottom: 18,
+        }}
+      >
+        <Ionicons name={iconosLoader[iconIdx] as any} size={width * 0.17} color={COLORS.primary} />
+      </Animated.View>
+      <Text style={loaderAlertStyles.text}>{text}</Text>
+      <Text style={loaderAlertStyles.sub}>{sub}</Text>
+    </View>
+  );
+};
+
 const RutinaIAGenerada: React.FC = () => {
   const { state } = useUser();
   const userId = state.user?.userId || "";
@@ -47,7 +99,6 @@ const RutinaIAGenerada: React.FC = () => {
       const result = await obtenerRutinaPorId(userId);
       if (result?.rutina?.rutina) setRutinaData(result.rutina.rutina);
 
-      // Si quieres cargar favoritos de API aquí
       const favs = await getFavoritos(userId);
       const favMap: { [key: string]: boolean } = {};
       favs.ejercicios.forEach((ej: string) => (favMap[ej] = true));
@@ -65,12 +116,7 @@ const RutinaIAGenerada: React.FC = () => {
   const rutinaDelDia = rutinaData.length > 0 ? rutinaData[selectedDiaIndex] : null;
 
   if (loading) {
-    return (
-      <View style={styles.loaderContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loaderText}>Cargando rutina personalizada...</Text>
-      </View>
-    );
+    return <LoaderAlert />;
   }
 
   if (error) {
@@ -385,6 +431,30 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 16,
     color: "#555",
+  },
+});
+
+const loaderAlertStyles = StyleSheet.create({
+  container: {
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: COLORS.bg,
+    flex: 1,
+  },
+  text: {
+    marginTop: 0,
+    fontWeight: "bold",
+    fontSize: width * 0.054,
+    color: COLORS.text,
+    textAlign: "center",
+    letterSpacing: 0.1,
+  },
+  sub: {
+    marginTop: 8,
+    fontSize: width * 0.042,
+    color: COLORS.text,
+    fontWeight: "500",
+    textAlign: "center",
   },
 });
 

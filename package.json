@@ -20,12 +20,12 @@
     "@react-navigation/stack": "^7.3.2",
     "expo-blur": "^14.1.5",
     "expo-linear-gradient": "~14.1.5",
-    "expo-location": "~18.1.5",
+    "expo-location": "~18.1.6",
     "expo-status-bar": "~2.2.3",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-hook-form": "^7.56.4",
-    "react-native": "^0.79.4",
+    "react-native": "^0.79.5",
     "react-native-gesture-handler": "~2.24.0",
     "react-native-maps": "1.20.1",
     "react-native-paper": "^5.14.5",
@@ -39,7 +39,7 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~19.0.10",
-    "expo": "^53.0.13",
+    "expo": "^53.0.16",
     "typescript": "~5.8.3"
   },
   "private": true
