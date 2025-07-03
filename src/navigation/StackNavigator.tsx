@@ -13,6 +13,8 @@ import RutinaIAGenerada from '../screens/RutinaIAGenerada';
 import DietaIAGenerada from '../screens/DietaIAGenerada';
 import ResumenSemanalDieta from '../components/ResumenSemanalDieta';
 import FavoritosScreen from '../screens/FavoritosScreen';
+import PaymentScreen from '../screens/PaymentScreen';
+
 
 export type RootStackParamList = {
   Login: undefined;
@@ -26,6 +28,7 @@ export type RootStackParamList = {
   DietaIAGenerada: { userId: string };
   ResumenSemanalDieta: { userId: string };
   Favoritos: { userId: string };
+  Payment: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -45,6 +48,7 @@ const StackNavigator: React.FC = () => {
         <Stack.Screen name="DietaIAGenerada" component={DietaIAGenerada} />
         <Stack.Screen name="ResumenSemanalDieta" component={ResumenSemanalDieta} />
         <Stack.Screen name="Favoritos" component={FavoritosScreen} />
+        <Stack.Screen name="Payment" component={PaymentScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
