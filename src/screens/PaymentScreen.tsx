@@ -7,17 +7,15 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
-  Dimensions,
   useWindowDimensions,
+  ScrollView,
 } from 'react-native';
 import { MaterialIcons, FontAwesome } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import CardInput from '../components/CardInput';
 
-const MAIN_GRADIENT = ['#E0EAFC', '#CFDEF3'] as const;
-const CARD_GRADIENT = ['#f7fafd', '#e0e7ff'] as const;
-const PRIMARY = '#2563eb';
-const ACCENT = '#06b6d4';
+const PRIMARY = "#00C27F";
+const SECONDARY = "#23c6d8";
 
 const PaymentScreen: React.FC = () => {
   const [cardName, setCardName] = useState('');
@@ -56,99 +54,101 @@ const PaymentScreen: React.FC = () => {
   };
 
   return (
-    <LinearGradient colors={MAIN_GRADIENT} style={styles.bg}>
+    <LinearGradient colors={["#f7fafd", "#e0fbe9"]} style={styles.bg}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.kav}
       >
-        <View style={[styles.panelWrap, { minHeight: 420 }]}>
-          <LinearGradient
-            colors={CARD_GRADIENT}
-            style={[
-              styles.panel,
-              {
-                width: width > 500 ? 410 : width * 0.94,
-                paddingHorizontal: width > 350 ? 28 : 12,
-              },
-            ]}
-            start={{ x: 0, y: 0.9 }}
-            end={{ x: 1, y: 0 }}
-          >
-            <View style={styles.iconWrap}>
-              <View style={styles.crownCircle}>
-                <MaterialIcons name="credit-card" size={32} color={PRIMARY} />
-              </View>
-            </View>
-            <Text style={styles.title}>Suscripción Plus</Text>
-            <Text style={styles.subtitle}>
-              Accede a beneficios exclusivos y contenido personalizado.
-            </Text>
-            <View style={styles.inputsBox}>
-              <Label label="Nombre del titular" />
-              <CardInput
-                icon={<MaterialIcons name="person" size={22} color={PRIMARY} />}
-                placeholder="Ej. Diego Osorio"
-                value={cardName}
-                onChangeText={setCardName}
-              />
-              <Label label="Número de tarjeta" />
-              <CardInput
-                icon={<FontAwesome name="credit-card" size={19} color={PRIMARY} />}
-                placeholder="1234 5678 9012 3456"
-                keyboardType="numeric"
-                value={cardNumber}
-                onChangeText={handleCardNumberChange}
-                maxLength={19}
-              />
-              <View style={styles.row}>
-                <View style={{ flex: 2, marginRight: 8 }}>
-                  <Label label="Vencimiento" />
-                  <CardInput
-                    icon={<MaterialIcons name="date-range" size={19} color={PRIMARY} />}
-                    placeholder="MM/AA"
-                    keyboardType="numeric"
-                    value={expiry}
-                    onChangeText={setExpiry}
-                    maxLength={5}
-                  />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Label label="CVV" />
-                  <CardInput
-                    icon={<MaterialIcons name="lock" size={19} color={PRIMARY} />}
-                    placeholder="CVV"
-                    keyboardType="numeric"
-                    value={cvv}
-                    onChangeText={setCvv}
-                    maxLength={4}
-                    secureTextEntry
-                  />
-                </View>
-              </View>
-            </View>
-            <TouchableOpacity
-              style={[styles.button, loading && { opacity: 0.7 }]}
-              onPress={handlePayment}
-              disabled={loading}
-              activeOpacity={0.88}
+        <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', minHeight: 550 }}>
+          <View style={[styles.panelWrap, { minHeight: 420 }]}>
+            <LinearGradient
+              colors={["#e0fbe9", "#f7fafd"]}
+              style={[
+                styles.panel,
+                {
+                  width: width > 500 ? 410 : width * 0.95,
+                  paddingHorizontal: width > 350 ? 28 : 14,
+                },
+              ]}
+              start={{ x: 0, y: 1 }}
+              end={{ x: 1, y: 0 }}
             >
-              <LinearGradient
-                colors={[PRIMARY, ACCENT]}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={styles.btnGrad}
+              <View style={styles.iconWrap}>
+                <View style={styles.crownCircle}>
+                  <MaterialIcons name="credit-card" size={30} color={PRIMARY} />
+                </View>
+              </View>
+              <Text style={styles.title}>Suscripción Plus</Text>
+              <Text style={styles.subtitle}>
+                Accede a beneficios exclusivos y contenido personalizado.
+              </Text>
+              <View style={styles.inputsBox}>
+                <Label label="Nombre del titular" />
+                <CardInput
+                  icon={<MaterialIcons name="person" size={20} color={PRIMARY} />}
+                  placeholder="Ej. Diego Osorio"
+                  value={cardName}
+                  onChangeText={setCardName}
+                />
+                <Label label="Número de tarjeta" />
+                <CardInput
+                  icon={<FontAwesome name="credit-card" size={18} color={PRIMARY} />}
+                  placeholder="1234 5678 9012 3456"
+                  keyboardType="numeric"
+                  value={cardNumber}
+                  onChangeText={handleCardNumberChange}
+                  maxLength={19}
+                />
+                <View style={styles.row}>
+                  <View style={{ flex: 2, marginRight: 8 }}>
+                    <Label label="Vencimiento" />
+                    <CardInput
+                      icon={<MaterialIcons name="date-range" size={17} color={PRIMARY} />}
+                      placeholder="MM/AA"
+                      keyboardType="numeric"
+                      value={expiry}
+                      onChangeText={setExpiry}
+                      maxLength={5}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Label label="CVV" />
+                    <CardInput
+                      icon={<MaterialIcons name="lock" size={17} color={PRIMARY} />}
+                      placeholder="CVV"
+                      keyboardType="numeric"
+                      value={cvv}
+                      onChangeText={setCvv}
+                      maxLength={4}
+                      secureTextEntry
+                    />
+                  </View>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={[styles.button, loading && { opacity: 0.7 }]}
+                onPress={handlePayment}
+                disabled={loading}
+                activeOpacity={0.88}
               >
-                <Text style={styles.btnText}>
-                  {loading ? 'Procesando...' : 'Pagar'}
-                </Text>
-              </LinearGradient>
-            </TouchableOpacity>
-            <View style={styles.secureWrap}>
-              <MaterialIcons name="lock" size={18} color={PRIMARY} />
-              <Text style={styles.secureTxt}>Pago 100% seguro y cifrado</Text>
-            </View>
-          </LinearGradient>
-        </View>
+                <LinearGradient
+                  colors={[PRIMARY, SECONDARY]}
+                  start={{ x: 0, y: 0.5 }}
+                  end={{ x: 1, y: 0.5 }}
+                  style={styles.btnGrad}
+                >
+                  <Text style={styles.btnText}>
+                    {loading ? 'Procesando...' : 'Pagar'}
+                  </Text>
+                </LinearGradient>
+              </TouchableOpacity>
+              <View style={styles.secureWrap}>
+                <MaterialIcons name="lock" size={17} color={PRIMARY} />
+                <Text style={styles.secureTxt}>Pago 100% seguro y cifrado</Text>
+              </View>
+            </LinearGradient>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
   );
@@ -177,59 +177,59 @@ const styles = StyleSheet.create({
   },
   panel: {
     alignSelf: 'center',
-    borderRadius: 34,
-    paddingTop: 34,
-    paddingBottom: 25,
+    borderRadius: 32,
+    paddingTop: 30,
+    paddingBottom: 24,
     shadowColor: PRIMARY,
-    shadowOpacity: 0.11,
-    shadowRadius: 26,
-    shadowOffset: { width: 0, height: 9 },
-    elevation: 17,
+    shadowOpacity: 0.09,
+    shadowRadius: 22,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 13,
     backgroundColor: '#f7fafd',
   },
   iconWrap: {
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 7,
   },
   crownCircle: {
-    backgroundColor: '#e0e7ff',
-    padding: 17,
-    borderRadius: 38,
-    elevation: 7,
+    backgroundColor: '#e0fbe9',
+    padding: 14,
+    borderRadius: 36,
+    elevation: 6,
     shadowColor: PRIMARY,
     shadowOpacity: 0.13,
     shadowRadius: 12,
-    shadowOffset: { width: 0, height: 5 },
+    shadowOffset: { width: 0, height: 3 },
   },
   title: {
-    fontSize: 27,
+    fontSize: 26,
     fontWeight: 'bold',
     color: PRIMARY,
     alignSelf: 'center',
-    marginTop: 12,
-    letterSpacing: 0.6,
-    marginBottom: 3,
+    marginTop: 7,
+    letterSpacing: 0.5,
+    marginBottom: 1,
   },
   subtitle: {
     fontSize: 15,
-    color: '#64748b',
+    color: '#3e5769',
     textAlign: 'center',
     fontWeight: '500',
-    marginBottom: 24,
+    marginBottom: 22,
     lineHeight: 20,
     opacity: 0.94,
   },
   label: {
     fontSize: 13,
     color: PRIMARY,
-    marginLeft: 4,
+    marginLeft: 3,
     fontWeight: '700',
     marginBottom: 2,
-    marginTop: 6,
-    opacity: 0.88,
+    marginTop: 5,
+    opacity: 0.9,
   },
   inputsBox: {
-    marginBottom: 13,
+    marginBottom: 11,
   },
   row: {
     flexDirection: 'row',
@@ -237,23 +237,23 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   button: {
-    marginTop: 18,
-    marginBottom: 7,
-    borderRadius: 17,
+    marginTop: 16,
+    marginBottom: 6,
+    borderRadius: 16,
     overflow: 'hidden',
     elevation: 2,
   },
   btnGrad: {
-    borderRadius: 17,
-    paddingVertical: 15,
+    borderRadius: 16,
+    paddingVertical: 13,
     alignItems: 'center',
     justifyContent: 'center',
   },
   btnText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 18,
-    letterSpacing: 1.1,
+    fontSize: 17,
+    letterSpacing: 1,
     textShadowColor: '#0001',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 1,
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: PRIMARY,
     fontWeight: '600',
-    letterSpacing: 0.2,
+    letterSpacing: 0.18,
     opacity: 0.88,
   },
 });
