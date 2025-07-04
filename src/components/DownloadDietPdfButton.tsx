@@ -1,0 +1,293 @@
+import React from 'react';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, Platform, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
+import * as FileSystem from 'expo-file-system';
+
+const COLORS = {
+  primary: '#00C27F',
+  dark: '#029865',
+  white: '#fff',
+};
+
+interface Props {
+  data: any;
+  nombreUsuario: string;
+  title?: string;
+  iconSize?: number;
+  style?: ViewStyle;
+}
+
+const DownloadDietPdfButton: React.FC<Props> = ({
+  data,
+  nombreUsuario,
+  title = 'Dieta PDF',
+  iconSize = 21,
+  style,
+}) => {
+  const [loading, setLoading] = React.useState(false);
+
+  const handleDownload = async () => {
+    if (!data?.resultado?.semana) return;
+    setLoading(true);
+
+    const semana = data.resultado.semana;
+
+    const html = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Plan Semanal - Dieta</title>
+  <style>
+    body {
+      font-family: 'Montserrat', Arial, sans-serif;
+      background: #f4fefc;
+      color: #20263d;
+      margin: 0;
+      padding: 0;
+    }
+    .cover {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background: linear-gradient(120deg, #34d399 60%, #22d3ee 100%);
+      border-radius: 0 0 48px 48px;
+      box-shadow: 0 8px 40px #19d2ac22;
+      margin-bottom: 0;
+      padding: 0;
+      page-break-after: always;
+    }
+    .cover-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 0 28px;
+    }
+    .cover-title {
+      font-size: 2.4rem;
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: 1.4px;
+      margin-bottom: 12px;
+      margin-top: 0;
+      text-align: center;
+      text-shadow: 0 2px 12px #019e8333;
+    }
+    .cover-desc {
+      color: #d4faf7;
+      font-size: 1.19rem;
+      margin-bottom: 26px;
+      text-align: center;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-shadow: 0 1px 6px #099b9b24;
+    }
+    .nombre-user {
+      color: #f0fdf8;
+      font-size: 1.12rem;
+      margin-bottom: 16px;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-shadow: 0 1px 6px #099b9b24;
+    }
+    .fecha {
+      margin-top: 16px;
+      color: #b8f2e6;
+      font-size: 1rem;
+      font-style: italic;
+      font-weight: 400;
+      letter-spacing: 0.07em;
+      text-align: center;
+      text-shadow: 0 1px 8px #1bbeb622;
+    }
+    .main-card {
+      background: #fff;
+      border-radius: 19px;
+      margin: 32px auto 25px auto;
+      box-shadow: 0 4px 24px #34d39919;
+      border: 1.7px solid #d7f6e9;
+      padding: 30px 32px 22px 32px;
+      min-height: 420px;
+      max-width: 780px;
+      page-break-after: always;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    .main-card:last-child { page-break-after: auto; }
+    .dia-title {
+      color: #00C27F;
+      font-size: 2.05rem;
+      font-weight: 800;
+      margin-bottom: 15px;
+      letter-spacing: 1px;
+      margin-top: 0;
+      text-shadow: 0 1px 10px #00c27f16;
+    }
+    .macros-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 19px;
+      margin-bottom: 20px;
+      margin-top: 2px;
+      justify-content: flex-start;
+    }
+    .macro-box {
+      flex: 1 1 130px;
+      background: #f4fefc;
+      border-radius: 14px;
+      padding: 13px 13px 10px 13px;
+      box-shadow: 0 2px 10px #38b00016;
+      min-width: 115px;
+      text-align: center;
+      border: 1.5px solid #d7f6e9;
+      margin-right: 4px;
+      font-weight: bold;
+    }
+    .macro-label { font-size: 1.07rem; color: #1c5d39; margin-bottom: 2px;}
+    .macro-val { font-size: 1.18rem; font-weight: bold;}
+    .macro-cal { color: #38B000;}
+    .macro-prot { color: #2196F3;}
+    .macro-carb { color: #FFA000;}
+    .macro-fat { color: #E64A19;}
+    .comidas-block { margin-top: 10px; }
+    .comidas-label { font-weight:700; color:#009b63; font-size:1.09rem; margin-bottom:5px; }
+    .comida-item { border-radius: 12px; padding: 12px 12px 10px 12px; background: #f7fff9; margin-bottom: 12px; border: 1.1px solid #c0efe0; box-shadow: 0 1px 5px #00c27f07; }
+    .comida-row { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 4px; }
+    .comida-tipo { color: #00C27F; font-size: 1.01rem; font-weight: bold; letter-spacing: 0.7px; margin-right: 10px; text-transform: uppercase; display: inline-block; min-width: 80px; }
+    .platillo-nombre { font-size: 1.07rem; font-weight: 700; color: #232946; display: inline-block; margin-left: 5px; }
+    .ingredientes-title { font-weight: 700; font-size: 1rem; color: #11b479; margin-bottom: 1px; margin-top: 7px; }
+    .ingredientes-list { margin-left: 7px; font-size: 1.01rem; color: #47545a; margin-bottom: 2px; }
+    .cost-cal-row { display: flex; justify-content: space-between; font-size: 1.01rem; margin-top: 8px; color: #1e9286; }
+    .costo { font-weight: 600; color: #888;}
+    .calorias { font-weight: 700; color: #38B000;}
+    @media print {
+      .cover { page-break-after: always; }
+      .main-card { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="cover">
+    <div class="cover-content">
+      <div class="cover-title">Plan semanal de dieta</div>
+      <div class="cover-desc">Tu plan personalizado generado con MyFitGuide</div>
+      <div class="nombre-user">Usuario: ${nombreUsuario}</div>
+      <div class="fecha">🕒 Generada el: ${new Date(data.creado).toLocaleString()}</div>
+    </div>
+  </div>
+  ${semana.map((dia: any, idx: number) => `
+    <div class="main-card">
+      <div class="dia-title">${dia.dia}</div>
+      <div class="macros-row">
+        <div class="macro-box"><div class="macro-label">Calorías</div><div class="macro-val macro-cal">${dia.totales_dia.calorias} kcal</div></div>
+        <div class="macro-box"><div class="macro-label">Proteínas</div><div class="macro-val macro-prot">${dia.totales_dia.proteinas}g</div></div>
+        <div class="macro-box"><div class="macro-label">Carbohidratos</div><div class="macro-val macro-carb">${dia.totales_dia.carbohidratos}g</div></div>
+        <div class="macro-box"><div class="macro-label">Grasas</div><div class="macro-val macro-fat">${dia.totales_dia.grasas}g</div></div>
+      </div>
+      <div class="comidas-block">
+        <div class="comidas-label">Comidas:</div>
+        ${dia.comidas.map((comida: any) => `
+          <div class="comida-item">
+            <div class="comida-row">
+              <div>
+                <span class="comida-tipo">${comida.tipo}</span>
+                <span class="platillo-nombre">
+                  ${typeof comida.platillo === 'string'
+                    ? comida.platillo
+                    : comida.platillo?.platillo || ''}
+                </span>
+              </div>
+              <div class="costo">Costo: $${comida.costo || comida.platillo?.costo || 0} MXN</div>
+            </div>
+            <div class="ingredientes-title">Ingredientes:</div>
+            <div class="ingredientes-list">
+              <ul>
+                ${
+                  (typeof comida.platillo === 'string' ? comida.ingredientes : comida.platillo?.ingredientes || [])
+                    .map((ing: any) => `<li>${ing.nombre}: ${ing.cantidad}</li>`).join('')
+                }
+              </ul>
+            </div>
+            <div class="cost-cal-row">
+              <div class="calorias">Calorías: <b>${comida.calorias || comida.platillo?.calorias || 0}</b> kcal</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('')}
+</body>
+</html>
+`;
+
+    try {
+      const { uri } = await Print.printToFileAsync({ html });
+      const nombreLimpio = nombreUsuario.replace(/[^\w]/gi, '');
+      const nombreArchivo = `Dieta-${nombreLimpio}.pdf`;
+      const destPath =
+        Platform.OS === 'ios'
+          ? `${FileSystem.documentDirectory}${nombreArchivo}`
+          : `${FileSystem.cacheDirectory}${nombreArchivo}`;
+      await FileSystem.moveAsync({ from: uri, to: destPath });
+      setLoading(false);
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(destPath, { mimeType: 'application/pdf', dialogTitle: title });
+      } else {
+        Alert.alert('Archivo guardado', `El PDF se guardó en:\n${destPath}`);
+      }
+    } catch (e) {
+      setLoading(false);
+      Alert.alert('Error', 'No se pudo generar o compartir el PDF');
+    }
+  };
+
+  return (
+    <TouchableOpacity
+      style={[pdfBtnStyles.btnSmall, style]}
+      onPress={handleDownload}
+      activeOpacity={0.9}
+      disabled={loading}
+    >
+      {loading ? (
+        <ActivityIndicator color={COLORS.white} size="small" />
+      ) : (
+        <Ionicons name="cloud-download-outline" size={iconSize} color={COLORS.white} />
+      )}
+      <Text style={pdfBtnStyles.btnText}>{title}</Text>
+    </TouchableOpacity>
+  );
+};
+
+const pdfBtnStyles = StyleSheet.create({
+  btnSmall: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.primary,
+    borderRadius: 11,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#00c27f99',
+    shadowOpacity: 0.14,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    marginLeft: 5
+  },
+  btnText: {
+    color: COLORS.white,
+    fontWeight: '700',
+    fontSize: 16,
+    marginLeft: 7,
+    letterSpacing: 0.14,
+  }
+});
+
+export default DownloadDietPdfButton;

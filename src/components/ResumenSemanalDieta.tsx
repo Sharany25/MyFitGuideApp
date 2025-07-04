@@ -10,6 +10,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useDieta } from '../hooks/useDieta';
 
 const { width } = Dimensions.get('window');
@@ -32,6 +33,7 @@ interface Params {
 
 const ResumenSemanalDieta = () => {
   const route = useRoute();
+  const insets = useSafeAreaInsets();
   const { userId } = route.params as Params;
   const { obtenerDietaPorUsuario, loading, error } = useDieta();
   const [totales, setTotales] = useState<any>(null);
@@ -71,14 +73,17 @@ const ResumenSemanalDieta = () => {
         <View
           style={[
             styles.progressBarFill,
-            { width: `${(value / max) * 100}%`, backgroundColor: color },
+            {
+              width: `${max > 0 ? Math.min(value / max, 1) * 100 : 0}%`,
+              backgroundColor: color,
+            },
           ]}
         />
       </View>
     </View>
   );
 
-  if (loading || !totales) {
+  if (loading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={COLORS.primary} />
@@ -87,20 +92,36 @@ const ResumenSemanalDieta = () => {
     );
   }
 
+  if (error) {
+    return (
+      <View style={styles.centered}>
+        <Text style={{ color: 'red', fontWeight: 'bold' }}>Error: {error}</Text>
+      </View>
+    );
+  }
+
+  if (!totales) {
+    return (
+      <View style={styles.centered}>
+        <Text>No hay datos para mostrar.</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+    <View style={[styles.safeArea, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : insets.top }]}>
+      <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1 }}>
         <Text style={styles.title}>Resumen Semanal de tu Dieta</Text>
 
         <View style={styles.card}>
-          <ProgressBar label="Calorías" value={totales.calorias_total} max={14000} color={COLORS.cal} />
-          <ProgressBar label="Proteínas" value={totales.proteinas_total} max={700} color={COLORS.prot} />
-          <ProgressBar label="Carbohidratos" value={totales.carbohidratos_total} max={2100} color={COLORS.carb} />
-          <ProgressBar label="Grasas" value={totales.grasas_total} max={350} color={COLORS.fat} />
-          <Text style={styles.costoText}>💰 Costo total: ${totales.costo_total} MXN</Text>
+          <ProgressBar label="Calorías" value={totales.calorias_total ?? 0} max={14000} color={COLORS.cal} />
+          <ProgressBar label="Proteínas" value={totales.proteinas_total ?? 0} max={700} color={COLORS.prot} />
+          <ProgressBar label="Carbohidratos" value={totales.carbohidratos_total ?? 0} max={2100} color={COLORS.carb} />
+          <ProgressBar label="Grasas" value={totales.grasas_total ?? 0} max={350} color={COLORS.fat} />
+          <Text style={styles.costoText}>💰 Costo total: ${totales.costo_total ?? 0} MXN</Text>
         </View>
 
-        <Text style={styles.fecha}>🕒 Generada el: {new Date(fechaCreacion || "").toLocaleString()}</Text>
+        <Text style={styles.fecha}>🕒 Generada el: {fechaCreacion ? new Date(fechaCreacion).toLocaleString() : ''}</Text>
       </ScrollView>
     </View>
   );
@@ -110,7 +131,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.bg,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 40,
   },
   container: {
     padding: 16,

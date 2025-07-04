@@ -1,7 +1,9 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Dimensions, Platform } from 'react-native';
+
+import { User2, Salad, Dumbbell, Home, MapPin } from 'lucide-react-native';
 
 import PerfilScreen from '../screens/PerfilScreen';
 import DietaIAGenerada from '../screens/DietaIAGenerada';
@@ -19,13 +21,18 @@ export type TabParamList = {
 
 const Tab = createBottomTabNavigator<TabParamList>();
 
-interface TabNavigatorProps {
-  route: { params: { userId: string } };
-}
+const getResponsiveSize = (percent: number) => {
+  const { width } = Dimensions.get('window');
+  return Math.round(width * percent);
+};
 
-const TabNavigator: React.FC<TabNavigatorProps> = ({ route }) => {
-  const { userId } = route.params;
+const TabNavigator: React.FC<any> = (props) => {
+  const userId =
+    props?.route?.params?.userId ??
+    props?.screenProps?.userId ??
+    undefined;
   const insets = useSafeAreaInsets();
+  const iconSize = getResponsiveSize(0.062);
 
   return (
     <Tab.Navigator
@@ -35,45 +42,39 @@ const TabNavigator: React.FC<TabNavigatorProps> = ({ route }) => {
         tabBarActiveTintColor: '#00C27F',
         tabBarInactiveTintColor: '#B0B0B0',
         tabBarStyle: {
-          minHeight: 56 + insets.bottom,
+          minHeight: getResponsiveSize(0.16) + insets.bottom,
           borderTopLeftRadius: 18,
           borderTopRightRadius: 18,
           backgroundColor: '#fff',
-          // Elimina cualquier border
           borderTopWidth: 0,
           borderColor: 'transparent',
-          elevation: 12,
-          shadowColor: '#000',
-          shadowOpacity: 0.07,
-          shadowOffset: { width: 0, height: -1 },
-          shadowRadius: 6,
-          paddingBottom: insets.bottom,
+          elevation: 13,
+          shadowColor: '#00C27F',
+          shadowOpacity: 0.08,
+          shadowOffset: { width: 0, height: -2 },
+          shadowRadius: 8,
+          paddingBottom: insets.bottom + (Platform.OS === 'android' ? 4 : 0),
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: getResponsiveSize(0.033),
           fontWeight: 'bold',
-          marginBottom: 3,
+          marginBottom: 2,
         },
         tabBarIcon: ({ focused, color }) => {
-          let iconName = '';
           switch (route.name) {
             case 'Perfil':
-              iconName = focused ? 'person' : 'person-outline';
-              break;
+              return <User2 size={iconSize} color={color} strokeWidth={focused ? 2.8 : 2.1} />;
             case 'Dieta':
-              iconName = focused ? 'fast-food' : 'fast-food-outline';
-              break;
+              return <Salad size={iconSize} color={color} strokeWidth={focused ? 2.6 : 2.1} />;
             case 'RutinaIAGenerada':
-              iconName = focused ? 'fitness' : 'fitness-outline';
-              break;
+              return <Dumbbell size={iconSize} color={color} strokeWidth={focused ? 2.6 : 2.1} />;
             case 'Home':
-              iconName = focused ? 'home' : 'home-outline';
-              break;
+              return <Home size={iconSize} color={color} strokeWidth={focused ? 2.7 : 2.1} />;
             case 'Map':
-              iconName = focused ? 'map' : 'map-outline';
-              break;
+              return <MapPin size={iconSize} color={color} strokeWidth={focused ? 2.6 : 2.1} />;
+            default:
+              return null;
           }
-          return <Ionicons name={iconName as any} size={24} color={color} />;
         },
       })}
     >
