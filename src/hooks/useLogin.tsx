@@ -1,25 +1,18 @@
 import { useState } from "react";
 import { API_URL } from "../api/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useUser } from "../context/UserContext"; // o useAuth, según tu contexto
 
 interface LoginData {
   correoElectronico: string;
   contraseña: string;
 }
 
-interface UserData {
-  _id: string;
-  nombre: string;
-  fechaNacimiento: string;
-  objetivo?: string;
-  genero?: string;
-  altura?: number;
-  peso?: number;
-}
-
+// Suponiendo que tu API regresa { user, token }
 export const useLogin = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<UserData | null>(null);
+  const { dispatch } = useUser(); // actualiza el contexto global
 
   const login = async (data: LoginData) => {
     setLoading(true);
@@ -31,27 +24,26 @@ export const useLogin = () => {
         body: JSON.stringify(data),
       });
       const result = await response.json();
+
+      // Este bloque depende de la estructura de tu backend
       if (response.ok && result) {
-        setUser(result);
+        // Guarda usuario y/o token en storage/context
+        dispatch({ type: 'SET_USER', payload: result }); // si tu contexto lo permite
+        await AsyncStorage.setItem("userProfile", JSON.stringify(result));
         return result;
       } else {
         setError("Correo o contraseña incorrectos");
-        setUser(null);
+        dispatch({ type: 'CLEAR_USER' });
         return null;
       }
     } catch (e) {
       setError("Error de conexión");
-      setUser(null);
+      dispatch({ type: 'CLEAR_USER' });
       return null;
     } finally {
       setLoading(false);
     }
   };
 
-  return { 
-    login,
-    loading,
-    error,
-    user
-  };
+  return { login, loading, error };
 };

@@ -11,10 +11,10 @@ import {
   StatusBar,
   Animated,
 } from "react-native";
-import { useRoute } from "@react-navigation/native";  // Usamos useRoute para obtener los parámetros
-import { useFavoritos } from "../hooks/useFavoritos";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { useFavoritos } from "../hooks/useFavoritos";
 import ConfirmDialog from "../components/ConfirmDialog";
 
 const COLORS = {
@@ -27,32 +27,28 @@ const COLORS = {
 };
 
 const FavoritosScreen = () => {
-  const route = useRoute();  // Usamos useRoute para obtener los parámetros
-  const { userId } = route.params as { userId: string };  // Accedemos al userId
+  const route = useRoute();
+  const navigation = useNavigation<any>();
+  const { userId } = route.params as { userId: string };
 
   const { getFavoritos, EjerciciosFavoritos, ComidasFavoritas } = useFavoritos();
 
-  const [favoritosEjercicios, setFavoritosEjercicios] = useState<string[]>([]); // Estado para ejercicios favoritos
-  const [favoritosComidas, setFavoritosComidas] = useState<string[]>([]); // Estado para comidas favoritas
+  const [favoritosEjercicios, setFavoritosEjercicios] = useState<string[]>([]);
+  const [favoritosComidas, setFavoritosComidas] = useState<string[]>([]);
   const [fadeAnim] = useState(new Animated.Value(0));
-
   const [dialogVisible, setDialogVisible] = useState(false);
   const [itemSeleccionado, setItemSeleccionado] = useState<string | null>(null);
   const [tipoItemSeleccionado, setTipoItemSeleccionado] = useState<"ejercicio" | "comida">("ejercicio");
 
-  // useEffect que se dispara cuando se carga la pantalla
   useEffect(() => {
     cargarFavoritos();
   }, [userId]);
 
   const cargarFavoritos = async () => {
     try {
-      // Cargar todos los favoritos
-      const data = await getFavoritos(userId); // Llamada al nuevo método GET
+      const data = await getFavoritos(userId);
       setFavoritosEjercicios(data.ejercicios || []);
       setFavoritosComidas(data.comidas || []);
-
-      // Animación de entrada
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 400,
@@ -72,21 +68,30 @@ const FavoritosScreen = () => {
   const ejecutarEliminacion = async () => {
     if (itemSeleccionado && tipoItemSeleccionado) {
       if (tipoItemSeleccionado === "ejercicio") {
-        await EjerciciosFavoritos(userId, itemSeleccionado, false); // Eliminar ejercicio
-        setFavoritosEjercicios(favoritosEjercicios.filter(ej => ej !== itemSeleccionado)); // Actualizar estado
+        await EjerciciosFavoritos(userId, itemSeleccionado, false);
+        setFavoritosEjercicios(favoritosEjercicios.filter(ej => ej !== itemSeleccionado));
       } else {
-        await ComidasFavoritas(userId, itemSeleccionado, false); // Eliminar comida
-        setFavoritosComidas(favoritosComidas.filter(c => c !== itemSeleccionado)); // Actualizar estado
+        await ComidasFavoritas(userId, itemSeleccionado, false);
+        setFavoritosComidas(favoritosComidas.filter(c => c !== itemSeleccionado));
       }
-
       setDialogVisible(false);
       setItemSeleccionado(null);
-      setTipoItemSeleccionado("ejercicio"); // Default a "ejercicio" después de eliminar
+      setTipoItemSeleccionado("ejercicio");
     }
   };
 
   return (
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.headerRow}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="chevron-back" size={28} color={COLORS.primary} />
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.header}>
         <Ionicons name="star" size={36} color={COLORS.primary} />
         <Text style={styles.title}>Mis Favoritos</Text>
@@ -97,7 +102,6 @@ const FavoritosScreen = () => {
         <Text style={styles.empty}>No has agregado favoritos aún.</Text>
       ) : (
         <>
-          {/* Mostrar favoritos de ejercicios */}
           {favoritosEjercicios.map((item, index) => (
             <Animated.View key={index} style={[styles.card, { opacity: fadeAnim }]}>
               <LinearGradient
@@ -107,12 +111,7 @@ const FavoritosScreen = () => {
                 style={styles.gradient}
               >
                 <View style={styles.cardRow}>
-                  <Ionicons
-                    name="barbell"
-                    size={30}
-                    color={COLORS.primary}
-                    style={styles.cardIcon}
-                  />
+                  <Ionicons name="barbell" size={30} color={COLORS.primary} style={styles.cardIcon} />
                   <View style={styles.textContainer}>
                     <Text style={styles.item}>{item}</Text>
                     <Text style={styles.cardText}>
@@ -126,8 +125,6 @@ const FavoritosScreen = () => {
               </LinearGradient>
             </Animated.View>
           ))}
-
-          {/* Mostrar favoritos de comidas */}
           {favoritosComidas.map((item, index) => (
             <Animated.View key={index} style={[styles.card, { opacity: fadeAnim }]}>
               <LinearGradient
@@ -137,12 +134,7 @@ const FavoritosScreen = () => {
                 style={styles.gradient}
               >
                 <View style={styles.cardRow}>
-                  <Ionicons
-                    name="fast-food"
-                    size={30}
-                    color={COLORS.primary}
-                    style={styles.cardIcon}
-                  />
+                  <Ionicons name="fast-food" size={30} color={COLORS.primary} style={styles.cardIcon} />
                   <View style={styles.textContainer}>
                     <Text style={styles.item}>{item}</Text>
                     <Text style={styles.cardText}>
@@ -178,6 +170,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: COLORS.bg,
     flexGrow: 1,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 18,
+    gap: 9,
+  },
+  backBtn: {
+    padding: 4,
+    borderRadius: 30,
+    backgroundColor: "#fff",
+    elevation: 3,
+    marginRight: 3,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  headerTitle: {
+    fontSize: 22,
+    color: COLORS.primary,
+    fontWeight: "bold",
+    marginLeft: 2,
   },
   header: {
     alignItems: "center",

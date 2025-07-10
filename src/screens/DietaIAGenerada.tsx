@@ -13,7 +13,6 @@ import {
   Animated,
   Easing,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -69,17 +68,22 @@ const LoadingDieta = ({ text = "Cargando dieta generada..." }) => {
 const DietaIAGenerada: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation<any>();
- const { userId, nombre } = route.params as { userId: string; nombre: string };
+  const { userId, nombre } = route.params as { userId: string; nombre: string };
   const { obtenerDietaPorUsuario, loading, error } = useDieta();
-  const { ComidasFavoritas } = useFavoritos();
+  const { ComidasFavoritas, getFavoritos } = useFavoritos();
+
   const [data, setData] = useState<any>(null);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
-  const [favoritos, setFavoritos] = useState<string[]>([]);
+
+  // --- Nueva lógica de favoritos tipo diccionario (como en rutinas) ---
+  const [favoritosLocal, setFavoritosLocal] = useState<{ [key: string]: boolean }>({});
+
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [nuevoPlatillo, setNuevoPlatillo] = useState('');
   const [editTipoComida, setEditTipoComida] = useState('');
   const [platilloLoading, setPlatilloLoading] = useState(false);
   const [platilloError, setPlatilloError] = useState<string | null>(null);
+
   const FAVORITOS_KEY = `favoritosComidas_${userId}`;
   const inputRef = useRef<TextInput>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -88,13 +92,29 @@ const DietaIAGenerada: React.FC = () => {
     (async () => {
       const result = await obtenerDietaPorUsuario(userId);
       if (result) setData(result);
+
+      // Cargar favoritos desde API (si tienes) o localStorage (si no)
+      let favsLocal: string[] = [];
       try {
         const favs = await AsyncStorage.getItem(FAVORITOS_KEY);
-        if (favs) setFavoritos(JSON.parse(favs));
+        if (favs) favsLocal = JSON.parse(favs);
       } catch {}
+      // Si tienes getFavoritos() para comidas, puedes usarlo también aquí
+      // const apiFavs = await getFavoritos(userId); // Si tu backend regresa comidas favoritas
+      // favsLocal = apiFavs.comidas || [];
+
+      // Mapeo a diccionario para respuesta rápida
+      const favMap: { [key: string]: boolean } = {};
+      favsLocal.forEach((item: string) => (favMap[item] = true));
+      setFavoritosLocal(favMap);
     })();
   }, [userId]);
-  useEffect(() => { AsyncStorage.setItem(FAVORITOS_KEY, JSON.stringify(favoritos)); }, [favoritos]);
+
+  useEffect(() => {
+    // Guarda los favoritos actualizados en storage
+    AsyncStorage.setItem(FAVORITOS_KEY, JSON.stringify(Object.keys(favoritosLocal).filter(k => favoritosLocal[k])));
+  }, [favoritosLocal]);
+
   useEffect(() => {
     if (editIndex !== null && scrollRef.current) {
       setTimeout(() => {
@@ -104,14 +124,12 @@ const DietaIAGenerada: React.FC = () => {
     }
   }, [editIndex]);
 
+  // --- Lógica igual que en rutinas para marcar/desmarcar favorito ---
   const toggleComidaFavorita = async (platillo: string) => {
-    const yaEsFavorita = favoritos.includes(platillo);
-    const nuevosFavs = yaEsFavorita
-      ? favoritos.filter(item => item !== platillo)
-      : [...favoritos, platillo];
-    setFavoritos(nuevosFavs);
-    await AsyncStorage.setItem(FAVORITOS_KEY, JSON.stringify(nuevosFavs));
-    await ComidasFavoritas(userId, platillo, !yaEsFavorita);
+    const marcado = !favoritosLocal[platillo];
+    setFavoritosLocal(prev => ({ ...prev, [platillo]: marcado }));
+    // Esto guarda el cambio en el backend o donde lo manejes
+    await ComidasFavoritas(userId, platillo, marcado);
   };
 
   const handleEditarPlatillo = (index: number, tipo: string, platillo: string) => {
@@ -265,15 +283,15 @@ const DietaIAGenerada: React.FC = () => {
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <TouchableOpacity
-                      style={[styles.iconButton, favoritos.includes(nombrePlatillo) && styles.favoriteButtonActive]}
+                      style={[styles.iconButton, favoritosLocal[nombrePlatillo] && styles.favoriteButtonActive]}
                       onPress={() => toggleComidaFavorita(nombrePlatillo)}
                       activeOpacity={0.85}
                     >
                       <Ionicons
-                        name={favoritos.includes(nombrePlatillo) ? 'star' : 'star-outline'}
+                        name={favoritosLocal[nombrePlatillo] ? 'star' : 'star-outline'}
                         size={22}
-                        color={favoritos.includes(nombrePlatillo) ? COLORS.primaryDark : '#bdbdbd'}
-                        style={favoritos.includes(nombrePlatillo)
+                        color={favoritosLocal[nombrePlatillo] ? COLORS.primaryDark : '#bdbdbd'}
+                        style={favoritosLocal[nombrePlatillo]
                           ? { textShadowColor: '#00c27f66', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 4 }
                           : {}}
                       />

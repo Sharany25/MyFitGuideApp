@@ -5,12 +5,14 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  TouchableOpacity,
   Dimensions,
   Platform,
   StatusBar,
 } from 'react-native';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useDieta } from '../hooks/useDieta';
 
 const { width } = Dimensions.get('window');
@@ -33,6 +35,7 @@ interface Params {
 
 const ResumenSemanalDieta = () => {
   const route = useRoute();
+  const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { userId } = route.params as Params;
   const { obtenerDietaPorUsuario, loading, error } = useDieta();
@@ -109,10 +112,27 @@ const ResumenSemanalDieta = () => {
   }
 
   return (
-    <View style={[styles.safeArea, { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : insets.top }]}>
-      <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1 }}>
-        <Text style={styles.title}>Resumen Semanal de tu Dieta</Text>
+    <View
+      style={[
+        styles.safeArea,
+        { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : insets.top },
+      ]}
+    >
+      {/* Botón de regreso */}
+      <View style={styles.headerRow}>
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={styles.backBtn}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="chevron-back" size={28} color={COLORS.primary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>
+          <Ionicons name="pie-chart" size={22} color={COLORS.primary} /> Resumen Semanal
+        </Text>
+      </View>
 
+      <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.card}>
           <ProgressBar label="Calorías" value={totales.calorias_total ?? 0} max={14000} color={COLORS.cal} />
           <ProgressBar label="Proteínas" value={totales.proteinas_total ?? 0} max={700} color={COLORS.prot} />
@@ -132,15 +152,33 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.bg,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 9,
+    paddingHorizontal: 13,
+    paddingTop: 7,
+  },
+  backBtn: {
+    padding: 4,
+    borderRadius: 30,
+    backgroundColor: "#fff",
+    elevation: 3,
+    marginRight: 3,
+    shadowColor: COLORS.primary,
+    shadowOpacity: 0.10,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  headerTitle: {
+    fontSize: 21,
+    color: COLORS.primary,
+    fontWeight: "bold",
+    marginLeft: 2,
+  },
   container: {
     padding: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.secondary,
-    textAlign: 'center',
-    marginBottom: 20,
   },
   card: {
     backgroundColor: COLORS.card,

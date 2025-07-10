@@ -12,6 +12,7 @@ import MapView, { Marker, Polyline } from "react-native-maps";
 import * as Location from "expo-location";
 import { fetchGymsNearby, Gym } from "../services/gymService";
 import { Ionicons } from "@expo/vector-icons";
+import UbicacionAlerta from "../components/UbicacionAlerta"; // <-- Importa tu modal
 
 const PEXELS_API_KEY = "Y2SubFuD5dpJLdWZLSxS71D9Vr0swU5t2m9h3AQRpYSP91yam0HbjrmJ";
 
@@ -48,33 +49,42 @@ export default function MapScreen() {
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const [routeLoading, setRouteLoading] = useState(false);
 
-  // Obtiene ubicación y gimnasios
-  useEffect(() => {
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        setLoading(false);
-        return;
-      }
-      const loc = await Location.getCurrentPositionAsync({});
-      setLocation(loc.coords);
-      const nearbyGyms = await fetchGymsNearby(
-        loc.coords.latitude,
-        loc.coords.longitude,
-        2000
-      );
-      const gymsWithImages = await Promise.all(
-        nearbyGyms.map(async (gym) => ({
-          ...gym,
-          image: await getGymImageFromPexels(),
-        }))
-      );
-      setGyms(gymsWithImages);
-      setLoading(false);
-    })();
-  }, []);
+  // Nuevo: controla visibilidad del modal de ubicación
+  const [showUbicacionAlerta, setShowUbicacionAlerta] = useState(true);
 
-  // Cuando seleccionas gym, pide la ruta
+  // Función para pedir permisos de ubicación
+  const pedirPermisoUbicacion = async () => {
+    setLoading(true);
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      setLoading(false);
+      return;
+    }
+    const loc = await Location.getCurrentPositionAsync({});
+    setLocation(loc.coords);
+    const nearbyGyms = await fetchGymsNearby(
+      loc.coords.latitude,
+      loc.coords.longitude,
+      2000
+    );
+    const gymsWithImages = await Promise.all(
+      nearbyGyms.map(async (gym) => ({
+        ...gym,
+        image: await getGymImageFromPexels(),
+      }))
+    );
+    setGyms(gymsWithImages);
+    setLoading(false);
+  };
+
+  // Solo pide permiso si el usuario acepta en el modal
+  useEffect(() => {
+    if (!showUbicacionAlerta) {
+      pedirPermisoUbicacion();
+    }
+  }, [showUbicacionAlerta]);
+
+  // Ruta al seleccionar gym
   useEffect(() => {
     const getRoute = async () => {
       if (!location || !selectedGym) return;
@@ -115,7 +125,17 @@ export default function MapScreen() {
   if (loading || !location) {
     return (
       <View style={styles.loading}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <UbicacionAlerta
+          visible={showUbicacionAlerta}
+          onClose={() => {
+            setShowUbicacionAlerta(false);
+            setLoading(false);
+          }}
+          onConfirm={() => setShowUbicacionAlerta(false)}
+        />
+        {!showUbicacionAlerta && (
+          <ActivityIndicator size="large" color="#00C27F" />
+        )}
       </View>
     );
   }
@@ -149,7 +169,7 @@ export default function MapScreen() {
         {routeCoords.length > 1 && (
           <Polyline
             coordinates={routeCoords}
-            strokeColor="#007AFF"
+            strokeColor="#00C27F"
             strokeWidth={5}
             lineDashPattern={[1]}
           />
@@ -179,7 +199,7 @@ export default function MapScreen() {
               </Text>
             </TouchableOpacity>
             {routeLoading ? (
-              <ActivityIndicator color="#007AFF" style={{ marginTop: 6 }} />
+              <ActivityIndicator color="#00C27F" style={{ marginTop: 6 }} />
             ) : null}
           </View>
         </View>
@@ -195,6 +215,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#fff",
   },
   markerImg: {
     width: 45,
@@ -228,12 +249,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginBottom: 5,
-    color: "#007AFF",
+    color: "#00C27F",
     textAlign: "center",
   },
   googleMapsBtn: {
     flexDirection: "row",
-    backgroundColor: "#007AFF",
+    backgroundColor: "#00C27F",
     borderRadius: 10,
     paddingVertical: 10,
     paddingHorizontal: 16,
@@ -241,7 +262,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginTop: 8,
     elevation: 2,
-    shadowColor: "#007AFF",
+    shadowColor: "#00C27F",
     shadowOpacity: 0.13,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 2,

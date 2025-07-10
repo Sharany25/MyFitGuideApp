@@ -85,20 +85,21 @@ const HomeScreen: React.FC = () => {
     <SafeAreaView style={styles.safeArea}>
       {/* Row de botones arriba */}
       <View style={styles.topRow}>
+        {/* Botón de Quejas y Sugerencias (arriba a la izquierda) */}
         <TouchableOpacity
           activeOpacity={0.93}
-          style={styles.plusBtnCompact}
-          onPress={() => navigation.navigate('Payment')}
+          style={styles.quejaTopBtn}
+          onPress={() => navigation.navigate('QuejaSugerencia', { userId: user?.userId })}
         >
           <LinearGradient
             colors={["#e0fbe9", "#00c27f33"]}
             start={{ x: 0, y: 0.5 }}
             end={{ x: 0.9, y: 0.5 }}
-            style={styles.plusBtnGradient}
+            style={styles.quejaBtnGradient}
           >
-            <MaterialCommunityIcons name="crown" size={20} color={COLORS.primary} style={{ marginRight: 8 }} />
-            <Text style={styles.plusBtnCompactText}>Suscripción Plus</Text>
-            <Ionicons name="arrow-forward-circle-outline" size={19} color={COLORS.primary} style={{ marginLeft: 7 }} />
+            <Ionicons name="chatbubble-ellipses-outline" size={20} color={COLORS.green} style={{ marginRight: 8 }} />
+            <Text style={styles.quejaBtnText}>¿Tienes una queja o sugerencia?</Text>
+            <Ionicons name="arrow-forward-circle-outline" size={19} color={COLORS.green} style={{ marginLeft: 7 }} />
           </LinearGradient>
         </TouchableOpacity>
         <TouchableOpacity
@@ -235,19 +236,6 @@ const HomeScreen: React.FC = () => {
             icon={<Ionicons name="trophy-outline" size={20} color={COLORS.primary} />}
           />
         </View>
-
-        {/* Botón de Quejas/Sugerencias */}
-        <TouchableOpacity
-          style={styles.quejaSugerenciaBtn}
-          onPress={() => navigation.navigate('QuejaSugerencia', { userId: user?.userId })}
-          activeOpacity={0.89}
-        >
-          <Ionicons name="chatbubble-ellipses-outline" size={28} color={COLORS.green} style={{ marginRight: 12 }} />
-          <View>
-            <Text style={styles.quejaSugerenciaText}>¿Tienes una queja o sugerencia?</Text>
-            <Text style={styles.quejaSugerenciaSubText}>Tu opinión nos ayuda a mejorar.</Text>
-          </View>
-        </TouchableOpacity>
       </ScrollView>
 
       <LogoutModal
@@ -302,7 +290,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: 10 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
 
-  // Top row (suscripción y logout)
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -311,8 +298,8 @@ const styles = StyleSheet.create({
     marginTop: 6,
     marginBottom: 2,
   },
-  plusBtnCompact: {},
-  plusBtnGradient: {
+  quejaTopBtn: {},
+  quejaBtnGradient: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 7,
@@ -324,8 +311,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.07,
     shadowRadius: 5,
   },
-  plusBtnCompactText: {
-    color: COLORS.primary,
+  quejaBtnText: {
+    color: COLORS.green,
     fontWeight: "bold",
     fontSize: width > 400 ? 15 : 13.7,
     letterSpacing: 0.13,
@@ -453,36 +440,6 @@ const styles = StyleSheet.create({
   },
   infoLabel: { color: "#3b5165", fontSize: 15, fontWeight: '700' },
   infoValue: { color: COLORS.primary, fontSize: 16, fontWeight: '800', maxWidth: '54%', textAlign: 'right' },
-
-  quejaSugerenciaBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.greenLight,
-    borderWidth: 1.4,
-    borderColor: COLORS.greenBorder,
-    paddingVertical: 18,
-    paddingHorizontal: 19,
-    borderRadius: 21,
-    marginHorizontal: 10,
-    marginTop: 7,
-    marginBottom: 16,
-    elevation: 3,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.07,
-    shadowRadius: 6,
-  },
-  quejaSugerenciaText: {
-    color: COLORS.green,
-    fontWeight: "bold",
-    fontSize: width > 400 ? 18 : 15.5,
-    letterSpacing: 0.2,
-  },
-  quejaSugerenciaSubText: {
-    color: COLORS.text,
-    fontSize: width > 400 ? 14.5 : 12.5,
-    opacity: 0.7,
-    fontWeight: "500",
-  },
 });
 
 export default HomeScreen;

@@ -66,6 +66,7 @@ const HistorialScreen: React.FC = () => {
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={styles.backBtn}
+          activeOpacity={0.75}
         >
           <Ionicons name="chevron-back" size={27} color={PRIMARY_COLOR} />
         </TouchableOpacity>
@@ -73,6 +74,7 @@ const HistorialScreen: React.FC = () => {
           <Ionicons name="time-outline" size={22} color={PRIMARY_COLOR} /> Historial
         </Text>
       </View>
+
       {/* Tabs */}
       <View style={styles.tabRow}>
         <TouchableOpacity
@@ -96,6 +98,7 @@ const HistorialScreen: React.FC = () => {
           <Text style={[styles.tabText, tab === 'rutinas' && styles.tabTextActive]}>Rutinas</Text>
         </TouchableOpacity>
       </View>
+
       <ScrollView style={styles.scrollArea} contentContainerStyle={{ paddingBottom: 50 }}>
         {loading ? (
           <Text style={styles.loadingText}>Cargando...</Text>
@@ -211,6 +214,13 @@ const styles = StyleSheet.create({
   backBtn: {
     padding: 4,
     marginRight: 3,
+    borderRadius: 30,
+    backgroundColor: '#fff',
+    elevation: 4,
+    shadowColor: PRIMARY_COLOR,
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
   },
   headerTitle: {
     fontSize: 22,

@@ -21,6 +21,7 @@
     "expo-blur": "^14.1.5",
     "expo-linear-gradient": "~14.1.5",
     "expo-location": "~18.1.6",
+    "expo-notifications": "^0.31.4",
     "expo-print": "^14.1.4",
     "expo-sharing": "^13.1.5",
     "expo-status-bar": "~2.2.3",
@@ -42,7 +43,7 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~19.0.10",
-    "expo": "^53.0.16",
+    "expo": "^53.0.19",
     "typescript": "~5.8.3"
   },
   "private": true

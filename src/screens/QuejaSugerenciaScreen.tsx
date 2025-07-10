@@ -12,6 +12,7 @@ import {
   useWindowDimensions,
   Keyboard,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { StackScreenProps } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/StackNavigator";
 import { enviarQuejaSugerencia } from "../hooks/useQuejaSugerencia";
@@ -80,6 +81,15 @@ const QuejaSugerenciaScreen: React.FC<Props> = ({ navigation, route }) => {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
     >
+      {/* Botón flotante para regresar */}
+      <TouchableOpacity
+        style={styles.backBtn}
+        onPress={() => navigation.goBack()}
+        activeOpacity={0.7}
+      >
+        <Ionicons name="arrow-back" size={27} color={COLORS.grad} />
+      </TouchableOpacity>
+      
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{
@@ -246,6 +256,20 @@ const QuejaSugerenciaScreen: React.FC<Props> = ({ navigation, route }) => {
 export default QuejaSugerenciaScreen;
 
 const styles = StyleSheet.create({
+  backBtn: {
+    position: "absolute",
+    top: Platform.OS === "android" ? 26 : 50,
+    left: 15,
+    zIndex: 20,
+    backgroundColor: "#fff",
+    borderRadius: 25,
+    elevation: 6,
+    shadowColor: "#00C27F",
+    shadowOpacity: 0.12,
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 10,
+    padding: 6,
+  },
   card: {
     backgroundColor: COLORS.card,
     borderRadius: 20,

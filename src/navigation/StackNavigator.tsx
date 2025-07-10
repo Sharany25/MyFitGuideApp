@@ -14,7 +14,6 @@ import RutinaIAGenerada from '../screens/RutinaIAGenerada';
 import DietaIAGenerada from '../screens/DietaIAGenerada';
 import ResumenSemanalDieta from '../components/ResumenSemanalDieta';
 import FavoritosScreen from '../screens/FavoritosScreen';
-import PaymentScreen from '../screens/PaymentScreen';
 import QuejaSugerenciaScreen from '../screens/QuejaSugerenciaScreen';
 
 // Tipos de navegación principales
@@ -50,7 +49,6 @@ const StackNavigator: React.FC = () => (
       <Stack.Screen name="DietaIAGenerada" component={DietaIAGenerada} />
       <Stack.Screen name="ResumenSemanalDieta" component={ResumenSemanalDieta} />
       <Stack.Screen name="Favoritos" component={FavoritosScreen} />
-      <Stack.Screen name="Payment" component={PaymentScreen} />
       <Stack.Screen name="QuejaSugerencia" component={QuejaSugerenciaScreen} />
     </Stack.Navigator>
   </NavigationContainer>

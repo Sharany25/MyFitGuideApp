@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "MyFitGuideApp",
-    "slug": "MyFitGuideApp",
+    "name": "MyFitGuide",
+    "slug": "MyFitGuide",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/Logo.png",
