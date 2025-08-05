@@ -101,12 +101,6 @@ const TabNavigator: React.FC<any> = (props) => {
         initialParams={{ userId }}
         options={{ tabBarLabel: 'Rutina' }}
       />
-      <Tab.Screen
-        name="Map"
-        component={MapScreen}
-        initialParams={{ userId }}
-        options={{ tabBarLabel: 'Gym Cercanos' }}
-      />
     </Tab.Navigator>
   );
 };

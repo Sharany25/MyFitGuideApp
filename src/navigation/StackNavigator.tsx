@@ -15,6 +15,7 @@ import DietaIAGenerada from '../screens/DietaIAGenerada';
 import ResumenSemanalDieta from '../components/ResumenSemanalDieta';
 import FavoritosScreen from '../screens/FavoritosScreen';
 import QuejaSugerenciaScreen from '../screens/QuejaSugerenciaScreen';
+import MapScreen from '../screens/MapScreen';
 
 // Tipos de navegación principales
 export type RootStackParamList = {
@@ -31,6 +32,7 @@ export type RootStackParamList = {
   Favoritos: { userId: string };
   Payment: undefined;
   QuejaSugerencia: { userId: string };
+  Map: { userId: string };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -50,6 +52,7 @@ const StackNavigator: React.FC = () => (
       <Stack.Screen name="ResumenSemanalDieta" component={ResumenSemanalDieta} />
       <Stack.Screen name="Favoritos" component={FavoritosScreen} />
       <Stack.Screen name="QuejaSugerencia" component={QuejaSugerenciaScreen} />
+      <Stack.Screen name="Map" component={MapScreen} />
     </Stack.Navigator>
   </NavigationContainer>
 );

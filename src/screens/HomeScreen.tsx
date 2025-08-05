@@ -125,6 +125,11 @@ const HomeScreen: React.FC = () => {
                             label="Historial" 
                             onPress={() => navigation.navigate('Historial', { userId: user?.userId })} 
                         />
+                        <ActionButton 
+                            icon={<Ionicons name="map-outline" size={22} color={PALETTE.primary} />} 
+                            label="Cercanos" 
+                            onPress={() => navigation.navigate('Map', { userId: user?.userId })} 
+                        />
                     </View>
 
                     <View style={styles.infoCardsRow}>
@@ -357,7 +362,7 @@ const styles = StyleSheet.create({
   actionsRow: {
       flexDirection: 'row',
       justifyContent: 'space-around',
-      gap: 15,
+      gap: 10,
       marginVertical: 25,
   },
   actionButtonWrapper: {
@@ -378,7 +383,7 @@ const styles = StyleSheet.create({
   actionButtonText: {
       fontWeight: 'bold',
       marginLeft: 10,
-      fontSize: width * 0.038,
+      fontSize: width * 0.035,
   },
   infoCardsRow: {
       flexDirection: 'row',
