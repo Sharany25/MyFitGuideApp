@@ -9,28 +9,27 @@ import {
   Platform,
   StatusBar,
   Animated,
+  SafeAreaView,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useUser } from "../context/UserContext";
 import { useRutina } from "../hooks/useRutina";
 import { useFavoritos } from "../hooks/useFavoritos";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from 'expo-blur';
 
 const { width } = Dimensions.get("window");
 
-const COLORS = {
-  primary: "#00C27F",
-  primaryDark: "#029865",
-  bg: "#F7F9FA",
-  card: "#fff",
-  accent: "#e0f4eb",
-  soft: "#f6fff9",
-  shadow: "#00c27f24",
-  grey: "#ECEFF1",
-  statBg: "#e0f7ef",
-  text: "#232946",
-  sub: "#7C98B3",
-  border: "#dafbe6",
-  statValue: "#087758"
+const PALETTE = {
+  background_gradient: ['#1D2A32', '#163B48', '#1D2A32'] as const,
+  primary: '#2CFD89',
+  accent_blue: '#00A3FF',
+  text_primary: '#FFFFFF',
+  text_secondary: '#B0C4DE',
+  inactive: 'rgba(255, 255, 255, 0.1)',
+  border: 'rgba(255, 255, 255, 0.15)',
+  danger: '#FF4757',
+  pin_red: '#F44336',
 };
 
 const DIAS_SEMANA = [
@@ -38,54 +37,29 @@ const DIAS_SEMANA = [
 ];
 
 const iconosLoader = [
-  "barbell-outline",
-  "fitness-outline",
-  "body-outline",
-  "flash-outline",
-  "star-outline",
-];
+  "barbell-outline", "fitness-outline", "body-outline", "flash-outline", "star-outline",
+] as const;
 
-const LoaderAlert = ({
-  text = "Cargando rutina personalizada...",
-  sub = "Esto puede tardar unos segundos.",
-}) => {
+const LoaderAlert = ({ text = "Cargando tu rutina...", sub = "Esto puede tardar unos segundos." }) => {
   const spinValue = useRef(new Animated.Value(0)).current;
   const [iconIdx, setIconIdx] = useState(0);
 
   useEffect(() => {
-    Animated.loop(
-      Animated.timing(spinValue, {
-        toValue: 1,
-        duration: 1200,
-        useNativeDriver: true,
-      })
-    ).start();
-
-    const interval = setInterval(() => {
-      setIconIdx((prev) => (prev + 1) % iconosLoader.length);
-    }, 650);
-
+    Animated.loop(Animated.timing(spinValue, { toValue: 1, duration: 1200, useNativeDriver: false })).start();
+    const interval = setInterval(() => setIconIdx((prev) => (prev + 1) % iconosLoader.length), 650);
     return () => clearInterval(interval);
   }, []);
 
-  const spin = spinValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ["0deg", "360deg"],
-  });
+  const spin = spinValue.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "360deg"] });
 
   return (
-    <View style={loaderAlertStyles.container}>
-      <Animated.View
-        style={{
-          transform: [{ rotate: spin }],
-          marginBottom: 18,
-        }}
-      >
-        <Ionicons name={iconosLoader[iconIdx] as any} size={width * 0.17} color={COLORS.primary} />
+    <LinearGradient colors={PALETTE.background_gradient} style={styles.centeredScreen}>
+      <Animated.View style={{ transform: [{ rotate: spin }], marginBottom: 20 }}>
+        <Ionicons name={iconosLoader[iconIdx]} size={width * 0.17} color={PALETTE.primary} />
       </Animated.View>
-      <Text style={loaderAlertStyles.text}>{text}</Text>
-      <Text style={loaderAlertStyles.sub}>{sub}</Text>
-    </View>
+      <Text style={styles.loaderText}>{text}</Text>
+      <Text style={styles.loaderSubText}>{sub}</Text>
+    </LinearGradient>
   );
 };
 
@@ -99,15 +73,20 @@ const RutinaIAGenerada: React.FC = () => {
   const [selectedDiaIndex, setSelectedDiaIndex] = useState(0);
   const [favoritosLocal, setFavoritosLocal] = useState<{ [key: string]: boolean }>({});
 
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     const fetchData = async () => {
       if (!userId) return;
       const result = await obtenerRutinaPorId(userId);
-      if (result?.rutina?.rutina) setRutinaData(result.rutina.rutina);
+      if (result?.rutina?.rutina) {
+        setRutinaData(result.rutina.rutina);
+        Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
+      }
 
       const favs = await getFavoritos(userId);
       const favMap: { [key: string]: boolean } = {};
-      favs.ejercicios.forEach((ej: string) => (favMap[ej] = true));
+      (favs.ejercicios || []).forEach((ej: string) => (favMap[ej] = true));
       setFavoritosLocal(favMap);
     };
     fetchData();
@@ -127,352 +106,218 @@ const RutinaIAGenerada: React.FC = () => {
 
   if (error) {
     return (
-      <View style={styles.loaderContainer}>
-        <Text style={styles.loaderText}>Error al obtener rutina. Intenta más tarde.</Text>
-      </View>
+      <LinearGradient colors={PALETTE.background_gradient} style={styles.centeredScreen}>
+        <Text style={styles.errorText}>Error al obtener la rutina.</Text>
+      </LinearGradient>
     );
   }
 
   return (
-    <View style={styles.safeArea}>
-      {/* Tabs de días de la semana */}
-      <View style={styles.tabsContainer}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.diasScroll}
-        >
-          {rutinaData.map((_, idx) => (
-            <TouchableOpacity
-              key={idx}
-              onPress={() => setSelectedDiaIndex(idx)}
-              activeOpacity={0.93}
-              style={[
-                styles.diaButton,
-                selectedDiaIndex === idx && styles.diaButtonActivo,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.diaButtonText,
-                  selectedDiaIndex === idx && styles.diaButtonTextActivo,
-                ]}
-              >
-                {DIAS_SEMANA[idx] || `Día ${idx + 1}`}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 32 }}
-        style={{ flex: 1 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.card}>
-          {rutinaDelDia ? (
-            <>
-              <Text style={styles.diaTitulo}>
-                <Ionicons name="calendar-outline" size={20} color={COLORS.primaryDark} />{" "}
-                {rutinaDelDia.dia} ·{" "}
-                <Text style={styles.grupo}>{rutinaDelDia.grupo}</Text>
-              </Text>
-              <View style={{ height: 8 }} />
-              {rutinaDelDia.ejercicios.map((ejercicio: any, i: number) => (
-                <View key={i} style={styles.ejercicioCard}>
-                  <View style={styles.headerRow}>
-                    <View style={styles.ejercicioInfo}>
-                      <Ionicons
-                        name="barbell-outline"
-                        size={width * 0.055}
-                        color={COLORS.primaryDark}
-                        style={{ marginRight: 10 }}
-                      />
-                      <Text style={styles.ejercicioNombre}>{ejercicio.nombre}</Text>
-                    </View>
-                    <TouchableOpacity
-                      onPress={() => handleToggleFavorito(ejercicio.nombre)}
-                      activeOpacity={0.75}
-                      style={[
-                        styles.favBtn,
-                        favoritosLocal[ejercicio.nombre] && styles.favBtnActive,
-                      ]}
-                    >
-                      <Ionicons
-                        name={favoritosLocal[ejercicio.nombre] ? "star" : "star-outline"}
-                        size={25}
-                        color={favoritosLocal[ejercicio.nombre] ? COLORS.primary : "#c5c5c5"}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                  <View style={styles.statsRow}>
-                    <View style={styles.statItem}>
-                      <Ionicons name="repeat" size={17} color={COLORS.primaryDark} style={{ marginBottom: 2 }} />
-                      <Text style={styles.statLabel}>Series</Text>
-                      <Text style={styles.statValue}>{ejercicio.series}</Text>
-                    </View>
-                    <View style={styles.statItem}>
-                      <Ionicons name="barbell" size={17} color={COLORS.primaryDark} style={{ marginBottom: 2 }} />
-                      <Text style={styles.statLabel}>Reps</Text>
-                      <Text style={styles.statValue}>{ejercicio.repeticiones}</Text>
-                    </View>
-                    <View style={styles.statItem}>
-                      <Ionicons name="timer-outline" size={17} color={COLORS.primaryDark} style={{ marginBottom: 2 }} />
-                      <Text style={styles.statLabel}>Descanso</Text>
-                      <Text style={styles.statValue}>{ejercicio.descanso}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.propositoBox}>
-                    <Ionicons
-                      name="radio-button-on"
-                      size={18}
-                      color={COLORS.primary}
-                      style={{ marginRight: 8, opacity: 0.9 }}
-                    />
-                    <Text style={styles.proposito}>{ejercicio["propósito"]}</Text>
-                  </View>
-                </View>
+    <LinearGradient colors={PALETTE.background_gradient} style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.daySelectorContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daySelectorContent}>
+              {rutinaData.map((_, idx) => (
+                <TouchableOpacity key={idx} style={[styles.dayButton, selectedDiaIndex === idx && styles.dayButtonSelected]} onPress={() => setSelectedDiaIndex(idx)}>
+                  <Text style={[styles.dayText, selectedDiaIndex === idx && styles.dayTextSelected]}>{DIAS_SEMANA[idx] || `Día ${idx + 1}`}</Text>
+                </TouchableOpacity>
               ))}
-            </>
-          ) : (
-            <View style={styles.loaderContainer}>
-              <Text style={styles.loaderText}>No hay rutina disponible para mostrar.</Text>
-            </View>
-          )}
+            </ScrollView>
         </View>
-      </ScrollView>
-    </View>
+
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            {rutinaDelDia ? (
+                <Animated.View style={{opacity: fadeAnim}}>
+                    <View style={styles.dayHeader}>
+                        <Text style={styles.dayTitle}>{rutinaDelDia.dia}</Text>
+                        <Text style={styles.muscleGroup}>{rutinaDelDia.grupo}</Text>
+                    </View>
+
+                    <View style={styles.infoBanner}>
+                        <Ionicons name="information-circle-outline" size={22} color={PALETTE.text_secondary} />
+                        <Text style={styles.infoBannerText}>Los pesos en cada ejercicio son independientes para cada persona.</Text>
+                    </View>
+
+                    {rutinaDelDia.ejercicios.map((ejercicio: any, i: number) => (
+                        <LinearGradient key={i} colors={['rgba(44, 253, 137, 0.15)', 'rgba(0, 163, 255, 0.05)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cardBorder}>
+                            <BlurView intensity={50} tint="dark" style={styles.exerciseCard}>
+                                <View style={styles.exerciseHeader}>
+                                    <Text style={styles.exerciseName}>{ejercicio.nombre}</Text>
+                                    <TouchableOpacity onPress={() => handleToggleFavorito(ejercicio.nombre)}>
+                                        <MaterialCommunityIcons name={favoritosLocal[ejercicio.nombre] ? "pin" : "pin-outline"} size={28} color={favoritosLocal[ejercicio.nombre] ? PALETTE.pin_red : PALETTE.text_secondary} />
+                                    </TouchableOpacity>
+                                </View>
+                                <View style={styles.statsRow}>
+                                    <StatItem icon="repeat" label="Series" value={ejercicio.series} />
+                                    <StatItem icon="barbell" label="Reps" value={ejercicio.repeticiones} />
+                                    <StatItem icon="timer-outline" label="Descanso" value={ejercicio.descanso} />
+                                </View>
+                                <View style={styles.purposeContainer}>
+                                    <Text style={styles.purposeText}>{ejercicio["propósito"]}</Text>
+                                </View>
+                            </BlurView>
+                        </LinearGradient>
+                    ))}
+                </Animated.View>
+            ) : (
+                <View style={styles.centeredScreen}>
+                    <Text style={styles.errorText}>No hay rutina disponible.</Text>
+                </View>
+            )}
+        </ScrollView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
+
+const StatItem = ({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap, label: string, value: string }) => (
+    <View style={styles.statItem}>
+        <Ionicons name={icon} size={20} color={PALETTE.text_secondary} />
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
+    </View>
+);
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.bg,
-    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight ?? 20) + 10 : 36,
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
-  tabsContainer: {
-    backgroundColor: COLORS.bg,
-    borderBottomWidth: 0,
-    paddingBottom: 5,
-    marginBottom: 2,
-    zIndex: 10,
-    paddingTop: 2,
-  },
-  diasScroll: {
-    paddingVertical: 9,
-    paddingHorizontal: 7,
-    alignItems: "center",
-    gap: 11,
-    minHeight: 56,
-  },
-  diaButton: {
-    paddingVertical: 11,
-    paddingHorizontal: width * 0.10,
-    marginHorizontal: 4,
-    borderRadius: 25,
-    backgroundColor: COLORS.accent,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.7,
-    borderColor: "transparent",
-    minWidth: 90,
-    elevation: 3,
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.13,
-    shadowRadius: 7,
-  },
-  diaButtonActivo: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primaryDark,
-    shadowOpacity: 0.17,
-    shadowColor: COLORS.primaryDark,
-  },
-  diaButtonText: {
-    color: COLORS.primary,
-    fontWeight: "bold",
-    fontSize: width * 0.045,
-    letterSpacing: 0.14,
-  },
-  diaButtonTextActivo: {
-    color: "#fff",
-  },
-  card: {
-    marginHorizontal: 9,
-    marginTop: 10,
-    marginBottom: 32,
-    padding: width > 400 ? 28 : 15,
-    backgroundColor: COLORS.card,
-    borderRadius: 27,
-    elevation: 8,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.19,
-    shadowRadius: 18,
-    shadowOffset: { width: 0, height: 7 },
-  },
-  diaTitulo: {
-    fontSize: width > 400 ? 22 : 18.8,
-    fontWeight: "bold",
-    color: COLORS.primaryDark,
-    textAlign: "center",
-    marginBottom: 7,
-    letterSpacing: 0.09,
-    marginTop: 0,
-  },
-  grupo: {
-    color: COLORS.text,
-    fontWeight: "600",
-    fontSize: width > 400 ? 17.5 : 15.7,
-  },
-  ejercicioCard: {
-    marginBottom: 27,
-    marginTop: 9,
-    backgroundColor: COLORS.soft,
-    borderRadius: 19,
-    padding: width > 400 ? 20 : 14,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.13,
-    shadowRadius: 10,
-    elevation: 2,
-    borderWidth: 1.3,
-    borderColor: COLORS.border,
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 11,
-    gap: 7,
-  },
-  ejercicioInfo: {
-    flexDirection: "row",
-    alignItems: "center",
+  centeredScreen: {
     flex: 1,
-    flexShrink: 1,
-    maxWidth: width * 0.60,
-  },
-  ejercicioNombre: {
-    fontSize: width > 400 ? 17.6 : 15.6,
-    fontWeight: "bold",
-    color: COLORS.text,
-    flexShrink: 1,
-    letterSpacing: 0.09,
-  },
-  favBtn: {
-    marginLeft: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    height: 38,
-    width: 38,
-    borderRadius: 19,
-    backgroundColor: "#e2faf3",
-    borderWidth: 1.7,
-    borderColor: "#cdf3e6",
-    elevation: 2,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.13,
-    shadowRadius: 7,
-  },
-  favBtnActive: {
-    backgroundColor: "#b5ffe3",
-    borderColor: COLORS.primaryDark,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.18,
-    shadowRadius: 13,
-  },
-  statsRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 9,
-    marginTop: 1,
-    gap: 13,
-  },
-  statItem: {
-    alignItems: "center",
-    flex: 1,
-    backgroundColor: COLORS.statBg,
-    paddingVertical: 11,
-    marginHorizontal: 3,
-    borderRadius: 12,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-    borderWidth: 0.8,
-    borderColor: "#b7f4e0",
-  },
-  statLabel: {
-    fontSize: width * 0.032,
-    color: "#009664",
-    marginTop: 2,
-    fontWeight: "700",
-  },
-  statValue: {
-    fontSize: width * 0.044,
-    fontWeight: "bold",
-    color: COLORS.statValue,
-    marginTop: 2,
-  },
-  propositoBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#e6fff6",
-    borderRadius: 12,
-    paddingVertical: 11,
-    paddingHorizontal: 17,
-    marginTop: 11,
-    alignSelf: "flex-start",
-    minWidth: 112,
-    shadowColor: "#00c27f44",
-    shadowOpacity: 0.12,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  proposito: {
-    fontSize: width * 0.041,
-    color: COLORS.primaryDark,
-    fontWeight: "700",
-    fontStyle: "italic",
-    marginLeft: 2,
-    letterSpacing: 0.04,
-    flexShrink: 1,
-    maxWidth: width > 400 ? 240 : 145,
-  },
-  loaderContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: COLORS.bg,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loaderText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: "#555",
+    color: PALETTE.text_primary,
+    fontSize: width * 0.05,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
-});
-
-const loaderAlertStyles = StyleSheet.create({
-  container: {
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: COLORS.bg,
+  loaderSubText: {
+    color: PALETTE.text_secondary,
+    fontSize: width * 0.04,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  errorText: {
+    color: PALETTE.danger,
+    fontSize: width * 0.045,
+    textAlign: 'center',
+  },
+  daySelectorContainer: {
+    backgroundColor: PALETTE.inactive,
+    borderRadius: 50,
+    padding: 5,
+    marginVertical: 15,
+    marginHorizontal: width * 0.05,
+  },
+  daySelectorContent: {
+    alignItems: 'center',
+  },
+  dayButton: {
+    paddingVertical: 10,
+    paddingHorizontal: width * 0.05,
+    borderRadius: 50,
+  },
+  dayButtonSelected: {
+    backgroundColor: PALETTE.primary,
+  },
+  dayText: {
+    color: PALETTE.text_secondary,
+    fontWeight: '700',
+    fontSize: width * 0.038,
+  },
+  dayTextSelected: {
+    color: '#1D2A32',
+  },
+  scrollContent: {
+    paddingHorizontal: width * 0.05,
+    paddingBottom: 120,
+  },
+  dayHeader: {
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  dayTitle: {
+    color: PALETTE.text_primary,
+    fontSize: width * 0.07,
+    fontWeight: 'bold',
+  },
+  muscleGroup: {
+    color: PALETTE.accent_blue,
+    fontSize: width * 0.05,
+    fontWeight: '600',
+    marginTop: 5,
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PALETTE.inactive,
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 25,
+  },
+  infoBannerText: {
+    color: PALETTE.text_secondary,
+    fontSize: width * 0.038,
+    marginLeft: 10,
     flex: 1,
   },
-  text: {
-    marginTop: 0,
-    fontWeight: "bold",
-    fontSize: width * 0.054,
-    color: COLORS.text,
-    textAlign: "center",
-    letterSpacing: 0.1,
+  cardBorder: {
+    borderRadius: 22,
+    marginBottom: 20,
+    padding: 1,
   },
-  sub: {
-    marginTop: 8,
-    fontSize: width * 0.042,
-    color: COLORS.text,
-    fontWeight: "500",
-    textAlign: "center",
+  exerciseCard: {
+    borderRadius: 20,
+    padding: 20,
+    overflow: 'hidden',
+  },
+  exerciseHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  exerciseName: {
+    color: PALETTE.text_primary,
+    fontSize: width * 0.05,
+    fontWeight: 'bold',
+    flex: 1,
+    marginRight: 10,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  statItem: {
+    alignItems: 'center',
+    backgroundColor: PALETTE.inactive,
+    borderRadius: 15,
+    padding: 15,
+    width: width * 0.25,
+  },
+  statValue: {
+    color: PALETTE.text_primary,
+    fontSize: width * 0.05,
+    fontWeight: 'bold',
+    marginVertical: 5,
+  },
+  statLabel: {
+    color: PALETTE.text_secondary,
+    fontSize: width * 0.035,
+  },
+  purposeContainer: {
+    backgroundColor: PALETTE.inactive,
+    borderRadius: 15,
+    padding: 15,
+  },
+  purposeText: {
+    color: PALETTE.text_secondary,
+    fontSize: width * 0.038,
+    fontStyle: 'italic',
   },
 });
 

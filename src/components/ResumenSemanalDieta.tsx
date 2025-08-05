@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,24 +9,29 @@ import {
   Dimensions,
   Platform,
   StatusBar,
+  SafeAreaView,
+  Animated,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDieta } from '../hooks/useDieta';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 const { width } = Dimensions.get('window');
 
-const COLORS = {
-  primary: '#00C27F',
-  secondary: '#1C1C1E',
-  bg: '#FAFAFA',
-  card: '#FFFFFF',
-  cal: '#4CAF50',
-  prot: '#00BCD4',
-  carb: '#3F51B5',
-  fat: '#FFC107',
-  text: '#333',
+const PALETTE = {
+  background_gradient: ['#1D2A32', '#163B48', '#1D2A32'] as const,
+  primary: '#2CFD89',
+  text_primary: '#FFFFFF',
+  text_secondary: '#B0C4DE',
+  inactive: 'rgba(255, 255, 255, 0.1)',
+  border: 'rgba(255, 255, 255, 0.15)',
+  danger: '#FF4757', // Error color added
+  cal: '#2CFD89',
+  prot: '#00A3FF',
+  carb: '#FFC107',
+  fat: '#E91E63',
 };
 
 interface Params {
@@ -36,7 +41,6 @@ interface Params {
 const ResumenSemanalDieta = () => {
   const route = useRoute();
   const navigation = useNavigation<any>();
-  const insets = useSafeAreaInsets();
   const { userId } = route.params as Params;
   const { obtenerDietaPorUsuario, loading, error } = useDieta();
   const [totales, setTotales] = useState<any>(null);
@@ -53,176 +57,189 @@ const ResumenSemanalDieta = () => {
     fetchData();
   }, [userId]);
 
-  const ProgressBar = ({
-    label,
-    value,
-    max,
-    color,
-  }: {
-    label: string;
-    value: number;
-    max: number;
-    color: string;
-  }) => (
-    <View style={styles.progressContainer}>
-      <View style={styles.progressLabelRow}>
-        <Text style={styles.progressLabel}>{label}</Text>
-        <Text style={styles.progressValue}>
-          {value}/{max}
-          {label === 'Calorías' ? ' kcal' : 'g'}
-        </Text>
-      </View>
-      <View style={styles.progressBarBackground}>
-        <View
-          style={[
-            styles.progressBarFill,
-            {
-              width: `${max > 0 ? Math.min(value / max, 1) * 100 : 0}%`,
-              backgroundColor: color,
-            },
-          ]}
-        />
-      </View>
-    </View>
-  );
-
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={{ marginTop: 10 }}>Cargando resumen semanal...</Text>
-      </View>
+      <LinearGradient colors={PALETTE.background_gradient} style={styles.centered}>
+        <ActivityIndicator size="large" color={PALETTE.primary} />
+      </LinearGradient>
     );
   }
 
-  if (error) {
+  if (error || !totales) {
     return (
-      <View style={styles.centered}>
-        <Text style={{ color: 'red', fontWeight: 'bold' }}>Error: {error}</Text>
-      </View>
-    );
-  }
-
-  if (!totales) {
-    return (
-      <View style={styles.centered}>
-        <Text>No hay datos para mostrar.</Text>
-      </View>
+      <LinearGradient colors={PALETTE.background_gradient} style={styles.centered}>
+        <Text style={{ color: PALETTE.danger, fontWeight: 'bold' }}>
+          {error || 'No hay datos para mostrar.'}
+        </Text>
+      </LinearGradient>
     );
   }
 
   return (
-    <View
-      style={[
-        styles.safeArea,
-        { paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : insets.top },
-      ]}
-    >
-      {/* Botón de regreso */}
-      <View style={styles.headerRow}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-          activeOpacity={0.75}
-        >
-          <Ionicons name="chevron-back" size={28} color={COLORS.primary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          <Ionicons name="pie-chart" size={22} color={COLORS.primary} /> Resumen Semanal
-        </Text>
-      </View>
+    <LinearGradient colors={PALETTE.background_gradient} style={{flex: 1}}>
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                    <Ionicons name="chevron-back" size={28} color={PALETTE.text_primary} />
+                </TouchableOpacity>
+                <Text style={styles.headerTitle}>Resumen Semanal</Text>
+                <View style={{width: 44}} />
+            </View>
 
-      <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1 }}>
-        <View style={styles.card}>
-          <ProgressBar label="Calorías" value={totales.calorias_total ?? 0} max={14000} color={COLORS.cal} />
-          <ProgressBar label="Proteínas" value={totales.proteinas_total ?? 0} max={700} color={COLORS.prot} />
-          <ProgressBar label="Carbohidratos" value={totales.carbohidratos_total ?? 0} max={2100} color={COLORS.carb} />
-          <ProgressBar label="Grasas" value={totales.grasas_total ?? 0} max={350} color={COLORS.fat} />
-          <Text style={styles.costoText}>💰 Costo total: ${totales.costo_total ?? 0} MXN</Text>
-        </View>
-
-        <Text style={styles.fecha}>🕒 Generada el: {fechaCreacion ? new Date(fechaCreacion).toLocaleString() : ''}</Text>
-      </ScrollView>
-    </View>
+            <ScrollView contentContainerStyle={styles.container}>
+                <LinearGradient colors={['rgba(44, 253, 137, 0.15)', 'rgba(0, 163, 255, 0.05)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cardBorder}>
+                    <BlurView intensity={50} tint="dark" style={styles.card}>
+                        <View style={styles.totalContainer}>
+                            <Text style={styles.totalLabel}>Total Semanal de Calorías</Text>
+                            <Text style={styles.totalValue}>{totales.calorias_total?.toLocaleString('en-US') ?? 0} kcal</Text>
+                        </View>
+                        <View style={styles.divider} />
+                        <Text style={styles.sectionTitle}>Resumen de Macronutrientes</Text>
+                        <ProgressBar label="Proteínas" value={totales.proteinas_total ?? 0} max={1050} color={PALETTE.prot} unit="g" />
+                        <ProgressBar label="Carbohidratos" value={totales.carbohidratos_total ?? 0} max={1750} color={PALETTE.carb} unit="g" />
+                        <ProgressBar label="Grasas" value={totales.grasas_total ?? 0} max={450} color={PALETTE.fat} unit="g" />
+                        <View style={styles.divider} />
+                        <View style={styles.costContainer}>
+                            <Ionicons name="cash-outline" size={24} color={PALETTE.primary} />
+                            <Text style={styles.costoText}>Costo total estimado: ${totales.costo_total?.toFixed(2) ?? 0} MXN</Text>
+                        </View>
+                    </BlurView>
+                </LinearGradient>
+            </ScrollView>
+        </SafeAreaView>
+    </LinearGradient>
   );
+};
+
+const ProgressBar = ({ label, value, max, color, unit }: { label: string; value: number; max: number; color: string; unit: string; }) => {
+    const animatedWidth = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.timing(animatedWidth, {
+            toValue: max > 0 ? Math.min(value / max, 1) : 0,
+            duration: 1000,
+            useNativeDriver: false, // width animation not supported by native driver
+        }).start();
+    }, [value, max]);
+
+    const widthInterpolation = animatedWidth.interpolate({
+        inputRange: [0, 1],
+        outputRange: ['0%', '100%'],
+    });
+
+    return (
+        <View style={styles.progressContainer}>
+            <View style={styles.progressLabelRow}>
+                <Text style={styles.progressLabel}>{label}</Text>
+                <Text style={styles.progressValue}>{value} / {max}{unit}</Text>
+            </View>
+            <View style={styles.progressBarBackground}>
+                <Animated.View style={[styles.progressBarFill, { width: widthInterpolation, backgroundColor: color }]} />
+            </View>
+        </View>
+    );
 };
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.bg,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
-  headerRow: {
+  header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    gap: 9,
-    paddingHorizontal: 13,
-    paddingTop: 7,
+    justifyContent: 'space-between',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
   },
   backBtn: {
-    padding: 4,
-    borderRadius: 30,
-    backgroundColor: "#fff",
-    elevation: 3,
-    marginRight: 3,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.10,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
+    padding: 8,
   },
   headerTitle: {
-    fontSize: 21,
-    color: COLORS.primary,
+    fontSize: width * 0.055,
+    color: PALETTE.text_primary,
     fontWeight: "bold",
-    marginLeft: 2,
   },
   container: {
-    padding: 16,
+    padding: 20,
+  },
+  cardBorder: {
+    borderRadius: 22,
+    padding: 1,
   },
   card: {
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 20,
-    elevation: 3,
+    borderRadius: 20,
+    padding: 25,
+    overflow: 'hidden',
+  },
+  totalContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  totalLabel: {
+    color: PALETTE.text_secondary,
+    fontSize: width * 0.04,
+  },
+  totalValue: {
+    color: PALETTE.primary,
+    fontSize: width * 0.1,
+    fontWeight: 'bold',
+    marginTop: 5,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: PALETTE.border,
+    marginVertical: 20,
+  },
+  sectionTitle: {
+    color: PALETTE.text_primary,
+    fontSize: width * 0.045,
+    fontWeight: 'bold',
+    marginBottom: 15,
   },
   progressContainer: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   progressLabelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 8,
   },
   progressLabel: {
     fontWeight: 'bold',
-    fontSize: 14,
-    color: COLORS.secondary,
+    fontSize: width * 0.04,
+    color: PALETTE.text_primary,
   },
   progressValue: {
-    fontSize: 13,
-    color: COLORS.text,
+    fontSize: width * 0.035,
+    color: PALETTE.text_secondary,
   },
   progressBarBackground: {
-    height: 10,
-    backgroundColor: '#ddd',
+    height: 12,
+    backgroundColor: PALETTE.inactive,
     borderRadius: 6,
-    marginTop: 4,
     overflow: 'hidden',
   },
   progressBarFill: {
-    height: 10,
+    height: '100%',
     borderRadius: 6,
   },
+  costContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    marginTop: 10,
+  },
   costoText: {
-    fontSize: 14,
-    marginTop: 16,
+    fontSize: width * 0.04,
     fontWeight: '600',
-    color: COLORS.text,
+    color: PALETTE.text_primary,
   },
   fecha: {
     textAlign: 'center',
-    fontSize: 12,
-    color: '#777',
+    fontSize: width * 0.035,
+    color: PALETTE.text_secondary,
     marginTop: 20,
     fontStyle: 'italic',
   },
@@ -230,7 +247,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: COLORS.bg,
   },
 });
 

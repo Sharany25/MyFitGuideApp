@@ -4,13 +4,20 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 const { width } = Dimensions.get('window');
 
+const PALETTE = {
+  primary: '#2CFD89',
+  text_primary: '#FFFFFF',
+  text_secondary: '#B0C4DE',
+  inactive: 'rgba(255, 255, 255, 0.2)',
+};
+
 type Step = 'Registro' | 'Dieta' | 'Rutina';
 
 interface ProgressStepperProps {
   currentStep: Step;
 }
 
-const steps: { key: Step; label: string; icon: string }[] = [
+const steps: { key: Step; label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap }[] = [
   { key: 'Registro', label: 'Perfil', icon: 'account' },
   { key: 'Dieta', label: 'Dieta', icon: 'silverware-fork-knife' },
   { key: 'Rutina', label: 'Rutina', icon: 'dumbbell' },
@@ -21,40 +28,31 @@ const ProgressStepper: React.FC<ProgressStepperProps> = ({ currentStep }) => {
 
   return (
     <View style={styles.wrapper}>
-      <View
-        style={[
-          styles.progressBar,
-          { width: `${((currentIndex + 1) / steps.length) * 100}%` },
-        ]}
-      />
       <View style={styles.container}>
         {steps.map((step, index) => {
-          const isCompleted = index < currentIndex;
-          const isCurrent = index === currentIndex;
-
-          const iconColor = isCompleted
-            ? '#00C27F'
-            : isCurrent
-            ? '#000'
-            : '#bbb';
-
-          const textStyle = isCompleted
-            ? styles.labelCompleted
-            : isCurrent
-            ? styles.labelCurrent
-            : styles.labelInactive;
+          const isActive = index <= currentIndex;
+          const iconColor = isActive ? PALETTE.primary : PALETTE.text_secondary;
+          const labelStyle = isActive ? styles.labelActive : styles.labelInactive;
 
           return (
             <View key={step.key} style={styles.stepItem}>
               <MaterialCommunityIcons
                 name={step.icon}
-                size={22}
-                color={iconColor} 
+                size={width * 0.07}
+                color={iconColor}
               />
-              <Text style={textStyle}>{step.label}</Text>
+              <Text style={labelStyle}>{step.label}</Text>
             </View>
           );
         })}
+      </View>
+      <View style={styles.progressBarBackground}>
+        <View
+          style={[
+            styles.progressBar,
+            { width: `${((currentIndex + 0.5) / steps.length) * 100}%` },
+          ]}
+        />
       </View>
     </View>
   );
@@ -62,43 +60,39 @@ const ProgressStepper: React.FC<ProgressStepperProps> = ({ currentStep }) => {
 
 const styles = StyleSheet.create({
   wrapper: {
-    paddingTop: 8,
-    paddingBottom: 10,
-    position: 'relative',
-    backgroundColor: 'transparent',
-  },
-  progressBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    height: 4,
-    backgroundColor: '#00C27F',
+    paddingVertical: 10,
+    marginVertical: 15,
   },
   container: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingHorizontal: 10,
+    alignItems: 'center',
   },
   stepItem: {
     alignItems: 'center',
-    flex: 1,
   },
-  labelCompleted: {
-    marginTop: 4,
-    color: '#00C27F',
-    fontWeight: '600',
-    fontSize: 12,
-  },
-  labelCurrent: {
-    marginTop: 4,
-    color: '#000',
-    fontWeight: '600',
-    fontSize: 12,
+  labelActive: {
+    marginTop: 6,
+    color: PALETTE.primary,
+    fontWeight: 'bold',
+    fontSize: width * 0.035,
   },
   labelInactive: {
-    marginTop: 4,
-    color: '#bbb',
-    fontSize: 12,
+    marginTop: 6,
+    color: PALETTE.text_secondary,
+    fontSize: width * 0.035,
+  },
+  progressBarBackground: {
+    height: 4,
+    backgroundColor: PALETTE.inactive,
+    borderRadius: 2,
+    marginTop: 10,
+    marginHorizontal: width * 0.05,
+  },
+  progressBar: {
+    height: '100%',
+    backgroundColor: PALETTE.primary,
+    borderRadius: 2,
   },
 });
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { API_URL } from "../api/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useUser } from "../context/UserContext"; // o useAuth, según tu contexto
+import { useUser } from "../context/UserContext";
 
 interface LoginData {
   correoElectronico: string;
@@ -12,7 +12,7 @@ interface LoginData {
 export const useLogin = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { dispatch } = useUser(); // actualiza el contexto global
+  const { dispatch } = useUser();
 
   const login = async (data: LoginData) => {
     setLoading(true);
@@ -27,8 +27,7 @@ export const useLogin = () => {
 
       // Este bloque depende de la estructura de tu backend
       if (response.ok && result) {
-        // Guarda usuario y/o token en storage/context
-        dispatch({ type: 'SET_USER', payload: result }); // si tu contexto lo permite
+        dispatch({ type: 'SET_USER', payload: result });
         await AsyncStorage.setItem("userProfile", JSON.stringify(result));
         return result;
       } else {

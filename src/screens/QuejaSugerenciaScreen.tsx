@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,29 +11,33 @@ import {
   Image,
   useWindowDimensions,
   Keyboard,
+  ActivityIndicator,
+  SafeAreaView,
+  StatusBar,
+  Dimensions,
+  Animated,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, Feather } from "@expo/vector-icons";
 import { StackScreenProps } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/StackNavigator";
 import { enviarQuejaSugerencia } from "../hooks/useQuejaSugerencia";
 import ConfirmacionEnvio from "../components/ConfirmacionEnvio";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from 'expo-blur';
 
 type Props = StackScreenProps<RootStackParamList, "QuejaSugerencia">;
 
-const COLORS = {
-  fondo: "#f7fafd",
-  card: "#fff",
-  borde: "#00C27F",
-  secundario: "#1FBF7C",
-  grad: "#00C27F",
-  grad2: "#23c6d8",
-  text: "#20293c",
-  btn: "#13cc89",
-  btnText: "#fff",
-  switch: "#e7f5ef",
-  switchSel: "#1FBF7C",
-  input: "#e5f7ef",
-  label: "#00A76A",
+const { width } = Dimensions.get("window");
+
+const PALETTE = {
+  background_gradient: ['#1D2A32', '#163B48', '#1D2A32'] as const,
+  primary: '#2CFD89',
+  text_primary: '#FFFFFF',
+  text_secondary: '#B0C4DE',
+  inactive: 'rgba(255, 255, 255, 0.1)',
+  border: 'rgba(255, 255, 255, 0.15)',
+  danger: '#FF4757',
+  dark: '#1D2A32',
 };
 
 const QuejaSugerenciaScreen: React.FC<Props> = ({ navigation, route }) => {
@@ -44,8 +48,16 @@ const QuejaSugerenciaScreen: React.FC<Props> = ({ navigation, route }) => {
   const [categoria, setCategoria] = useState<"acceso" | "funcionalidad">("acceso");
   const [loading, setLoading] = useState(false);
   const [enviado, setEnviado] = useState<false | "queja" | "sugerencia">(false);
+  
+  const formAnim = useRef(new Animated.Value(100)).current;
 
-  const { width } = useWindowDimensions();
+  useEffect(() => {
+    Animated.spring(formAnim, {
+        toValue: 0,
+        friction: 6,
+        useNativeDriver: true,
+    }).start();
+  }, []);
 
   const handleEnviar = async () => {
     if (!mensaje.trim()) {
@@ -76,181 +88,127 @@ const QuejaSugerenciaScreen: React.FC<Props> = ({ navigation, route }) => {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: COLORS.fondo }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 24}
-    >
-      {/* Botón flotante para regresar */}
-      <TouchableOpacity
-        style={styles.backBtn}
-        onPress={() => navigation.goBack()}
-        activeOpacity={0.7}
-      >
-        <Ionicons name="arrow-back" size={27} color={COLORS.grad} />
-      </TouchableOpacity>
-      
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: "center",
-          paddingVertical: 18,
-        }}
-        keyboardShouldPersistTaps="handled"
-        automaticallyAdjustKeyboardInsets
-      >
-        <View
-          style={[
-            styles.card,
-            {
-              maxWidth: Math.min(440, width - 22),
-              marginTop: 18,
-              marginBottom: 32,
-            },
-          ]}
+    <LinearGradient colors={PALETTE.background_gradient} style={{ flex: 1 }}>
+      <SafeAreaView style={{ flex: 1 }}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <View style={styles.header}>
-            <Image
-              source={require("../../assets/Email.jpg")}
-              style={styles.logo}
-            />
-            <Text style={styles.title}>Soporte MyFitGuide</Text>
-          </View>
-          <Text style={styles.subtitle}>Envíanos tu queja o sugerencia</Text>
-
-          {/* Selector tipo */}
-          <View style={styles.switchRow}>
-            <TouchableOpacity
-              style={[
-                styles.switchButton,
-                tipo === "queja" && styles.switchSelected,
-              ]}
-              onPress={() => setTipo("queja")}
-              activeOpacity={0.88}
-            >
-              <Text
-                style={[
-                  styles.switchText,
-                  tipo === "queja" && styles.switchSelectedText,
-                ]}
-              >
-                Queja
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.switchButton,
-                tipo === "sugerencia" && styles.switchSelected,
-              ]}
-              onPress={() => setTipo("sugerencia")}
-              activeOpacity={0.88}
-            >
-              <Text
-                style={[
-                  styles.switchText,
-                  tipo === "sugerencia" && styles.switchSelectedText,
-                ]}
-              >
-                Sugerencia
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Mensaje */}
-          <Text style={styles.label}>Mensaje</Text>
-          <TextInput
-            style={styles.inputArea}
-            value={mensaje}
-            onChangeText={setMensaje}
-            placeholder="Escribe tu queja o sugerencia..."
-            placeholderTextColor="#92bda8"
-            multiline
-            numberOfLines={4}
-            maxLength={500}
-            textAlignVertical="top"
-            autoCapitalize="sentences"
-            autoCorrect
-            returnKeyType="done"
-          />
-
-          {/* Email */}
-          <Text style={styles.label}>Email (opcional)</Text>
-          <TextInput
-            style={styles.input}
-            value={emailContacto}
-            onChangeText={setEmailContacto}
-            placeholder="tu@email.com"
-            placeholderTextColor="#a1b7bc"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            returnKeyType="done"
-          />
-
-          {/* Categoría */}
-          <Text style={styles.label}>Categoría</Text>
-          <View style={styles.switchRow}>
-            <TouchableOpacity
-              style={[
-                styles.switchButton,
-                categoria === "acceso" && styles.switchSelected,
-              ]}
-              onPress={() => setCategoria("acceso")}
-              activeOpacity={0.88}
-            >
-              <Text
-                style={[
-                  styles.switchText,
-                  categoria === "acceso" && styles.switchSelectedText,
-                ]}
-              >
-                Acceso
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.switchButton,
-                categoria === "funcionalidad" && styles.switchSelected,
-              ]}
-              onPress={() => setCategoria("funcionalidad")}
-              activeOpacity={0.88}
-            >
-              <Text
-                style={[
-                  styles.switchText,
-                  categoria === "funcionalidad" && styles.switchSelectedText,
-                ]}
-              >
-                Funcionalidad
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Botón */}
           <TouchableOpacity
-            style={[
-              styles.btn,
-              { opacity: !mensaje.trim() || loading ? 0.6 : 1 },
-            ]}
-            onPress={handleEnviar}
-            disabled={!mensaje.trim() || loading}
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
           >
-            <Text style={styles.btnText}>
-              {loading ? "Enviando..." : "Enviar"}
-            </Text>
+            <Ionicons name="arrow-back" size={27} color={PALETTE.text_primary} />
           </TouchableOpacity>
-        </View>
-        <ConfirmacionEnvio
-          visible={!!enviado}
-          tipo={enviado === "queja" ? "queja" : "sugerencia"}
-          onClose={() => {
-            setEnviado(false);
-            navigation.goBack();
-          }}
-        />
-      </ScrollView>
-    </KeyboardAvoidingView>
+          
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={styles.scrollContainer}
+            keyboardShouldPersistTaps="handled"
+          >
+            <Animated.View style={{transform: [{translateY: formAnim}]}}>
+                <BlurView intensity={50} tint="dark" style={styles.card}>
+                  <View style={styles.header}>
+                    <Feather name="message-square" size={width * 0.12} color={PALETTE.primary} />
+                    <Text style={styles.title}>Soporte MyFitGuide</Text>
+                    <Text style={styles.subtitle}>Tu opinión nos ayuda a mejorar.</Text>
+                  </View>
+
+                  <SegmentedControl
+                    label="Tipo"
+                    options={[{ label: 'Queja', value: 'queja' }, { label: 'Sugerencia', value: 'sugerencia' }]}
+                    selectedValue={tipo}
+                    onValueChange={setTipo}
+                  />
+
+                  <CustomInput
+                    label="Mensaje"
+                    value={mensaje}
+                    onChangeText={setMensaje}
+                    placeholder="Escribe aquí tu mensaje..."
+                    multiline
+                    height={120}
+                  />
+
+                  <CustomInput
+                    label="Correo Electrónico"
+                    value={emailContacto}
+                    onChangeText={setEmailContacto}
+                    placeholder="tu@email.com"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+
+                  <SegmentedControl
+                    label="Categoría"
+                    options={[{ label: 'Acceso', value: 'acceso' }, { label: 'Funcionalidad', value: 'funcionalidad' }]}
+                    selectedValue={categoria}
+                    onValueChange={setCategoria}
+                  />
+
+                  <TouchableOpacity
+                    style={{ opacity: !mensaje.trim() || loading ? 0.6 : 1, marginTop: 20 }}
+                    onPress={handleEnviar}
+                    disabled={!mensaje.trim() || loading}
+                  >
+                    <LinearGradient colors={['#2CFD89', '#00A3FF']} style={styles.btn}>
+                        {loading ? <ActivityIndicator color={PALETTE.dark} /> : <Text style={styles.btnText}>Enviar</Text>}
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </BlurView>
+            </Animated.View>
+            <ConfirmacionEnvio
+              visible={!!enviado}
+              tipo={enviado === "queja" ? "queja" : "sugerencia"}
+              onClose={() => {
+                setEnviado(false);
+                navigation.goBack();
+              }}
+            />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
   );
+};
+
+const SegmentedControl = ({ label, options, selectedValue, onValueChange }: any) => (
+    <View style={{marginVertical: 10}}>
+        <Text style={styles.label}>{label}</Text>
+        <View style={styles.switchRow}>
+            {options.map((option: any) => (
+                <TouchableOpacity
+                    key={option.value}
+                    style={[styles.switchButton, selectedValue === option.value && styles.switchSelected]}
+                    onPress={() => onValueChange(option.value)}
+                >
+                    <Text style={[styles.switchText, selectedValue === option.value && styles.switchSelectedText]}>
+                        {option.label}
+                    </Text>
+                </TouchableOpacity>
+            ))}
+        </View>
+    </View>
+);
+
+const CustomInput = ({ label, ...props }: any) => {
+    const [isFocused, setIsFocused] = useState(false);
+    return (
+        <View>
+            <Text style={styles.label}>{label}</Text>
+            <TextInput
+                style={[
+                    styles.input,
+                    { height: props.multiline ? props.height : 55, textAlignVertical: props.multiline ? 'top' : 'center' },
+                    isFocused && styles.inputFocused,
+                ]}
+                placeholderTextColor={PALETTE.text_secondary}
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                {...props}
+            />
+        </View>
+    );
 };
 
 export default QuejaSugerenciaScreen;
@@ -258,135 +216,92 @@ export default QuejaSugerenciaScreen;
 const styles = StyleSheet.create({
   backBtn: {
     position: "absolute",
-    top: Platform.OS === "android" ? 26 : 50,
-    left: 15,
+    top: (Platform.OS === "android" ? StatusBar.currentHeight ?? 0 : 40) + 15,
+    left: 20,
     zIndex: 20,
-    backgroundColor: "#fff",
+    backgroundColor: PALETTE.inactive,
     borderRadius: 25,
-    elevation: 6,
-    shadowColor: "#00C27F",
-    shadowOpacity: 0.12,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 10,
-    padding: 6,
+    padding: 8,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: "center",
+    padding: 20,
   },
   card: {
-    backgroundColor: COLORS.card,
-    borderRadius: 20,
-    padding: 20,
-    elevation: 7,
-    alignSelf: "center",
-    width: "98%",
-    shadowColor: "#00C27F",
-    shadowOpacity: 0.12,
-    shadowOffset: { width: 0, height: 8 },
-    shadowRadius: 30,
+    borderRadius: 25,
+    padding: 25,
+    borderWidth: 1,
+    borderColor: PALETTE.border,
+    overflow: 'hidden',
   },
   header: {
     alignItems: "center",
-    marginBottom: 10,
-  },
-  logo: {
-    width: 62,
-    height: 62,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: COLORS.grad,
-    marginBottom: 7,
-    resizeMode: "cover",
+    marginBottom: 20,
   },
   title: {
-    fontSize: 22,
-    color: COLORS.grad,
+    fontSize: width * 0.06,
+    color: PALETTE.text_primary,
     fontWeight: "bold",
-    letterSpacing: 0.1,
+    marginTop: 15,
   },
   subtitle: {
-    color: COLORS.secundario,
-    fontWeight: "bold",
-    fontSize: 16,
+    color: PALETTE.text_secondary,
+    fontSize: width * 0.04,
     textAlign: "center",
-    marginBottom: 12,
-    marginTop: 2,
-    letterSpacing: 0.1,
+    marginTop: 5,
   },
   switchRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginVertical: 8,
-    gap: 8,
+    backgroundColor: PALETTE.inactive,
+    borderRadius: 15,
+    padding: 5,
   },
   switchButton: {
     flex: 1,
-    marginHorizontal: 2,
-    backgroundColor: COLORS.switch,
-    borderRadius: 11,
-    paddingVertical: 10,
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#cdeedd",
   },
   switchSelected: {
-    backgroundColor: COLORS.switchSel,
-    borderColor: COLORS.grad,
+    backgroundColor: PALETTE.primary,
   },
   switchText: {
-    color: "#5e6e72",
+    color: PALETTE.text_secondary,
     fontWeight: "bold",
     fontSize: 15,
-    letterSpacing: 0.08,
   },
   switchSelectedText: {
-    color: "#fff",
+    color: PALETTE.dark,
   },
   label: {
-    color: COLORS.label,
+    color: PALETTE.text_secondary,
     fontWeight: "600",
-    marginTop: 10,
-    marginBottom: 4,
-    letterSpacing: 0.16,
+    marginTop: 20,
+    marginBottom: 10,
+    fontSize: 16,
   },
   input: {
+    backgroundColor: PALETTE.inactive,
+    borderRadius: 15,
+    color: PALETTE.text_primary,
+    paddingHorizontal: 15,
+    fontSize: 16,
     borderWidth: 1,
-    borderColor: COLORS.borde,
-    borderRadius: 8,
-    backgroundColor: COLORS.input,
-    color: COLORS.text,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    marginBottom: 10,
-    fontSize: 15.2,
+    borderColor: 'transparent',
+    paddingTop: 15,
   },
-  inputArea: {
-    borderWidth: 1,
-    borderColor: COLORS.grad2,
-    borderRadius: 10,
-    backgroundColor: COLORS.input,
-    color: COLORS.text,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    marginBottom: 10,
-    fontSize: 15.2,
-    minHeight: 80,
-    textAlignVertical: "top",
+  inputFocused: {
+    borderColor: PALETTE.primary,
   },
   btn: {
-    backgroundColor: COLORS.secundario,
-    borderRadius: 13,
-    paddingVertical: 15,
-    marginTop: 16,
+    borderRadius: 15,
+    paddingVertical: 18,
     alignItems: "center",
-    marginHorizontal: 10,
-    elevation: 2,
-    shadowColor: COLORS.grad,
-    shadowOpacity: 0.13,
-    shadowOffset: { width: 0, height: 3 },
-    shadowRadius: 6,
   },
   btnText: {
-    color: COLORS.btnText,
+    color: PALETTE.dark,
     fontWeight: "bold",
     fontSize: 18,
-    letterSpacing: 0.18,
   },
 });

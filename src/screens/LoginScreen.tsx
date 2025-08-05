@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -11,11 +11,12 @@ import {
   Platform,
   ScrollView,
   Linking,
+  TextInput,
+  Animated,
 } from "react-native";
 import { useForm, Controller } from "react-hook-form";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { TextInput } from "react-native-paper";
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from "../navigation/StackNavigator";
 import SuccessToast from "../components/SuccessToast";
@@ -23,15 +24,68 @@ import ErrorToast from "../components/ErrorToast";
 import { useLogin } from "../hooks/useLogin";
 import { useUser } from "../context/UserContext";
 import { obtenerPerfilCompleto } from "../hooks/usePerfil";
-import { MaterialIcons } from "@expo/vector-icons";
+import { MaterialIcons, Feather } from "@expo/vector-icons";
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
 const logo = require("../../assets/Logo.png");
 const { width, height } = Dimensions.get("window");
+
+const PALETTE = {
+  background_gradient: ['#1D2A32', '#163B48', '#1D2A32'] as const,
+  primary: '#2CFD89',
+  inactive: 'rgba(255, 255, 255, 0.2)',
+  text_primary: '#FFFFFF',
+  text_secondary: '#B0C4DE',
+  danger: '#FF4757',
+  dark: '#1D2A32',
+};
 
 type FormData = {
   email: string;
   password: string;
 };
+
+const CustomInput = ({ control, name, rules, placeholder, iconName, errors, secureTextEntry = false, keyboardType = 'default', autoCapitalize = 'sentences', rightIcon, rightIconPress }: any) => {
+  const hasError = errors[name];
+  const [isFocused, setIsFocused] = useState(false);
+
+  return (
+    <View style={{ marginBottom: 15 }}>
+      <Controller
+        control={control}
+        name={name}
+        rules={rules}
+        render={({ field: { onChange, onBlur, value } }) => (
+          <View>
+            <View style={[styles.inputContainer, hasError ? styles.inputErrorBorder : isFocused && styles.inputFocusedBorder]}>
+              <Feather name={iconName} size={20} color={hasError ? PALETTE.danger : isFocused ? PALETTE.primary : PALETTE.text_secondary} style={styles.inputIcon} />
+              <TextInput
+                placeholder={placeholder}
+                value={value}
+                onChangeText={onChange}
+                onBlur={() => { onBlur(); setIsFocused(false); }}
+                onFocus={() => setIsFocused(true)}
+                style={styles.input}
+                placeholderTextColor={PALETTE.text_secondary}
+                secureTextEntry={secureTextEntry}
+                keyboardType={keyboardType}
+                autoCapitalize={autoCapitalize}
+              />
+              {rightIcon && (
+                <TouchableOpacity onPress={rightIconPress} style={styles.rightIcon}>
+                  <Feather name={rightIcon} size={22} color={PALETTE.text_secondary} />
+                </TouchableOpacity>
+              )}
+            </View>
+            {hasError && <Text style={styles.errorText}>{hasError.message}</Text>}
+          </View>
+        )}
+      />
+    </View>
+  );
+};
+
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -43,16 +97,29 @@ const LoginScreen: React.FC = () => {
   const { login, loading, error } = useLogin();
   const { dispatch } = useUser();
 
+  const logoAnim = useRef(new Animated.Value(0)).current;
+  const formAnim = useRef(new Animated.Value(height)).current;
+
+  useEffect(() => {
+    Animated.stagger(200, [
+      Animated.spring(logoAnim, {
+        toValue: 1,
+        friction: 5,
+        useNativeDriver: true,
+      }),
+      Animated.timing(formAnim, {
+        toValue: 0,
+        duration: 700,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
   const onSubmit = async (data: FormData) => {
     if (!data.email || !data.password) return;
 
     const emailLower = data.email.toLowerCase();
-
-    const loginData = {
-      correoElectronico: emailLower,
-      contraseña: data.password,
-    };
-
+    const loginData = { correoElectronico: emailLower, contraseña: data.password };
     const result = await login(loginData);
 
     if (result) {
@@ -105,221 +172,188 @@ const LoginScreen: React.FC = () => {
       <SuccessToast message="¡Login exitoso!" visible={showSuccess} onHide={() => setShowSuccess(false)} />
       <ErrorToast message={error || "Correo o contraseña incorrectos"} visible={showError} onHide={() => setShowError(false)} />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1, backgroundColor: "#f0f0f0" }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 20}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.card}>
-            <View style={styles.logoContainer}>
-              <Image source={logo} style={styles.logo} />
-            </View>
+      <LinearGradient colors={PALETTE.background_gradient} style={styles.base}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+          <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+            <Animated.View style={[styles.logoContainer, { opacity: logoAnim, transform: [{ scale: logoAnim }] }]}>
+              <View style={styles.logoWrapper}>
+                <Image source={logo} style={styles.logo} />
+              </View>
+              <Text style={styles.appName}>MyFitGuide</Text>
+            </Animated.View>
 
-            <Text style={styles.appName}>MyFitGuide</Text>
+            <Animated.View style={{ transform: [{ translateY: formAnim }] }}>
+              <BlurView intensity={50} tint="dark" style={styles.formContainer}>
+                 <CustomInput
+                  control={control}
+                  errors={errors}
+                  name="email"
+                  rules={{
+                    required: "El email es obligatorio",
+                    pattern: { value: /\S+@\S+\.\S+/, message: "Email no válido" },
+                  }}
+                  placeholder="Correo Electrónico"
+                  iconName="mail"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+                
+                <CustomInput
+                  control={control}
+                  errors={errors}
+                  name="password"
+                  rules={{
+                    required: "La contraseña es obligatoria",
+                    minLength: { value: 8, message: "Mínimo 8 caracteres" },
+                  }}
+                  placeholder="Contraseña"
+                  iconName="lock"
+                  secureTextEntry={!passwordVisible}
+                  rightIcon={passwordVisible ? "eye-off" : "eye"}
+                  rightIconPress={() => setPasswordVisible(!passwordVisible)}
+                />
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Correo Electrónico</Text>
-              <Controller
-                control={control}
-                name="email"
-                rules={{
-                  required: "El email es obligatorio",
-                  pattern: { value: /\S+@\S+\.\S+/, message: "Email no válido" },
-                }}
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <>
-                    <TextInput
-                      label="Correo Electrónico"
-                      value={value}
-                      onChangeText={text => onChange(text.toLowerCase())}
-                      onBlur={onBlur}
-                      style={[styles.input, errors.email && styles.inputError]}
-                      autoCapitalize="none"
-                      keyboardType="email-address"
-                      error={!!errors.email}
-                    />
-                    {errors.email && <Text style={styles.errorText}>{errors.email.message}</Text>}
-                  </>
-                )}
-              />
-            </View>
+                <TouchableOpacity onPress={handleSubmit(onSubmit)} disabled={loading} style={{ marginTop: 25 }}>
+                  <LinearGradient colors={['#2CFD89', '#00A3FF']} style={styles.button}>
+                    {loading ? (
+                      <ActivityIndicator color={PALETTE.dark} />
+                    ) : (
+                      <Text style={styles.buttonText}>Iniciar Sesión</Text>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </BlurView>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Contraseña</Text>
-              <Controller
-                control={control}
-                name="password"
-                rules={{
-                  required: "La contraseña es obligatoria",
-                  minLength: { value: 8, message: "Mínimo 8 caracteres" },
-                }}
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <>
-                    <TextInput
-                      label="Contraseña"
-                      value={value}
-                      onChangeText={onChange}
-                      onBlur={onBlur}
-                      style={[styles.input, errors.password && styles.inputError]}
-                      secureTextEntry={!passwordVisible}
-                      error={!!errors.password}
-                      right={
-                        <TextInput.Icon
-                          icon={passwordVisible ? "eye" : "eye-off"}
-                          onPress={() => setPasswordVisible(!passwordVisible)}
-                        />
-                      }
-                    />
-                    {errors.password && <Text style={styles.errorText}>{errors.password.message}</Text>}
-                  </>
-                )}
-              />
-            </View>
+              <TouchableOpacity style={styles.bottomButton} onPress={() => navigation.navigate("Registro")}>
+                <Text style={styles.bottomButtonText}>¿Nuevo usuario? <Text style={{ fontWeight: 'bold', color: PALETTE.primary }}>Crear cuenta</Text></Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[styles.button, loading && { backgroundColor: "#ccc" }]}
-              onPress={handleSubmit(onSubmit)}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.buttonText}>Iniciar Sesión</Text>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.bottomButton} onPress={() => navigation.navigate("Registro")}>
-              <Text style={styles.bottomButtonText}>¿Nuevo usuario? Crear cuenta</Text>
-            </TouchableOpacity>
-
-            <View style={styles.helpContainer}>
               <TouchableOpacity
                 style={styles.helpLinkContainer}
                 onPress={() => Linking.openURL("https://studio--smartbit-health-hub.us-central1.hosted.app/")}
-                activeOpacity={0.7}
               >
-                <MaterialIcons name="help-outline" size={20} color="#007bff" style={{ marginRight: 6 }} />
+                <MaterialIcons name="help-outline" size={20} color={PALETTE.text_secondary} style={{ marginRight: 6 }} />
                 <Text style={styles.helpLinkText}>Manual de Uso / Preguntas Frecuentes</Text>
               </TouchableOpacity>
-            </View>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView> 
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
     </>
   );
 };
 
-const PRIMARY_COLOR = "#28a745";
-
 const styles = StyleSheet.create({
+  base: {
+    flex: 1,
+  },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: "center",
-    padding: 20,
-    paddingBottom: 80,
-    minHeight: height,
-  },
-  card: {
-    width: "100%",
-    maxWidth: 400,
-    backgroundColor: "#fff",
-    padding: 25,
-    borderRadius: 15,
-    alignSelf: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
+    paddingHorizontal: width * 0.05,
   },
   logoContainer: {
     alignItems: "center",
-    marginBottom: 15,
+    marginBottom: 20,
+  },
+  logoWrapper: {
+    width: width * 0.35,
+    height: width * 0.35,
+    borderRadius: (width * 0.35) / 2,
+    backgroundColor: 'rgba(44, 253, 137, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: PALETTE.primary,
+    shadowColor: PALETTE.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 15,
+    overflow: 'hidden',
   },
   logo: {
-    width: width * 0.3,
-    height: width * 0.3,
-    borderRadius: 50,
-    marginBottom: 10,
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   appName: {
     fontWeight: "700",
-    color: PRIMARY_COLOR,
+    color: PALETTE.text_primary,
     textAlign: "center",
-    fontSize: width * 0.07,
-    marginBottom: 20,
+    fontSize: width * 0.09,
+    marginTop: 20,
+    letterSpacing: 1,
+  },
+  formContainer: {
+    padding: 25,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    overflow: 'hidden',
   },
   inputContainer: {
-    marginBottom: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PALETTE.inactive,
+    borderRadius: 15,
+    paddingHorizontal: 15,
+    height: 55,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
-  label: {
-    fontSize: width * 0.04,
-    fontWeight: "500",
-    color: "#333",
-    marginBottom: 5,
+  inputErrorBorder: {
+    borderColor: PALETTE.danger,
+  },
+  inputFocusedBorder: {
+    borderColor: PALETTE.primary,
+  },
+  inputIcon: {
+    marginRight: 10,
   },
   input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    backgroundColor: "#fff",
+    flex: 1,
+    height: '100%',
+    color: PALETTE.text_primary,
     fontSize: 16,
   },
-  inputError: {
-    borderColor: "red",
+  rightIcon: {
+    padding: 5,
   },
   errorText: {
-    color: "red",
+    color: PALETTE.danger,
     fontSize: 13,
-    marginTop: 4,
+    marginTop: 5,
+    marginLeft: 10,
   },
   button: {
-    backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 12,
-    borderRadius: 10,
-    marginTop: 10,
+    paddingVertical: 15,
+    borderRadius: 15,
     alignItems: "center",
+    justifyContent: 'center'
   },
   buttonText: {
-    color: "#fff",
+    color: PALETTE.dark,
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "bold",
   },
   bottomButton: {
-    marginTop: 20,
+    marginTop: 30,
     alignItems: "center",
   },
   bottomButtonText: {
-    color: PRIMARY_COLOR,
+    color: PALETTE.text_secondary,
     fontSize: 15,
-    fontWeight: "500",
-  },
-  helpContainer: {
-    marginTop: 35,
-    alignItems: "center",
-    justifyContent: "center",
   },
   helpLinkContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f2f7ff",
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "#d6e4ff",
+    justifyContent: 'center',
+    marginTop: 30,
+    opacity: 0.8,
   },
   helpLinkText: {
-    color: "#007bff",
-    fontSize: 15,
-    fontWeight: "500",
-    textDecorationLine: "none",
+    color: PALETTE.text_secondary,
+    fontSize: 14,
   },
 });
 

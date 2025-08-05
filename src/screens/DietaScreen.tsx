@@ -4,13 +4,15 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
-  Dimensions,
   KeyboardAvoidingView,
   Platform,
+  Dimensions,
+  TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+  ActivityIndicator,
+  TextInput,
 } from "react-native";
-import { TextInput } from "react-native-paper";
-import { Ionicons } from "@expo/vector-icons";
 import { useRoute, useNavigation, RouteProp } from "@react-navigation/native";
 import type { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/StackNavigator";
@@ -19,13 +21,26 @@ import CustomToast from "../components/CustomToast";
 import { useDieta } from "../hooks/useDieta";
 import { useUser } from "../context/UserContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from 'expo-blur';
+import { Feather, Ionicons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { width, height } = Dimensions.get("window");
-const PRIMARY_COLOR = "#28a745";
-const TEXT_COLOR = "#232946";
-const ERROR_COLOR = "#E53935";
-const MALE_COLOR = "#428AF8";
-const FEMALE_COLOR = "#FF69B4";
+const { width } = Dimensions.get("window");
+
+const PALETTE = {
+  background_gradient: ['#1D2A32', '#163B48', '#1D2A32'] as const,
+  primary: '#2CFD89',
+  text_primary: '#FFFFFF',
+  text_secondary: '#B0C4DE',
+  inactive: 'rgba(255, 255, 255, 0.1)',
+  border: 'rgba(255, 255, 255, 0.15)',
+  danger: '#FF4757',
+  dark: '#1D2A32',
+  male: '#00A3FF',
+  female: '#E91E63',
+};
 
 type DietaRouteProp = RouteProp<RootStackParamList, "Dieta">;
 type NavigationProp = StackNavigationProp<RootStackParamList, "Dieta">;
@@ -33,6 +48,7 @@ type NavigationProp = StackNavigationProp<RootStackParamList, "Dieta">;
 const DietaScreen: React.FC = () => {
   const route = useRoute<DietaRouteProp>();
   const navigation = useNavigation<NavigationProp>();
+  const insets = useSafeAreaInsets();
   const { userId, nombre } = route.params || { userId: "", nombre: "" };
 
   const { state, dispatch } = useUser();
@@ -86,20 +102,17 @@ const DietaScreen: React.FC = () => {
     if (result) {
       const updatedUser = {
         ...state.user,
-        userId,
-        nombre,
+        userId: state.user?.userId || userId,
+        nombre: state.user?.nombre || nombre,
+        correoElectronico: state.user?.correoElectronico || '',
         genero,
         altura,
         peso,
         objetivo,
         alergias,
         presupuesto,
-        correoElectronico: state.user?.correoElectronico ?? "",
-        fechaNacimiento: state.user?.fechaNacimiento ?? "",
-        ubicacion: state.user?.ubicacion ?? "",
-        edad: state.user?.edad ?? "",
       };
-      dispatch({ type: "SET_USER", payload: updatedUser });
+      dispatch({ type: "SET_USER", payload: updatedUser as any });
       await AsyncStorage.setItem("userProfile", JSON.stringify(updatedUser));
 
       setShowSuccess(true);
@@ -113,378 +126,222 @@ const DietaScreen: React.FC = () => {
   };
 
   return (
-    <>
-      <CustomToast
-        message="¡Datos de dieta guardados correctamente!"
-        visible={showSuccess}
-        onHide={() => setShowSuccess(false)}
-        type="success"
-      />
-      <CustomToast
-        message={error || "Verifica tus datos e inténtalo de nuevo."}
-        visible={showError}
-        onHide={() => setShowError(false)}
-        type="error"
-      />
-
-      <KeyboardAvoidingView
-        style={styles.keyboard}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 20}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+    <LinearGradient colors={PALETTE.background_gradient} style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <View style={styles.card}>
-            <Text style={styles.appName}>MyFitGuide</Text>
-            <ProgressStepper currentStep="Dieta" />
-            <Text style={styles.titulo}>Tu información corporal y dieta</Text>
+          <CustomToast message="¡Datos de dieta guardados!" visible={showSuccess} onHide={() => setShowSuccess(false)} type="success" />
+          <CustomToast message={error || "Verifica tus datos."} visible={showError} onHide={() => setShowError(false)} type="error" />
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Peso (kg)</Text>
-              <TextInput
-                mode="flat"
-                label=""
-                placeholder="Ejemplo: 70"
-                keyboardType="numeric"
-                value={peso}
-                onChangeText={setPeso}
-                style={styles.input}
-                left={<TextInput.Icon icon="weight-kilogram" color={PRIMARY_COLOR} />}
-                theme={{
-                  colors: {
-                    primary: PRIMARY_COLOR,
-                    text: TEXT_COLOR,
-                    placeholder: "#888",
-                    background: "#fff",
-                  },
-                }}
-              />
-            </View>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Altura (cm)</Text>
-              <TextInput
-                mode="flat"
-                label=""
-                placeholder="Ejemplo: 170"
-                keyboardType="numeric"
-                value={altura}
-                onChangeText={setAltura}
-                style={styles.input}
-                left={<TextInput.Icon icon="human-male-height" color={PRIMARY_COLOR} />}
-                theme={{
-                  colors: {
-                    primary: PRIMARY_COLOR,
-                    text: TEXT_COLOR,
-                    placeholder: "#888",
-                    background: "#fff",
-                  },
-                }}
-              />
-            </View>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Objetivo</Text>
-              <TextInput
-                mode="flat"
-                label=""
-                placeholder="Ejemplo: bajar grasa, ganar masa"
-                value={objetivo}
-                onChangeText={setObjetivo}
-                style={styles.input}
-                left={<TextInput.Icon icon="target" color={PRIMARY_COLOR} />}
-                theme={{
-                  colors: {
-                    primary: PRIMARY_COLOR,
-                    text: TEXT_COLOR,
-                    placeholder: "#888",
-                    background: "#fff",
-                  },
-                }}
-              />
-            </View>
-            <Text style={styles.label}>Género</Text>
-            <View style={styles.sexoContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.generoOpcion,
-                  genero === "masculino" && styles.generoSeleccionadoM,
-                ]}
-                onPress={() => setGenero("masculino")}
-                activeOpacity={0.85}
-              >
-                <Ionicons
-                  name="male"
-                  size={26}
-                  color={genero === "masculino" ? "#fff" : MALE_COLOR}
-                />
-                <Text
-                  style={[
-                    styles.textGenero,
-                    genero === "masculino" && { color: "#fff" },
-                  ]}
-                >
-                  Masculino
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.generoOpcion,
-                  genero === "femenino" && styles.generoSeleccionadoF,
-                ]}
-                onPress={() => setGenero("femenino")}
-                activeOpacity={0.85}
-              >
-                <Ionicons
-                  name="female"
-                  size={26}
-                  color={genero === "femenino" ? "#fff" : FEMALE_COLOR}
-                />
-                <Text
-                  style={[
-                    styles.textGenero,
-                    genero === "femenino" && { color: "#fff" },
-                  ]}
-                >
-                  Femenino
-                </Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Presupuesto Semanal</Text>
-              <TextInput
-                mode="flat"
-                label=""
-                placeholder="Ejemplo: 500"
-                keyboardType="numeric"
-                value={presupuesto}
-                onChangeText={setPresupuesto}
-                style={styles.input}
-                left={<TextInput.Icon icon="cash-multiple" color={PRIMARY_COLOR} />}
-                theme={{
-                  colors: {
-                    primary: PRIMARY_COLOR,
-                    text: TEXT_COLOR,
-                    placeholder: "#888",
-                    background: "#fff",
-                  },
-                }}
-              />
-            </View>
-            <Text style={styles.label}>Alergias alimenticias</Text>
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginBottom: 10,
-              }}
-            >
-              <TextInput
-                mode="flat"
-                label=""
-                placeholder="Ejemplo: gluten"
-                value={alergiaInput}
-                onChangeText={setAlergiaInput}
-                style={[styles.input, { flex: 1, marginBottom: 0 }]}
-                left={
-                  <TextInput.Icon icon="alert-circle-outline" color={PRIMARY_COLOR} />
-                }
-                theme={{
-                  colors: {
-                    primary: PRIMARY_COLOR,
-                    text: TEXT_COLOR,
-                    placeholder: "#888",
-                    background: "#fff",
-                  },
-                }}
-              />
-              <TouchableOpacity
-                onPress={handleAddAlergia}
-                style={styles.agregarBtn}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="add" size={26} color="#fff" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.alergiasList}>
-              {alergias.map((a, idx) => (
+          <ScrollView contentContainerStyle={[styles.scrollContainer, {paddingTop: insets.top + 20, paddingBottom: insets.bottom + 20}]} keyboardShouldPersistTaps="handled">
+            <BlurView intensity={50} tint="dark" style={styles.card}>
+              <Text style={styles.title}>MyFitGuide</Text>
+              <ProgressStepper currentStep="Dieta" />
+              <Text style={styles.subtitle}>Tu información corporal y dieta</Text>
+
+              <CustomInput label="Peso (kg)" value={peso} onChangeText={setPeso} placeholder="Ej: 70" keyboardType="numeric" icon="barbell-outline" />
+              <CustomInput label="Altura (cm)" value={altura} onChangeText={setAltura} placeholder="Ej: 170" keyboardType="numeric" icon="body-outline" />
+              <CustomInput label="Objetivo" value={objetivo} onChangeText={setObjetivo} placeholder="Ej: Bajar grasa, ganar masa" icon="trophy-outline" />
+
+              <Text style={styles.label}>Género</Text>
+              <View style={styles.genderContainer}>
                 <TouchableOpacity
-                  key={idx}
-                  style={styles.alergiaChip}
-                  onPress={() => handleRemoveAlergia(idx)}
-                  activeOpacity={0.85}
+                  style={[styles.genderOption, genero === "masculino" && { borderColor: PALETTE.male }]}
+                  onPress={() => setGenero("masculino")}
                 >
-                  <Text style={{ color: "#fff", fontWeight: "bold" }}>
-                    {a} <Ionicons name="close-circle" size={16} color="#fff" />
-                  </Text>
+                  <Ionicons name="male" size={width * 0.1} color={genero === "masculino" ? PALETTE.male : PALETTE.text_secondary} />
+                  <Text style={[styles.genderText, genero === "masculino" && { color: PALETTE.male }]}>Masculino</Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity
-              style={[styles.boton, loading && { backgroundColor: "#84dfa0" }]}
-              onPress={handleSiguiente}
-              disabled={loading}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.botonTexto}>
-                {loading ? "Enviando..." : "Siguiente"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </>
+                <TouchableOpacity
+                  style={[styles.genderOption, genero === "femenino" && { borderColor: PALETTE.female }]}
+                  onPress={() => setGenero("femenino")}
+                >
+                  <Ionicons name="female" size={width * 0.1} color={genero === "femenino" ? PALETTE.female : PALETTE.text_secondary} />
+                  <Text style={[styles.genderText, genero === "femenino" && { color: PALETTE.female }]}>Femenino</Text>
+                </TouchableOpacity>
+              </View>
+
+              <CustomInput label="Presupuesto Semanal (MXN)" value={presupuesto} onChangeText={setPresupuesto} placeholder="Ej: 500" keyboardType="numeric" icon="cash-outline" />
+              
+              <View>
+                <CustomInput
+                  label="Alergias alimenticias"
+                  value={alergiaInput}
+                  onChangeText={setAlergiaInput}
+                  placeholder="Ej: Gluten, lactosa..."
+                  icon="alert-circle-outline"
+                  rightIcon={
+                    <TouchableOpacity onPress={handleAddAlergia} style={styles.addBtn}>
+                      <Feather name="plus" size={22} color={PALETTE.dark} />
+                    </TouchableOpacity>
+                  }
+                />
+                <View style={styles.allergyList}>
+                  {alergias.map((a, idx) => (
+                    <TouchableOpacity key={idx} style={styles.allergyChip} onPress={() => handleRemoveAlergia(idx)}>
+                      <Text style={styles.allergyText}>{a}</Text>
+                      <Ionicons name="close" size={16} color={PALETTE.dark} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+              
+              <TouchableOpacity
+                style={{ opacity: loading ? 0.6 : 1, marginTop: 10 }}
+                onPress={handleSiguiente}
+                disabled={loading}
+              >
+                <LinearGradient colors={['#2CFD89', '#00A3FF']} style={styles.nextButton}>
+                    {loading ? <ActivityIndicator color={PALETTE.dark} /> : <Text style={styles.nextButtonText}>Siguiente</Text>}
+                </LinearGradient>
+              </TouchableOpacity>
+            </BlurView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
+const CustomInput = ({ label, rightIcon, icon, ...props }: any) => {
+    const [isFocused, setIsFocused] = useState(false);
+    return (
+        <View style={{marginBottom: 15}}>
+            <Text style={styles.label}>{label}</Text>
+            <View style={[styles.inputWrapper, isFocused && styles.inputFocused]}>
+                {icon && <Ionicons name={icon} size={22} color={isFocused ? PALETTE.primary : PALETTE.text_secondary} style={styles.leftIcon} />}
+                <TextInput
+                    style={styles.input}
+                    placeholderTextColor={PALETTE.text_secondary}
+                    onFocus={() => setIsFocused(true)}
+                    onBlur={() => setIsFocused(false)}
+                    {...props}
+                />
+                {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
+            </View>
+        </View>
+    );
+};
+
 const styles = StyleSheet.create({
-  keyboard: {
-    flex: 1,
-    backgroundColor: "#f0f0f0",
-  },
+  safeArea: { flex: 1 },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: "center",
-    padding: 20,
-    paddingBottom: 80,
-    minHeight: height,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  title: {
+    fontWeight: "800",
+    color: PALETTE.primary,
+    fontSize: width * 0.08,
+    textAlign: 'center',
+    marginBottom: 15,
   },
   card: {
-    width: "100%",
-    maxWidth: 400,
-    backgroundColor: "#fff",
+    borderRadius: 25,
     padding: 25,
-    borderRadius: 15,
-    alignSelf: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    marginTop: 20,
+    borderWidth: 1,
+    borderColor: PALETTE.border,
+    overflow: 'hidden',
+  },
+  subtitle: {
+    fontSize: width * 0.045,
+    color: PALETTE.text_secondary,
+    textAlign: "center",
     marginBottom: 30,
-  },
-  appName: {
-    fontWeight: "700",
-    color: PRIMARY_COLOR,
-    textAlign: "center",
-    fontSize: width * 0.07,
-    marginBottom: 10,
-    marginTop: 0,
-  },
-  titulo: {
-    fontSize: width * 0.055,
-    fontWeight: "bold",
-    marginBottom: 18,
-    textAlign: "center",
-    color: "#232946",
-    letterSpacing: 0.2,
-    marginTop: 6,
-  },
-  inputContainer: {
-    marginBottom: 12,
   },
   label: {
     fontSize: width * 0.04,
-    fontWeight: "500",
-    color: "#333",
-    marginBottom: 5,
+    fontWeight: "600",
+    color: PALETTE.text_secondary,
+    marginBottom: 8,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PALETTE.inactive,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    backgroundColor: "#fff",
-    fontSize: 16,
-    marginBottom: 0,
-    justifyContent: "center",
-  },
-  sexoContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 12,
-    marginTop: 2,
-    gap: 10,
-  },
-  generoOpcion: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: "#eee",
-    backgroundColor: "#f8f8f8",
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    justifyContent: "center",
-    marginHorizontal: 4,
-    elevation: 1,
+    height: 55,
+    paddingHorizontal: 15,
+    color: PALETTE.text_primary,
+    fontSize: 16,
+  },
+  inputFocused: {
+    borderColor: PALETTE.primary,
+  },
+  leftIcon: {
+    paddingLeft: 15,
+  },
+  rightIcon: {
+    paddingRight: 8,
+  },
+  genderContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 15,
+    marginBottom: 15,
+  },
+  genderOption: {
+    flex: 1,
+    backgroundColor: PALETTE.inactive,
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  genderText: {
+    marginTop: 10,
+    color: PALETTE.text_secondary,
+    fontWeight: 'bold',
+    fontSize: width * 0.04,
+  },
+  addBtn: {
+    backgroundColor: PALETTE.primary,
+    borderRadius: 12,
+    padding: 8,
+  },
+  allergyList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 10,
     gap: 8,
   },
-  generoSeleccionadoM: {
-    backgroundColor: MALE_COLOR,
-    borderColor: MALE_COLOR,
-    elevation: 3,
-  },
-  generoSeleccionadoF: {
-    backgroundColor: FEMALE_COLOR,
-    borderColor: FEMALE_COLOR,
-    elevation: 3,
-  },
-  textGenero: {
-    fontWeight: "700",
-    color: TEXT_COLOR,
-    fontSize: 15,
-    letterSpacing: 0.1,
-    marginLeft: 4,
-  },
-  alergiasList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginBottom: 8,
-    gap: 4,
-  },
-  alergiaChip: {
-    backgroundColor: PRIMARY_COLOR,
-    borderRadius: 16,
-    paddingVertical: 6,
+  allergyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PALETTE.primary,
+    borderRadius: 50,
+    paddingVertical: 8,
     paddingHorizontal: 12,
-    marginRight: 8,
-    marginBottom: 5,
-    elevation: 2,
-    borderColor: "#fff",
-    borderWidth: 1,
+    gap: 5,
   },
-  agregarBtn: {
-    backgroundColor: PRIMARY_COLOR,
-    marginLeft: 8,
-    borderRadius: 20,
-    width: 38,
-    height: 38,
-    justifyContent: "center",
+  allergyText: {
+    color: PALETTE.dark,
+    fontWeight: 'bold',
+  },
+  nextButton: {
+    paddingVertical: 18,
+    borderRadius: 15,
     alignItems: "center",
-    elevation: 2,
+    shadowColor: PALETTE.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+    marginTop: 20,
   },
-  boton: {
-    backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 14,
-    borderRadius: 10,
-    alignItems: "center",
-    marginTop: 25,
-    elevation: 2,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 6,
-  },
-  botonTexto: {
-    color: "#fff",
+  nextButtonText: {
+    color: PALETTE.dark,
     fontSize: 18,
-    fontWeight: "600",
-    letterSpacing: 0.2,
+    fontWeight: "bold",
   },
 });
 

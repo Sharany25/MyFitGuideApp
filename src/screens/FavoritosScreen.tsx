@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -10,20 +10,26 @@ import {
   Platform,
   StatusBar,
   Animated,
+  SafeAreaView,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useFavoritos } from "../hooks/useFavoritos";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { BlurView } from 'expo-blur';
 
-const COLORS = {
-  primary: "#00C27F",
-  bg: "#F7F9FA",
-  card: "#ffffff",
-  text: "#1A1A1A",
-  gray: "#6B7280",
-  softGreen: "#d1fae5",
+const { width, height } = Dimensions.get("window");
+
+const PALETTE = {
+  background_gradient: ['#1D2A32', '#163B48', '#1D2A32'] as const,
+  primary: '#2CFD89',
+  text_primary: '#FFFFFF',
+  text_secondary: '#B0C4DE',
+  inactive: 'rgba(255, 255, 255, 0.1)',
+  border: 'rgba(255, 255, 255, 0.15)',
+  danger: '#FF4757',
+  pin_red: '#F44336',
 };
 
 const FavoritosScreen = () => {
@@ -35,7 +41,7 @@ const FavoritosScreen = () => {
 
   const [favoritosEjercicios, setFavoritosEjercicios] = useState<string[]>([]);
   const [favoritosComidas, setFavoritosComidas] = useState<string[]>([]);
-  const [fadeAnim] = useState(new Animated.Value(0));
+  const [loading, setLoading] = useState(true);
   const [dialogVisible, setDialogVisible] = useState(false);
   const [itemSeleccionado, setItemSeleccionado] = useState<string | null>(null);
   const [tipoItemSeleccionado, setTipoItemSeleccionado] = useState<"ejercicio" | "comida">("ejercicio");
@@ -46,16 +52,14 @@ const FavoritosScreen = () => {
 
   const cargarFavoritos = async () => {
     try {
+      setLoading(true);
       const data = await getFavoritos(userId);
       setFavoritosEjercicios(data.ejercicios || []);
-      setFavoritosComidas(data.comidas || []);
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }).start();
+      setFavoritosComidas(data.comidas ||[]);
     } catch (error) {
       console.error("Error al cargar los favoritos", error);
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -66,188 +70,217 @@ const FavoritosScreen = () => {
   };
 
   const ejecutarEliminacion = async () => {
-    if (itemSeleccionado && tipoItemSeleccionado) {
+    if (itemSeleccionado) {
       if (tipoItemSeleccionado === "ejercicio") {
         await EjerciciosFavoritos(userId, itemSeleccionado, false);
-        setFavoritosEjercicios(favoritosEjercicios.filter(ej => ej !== itemSeleccionado));
+        setFavoritosEjercicios(prev => prev.filter(ej => ej !== itemSeleccionado));
       } else {
         await ComidasFavoritas(userId, itemSeleccionado, false);
-        setFavoritosComidas(favoritosComidas.filter(c => c !== itemSeleccionado));
+        setFavoritosComidas(prev => prev.filter(c => c !== itemSeleccionado));
       }
       setDialogVisible(false);
       setItemSeleccionado(null);
-      setTipoItemSeleccionado("ejercicio");
     }
   };
 
+  const renderEmptyState = () => (
+    <View style={styles.emptyContainer}>
+        <MaterialCommunityIcons name="pin-off-outline" size={width * 0.2} color={PALETTE.inactive} />
+        <Text style={styles.emptyTitle}>Sin Favoritos</Text>
+        <Text style={styles.emptySubtitle}>Añade tus comidas y ejercicios preferidos para verlos aquí.</Text>
+    </View>
+  );
+
   return (
-    <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-      <View style={styles.headerRow}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.backBtn}
-          activeOpacity={0.75}
-        >
-          <Ionicons name="chevron-back" size={28} color={COLORS.primary} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.header}>
-        <Ionicons name="star" size={36} color={COLORS.primary} />
-        <Text style={styles.title}>Mis Favoritos</Text>
-        <Text style={styles.subtitle}>¡Administra tus favoritos y mantente motivado!</Text>
-      </View>
-
-      {favoritosEjercicios.length === 0 && favoritosComidas.length === 0 ? (
-        <Text style={styles.empty}>No has agregado favoritos aún.</Text>
-      ) : (
-        <>
-          {favoritosEjercicios.map((item, index) => (
-            <Animated.View key={index} style={[styles.card, { opacity: fadeAnim }]}>
-              <LinearGradient
-                colors={["#e0fdf4", "#f0fff8"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.gradient}
-              >
-                <View style={styles.cardRow}>
-                  <Ionicons name="barbell" size={30} color={COLORS.primary} style={styles.cardIcon} />
-                  <View style={styles.textContainer}>
-                    <Text style={styles.item}>{item}</Text>
-                    <Text style={styles.cardText}>
-                      ¡Este ejercicio está entre tus favoritos!
-                    </Text>
-                  </View>
-                  <TouchableOpacity onPress={() => confirmarEliminar(item, "ejercicio")}>
-                    <Ionicons name="trash-outline" size={24} color="#dc2626" />
-                  </TouchableOpacity>
+    <LinearGradient colors={PALETTE.background_gradient} style={{ flex: 1 }}>
+        <SafeAreaView style={styles.safeArea}>
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                    <Ionicons name="arrow-back" size={28} color={PALETTE.text_primary} />
+                </TouchableOpacity>
+                <View style={styles.headerTitleContainer}>
+                    <MaterialCommunityIcons name="pin-outline" size={32} color={PALETTE.primary} />
+                    <Text style={styles.title}>Mis Favoritos</Text>
                 </View>
-              </LinearGradient>
-            </Animated.View>
-          ))}
-          {favoritosComidas.map((item, index) => (
-            <Animated.View key={index} style={[styles.card, { opacity: fadeAnim }]}>
-              <LinearGradient
-                colors={["#e0fdf4", "#f0fff8"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.gradient}
-              >
-                <View style={styles.cardRow}>
-                  <Ionicons name="fast-food" size={30} color={COLORS.primary} style={styles.cardIcon} />
-                  <View style={styles.textContainer}>
-                    <Text style={styles.item}>{item}</Text>
-                    <Text style={styles.cardText}>
-                      ¡Esta comida está entre tus favoritos!
-                    </Text>
-                  </View>
-                  <TouchableOpacity onPress={() => confirmarEliminar(item, "comida")}>
-                    <Ionicons name="trash-outline" size={24} color="#dc2626" />
-                  </TouchableOpacity>
-                </View>
-              </LinearGradient>
-            </Animated.View>
-          ))}
-        </>
-      )}
+                <View style={{width: 44}} /> 
+            </View>
 
-      <ConfirmDialog
-        visible={dialogVisible}
-        onCancel={() => setDialogVisible(false)}
-        onConfirm={ejecutarEliminacion}
-        title={`Quitar de favoritos`}
-        message={`¿Deseas quitar "${itemSeleccionado}" de tus favoritos?`}
-        confirmText="Sí, quitar"
-        cancelText="Cancelar"
-      />
-    </ScrollView>
+            {loading ? (
+                <ActivityIndicator color={PALETTE.primary} size="large" style={{flex: 1}} />
+            ) : (
+                <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+                    {favoritosEjercicios.length === 0 && favoritosComidas.length === 0 ? (
+                        renderEmptyState()
+                    ) : (
+                        <>
+                            {favoritosEjercicios.length > 0 && (
+                                <Section title="Ejercicios" items={favoritosEjercicios} type="ejercicio" onRemove={confirmarEliminar} />
+                            )}
+                            {favoritosComidas.length > 0 && (
+                                <Section title="Comidas" items={favoritosComidas} type="comida" onRemove={confirmarEliminar} />
+                            )}
+                        </>
+                    )}
+                </ScrollView>
+            )}
+
+            <ConfirmDialog
+                visible={dialogVisible}
+                onCancel={() => setDialogVisible(false)}
+                onConfirm={ejecutarEliminacion}
+                title={`Quitar de favoritos`}
+                message={`¿Deseas quitar "${itemSeleccionado}" de tus favoritos?`}
+                confirmText="Sí, quitar"
+                cancelText="Cancelar"
+            />
+        </SafeAreaView>
+    </LinearGradient>
   );
 };
 
+const Section = ({ title, items, type, onRemove }: { title: string, items: string[], type: 'ejercicio' | 'comida', onRemove: (item: string, type: 'ejercicio' | 'comida') => void }) => {
+    const animations = useRef(items.map(() => new Animated.Value(0))).current;
+
+    useEffect(() => {
+        const anims = items.map((_, i) => 
+            Animated.timing(animations[i], {
+                toValue: 1,
+                duration: 500,
+                useNativeDriver: true,
+            })
+        );
+        Animated.stagger(100, anims).start();
+    }, [items]);
+
+    return (
+        <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>{title}</Text>
+            {items.map((item, index) => {
+                const animStyle = {
+                    opacity: animations[index],
+                    transform: [{
+                        translateY: animations[index].interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [50, 0]
+                        })
+                    }]
+                };
+                return (
+                    <Animated.View key={`${type}-${index}`} style={animStyle}>
+                        <LinearGradient colors={['rgba(44, 253, 137, 0.15)', 'rgba(0, 163, 255, 0.05)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cardBorder}>
+                            <BlurView intensity={50} tint="dark" style={styles.card}>
+                                <View style={styles.cardContent}>
+                                    <Ionicons name={type === 'ejercicio' ? "barbell-outline" : "fast-food-outline"} size={30} color={PALETTE.primary} style={styles.cardIcon} />
+                                    <View style={styles.itemTextContainer}>
+                                        <Text style={styles.itemText} numberOfLines={1}>{item}</Text>
+                                        <Text style={styles.cardSubtitle}>
+                                            {type === 'ejercicio' ? 'Ejercicio favorito' : 'Comida favorita'}
+                                        </Text>
+                                    </View>
+                                    <TouchableOpacity onPress={() => onRemove(item, type)} style={styles.deleteButton}>
+                                        <Ionicons name="trash-outline" size={24} color={PALETTE.danger} />
+                                    </TouchableOpacity>
+                                </View>
+                            </BlurView>
+                        </LinearGradient>
+                    </Animated.View>
+                );
+            })}
+        </View>
+    );
+};
+
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
+  },
   container: {
-    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight ?? 20) + 10 : 30,
     paddingHorizontal: 20,
-    backgroundColor: COLORS.bg,
-    flexGrow: 1,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 18,
-    gap: 9,
-  },
-  backBtn: {
-    padding: 4,
-    borderRadius: 30,
-    backgroundColor: "#fff",
-    elevation: 3,
-    marginRight: 3,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.10,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 1 },
-  },
-  headerTitle: {
-    fontSize: 22,
-    color: COLORS.primary,
-    fontWeight: "bold",
-    marginLeft: 2,
+    paddingBottom: 100,
   },
   header: {
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: 28,
+    justifyContent: 'space-between',
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+  },
+  backBtn: {
+    padding: 8,
+  },
+  headerTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   title: {
-    fontSize: 26,
+    fontSize: width * 0.06,
     fontWeight: "bold",
-    color: COLORS.primary,
+    color: PALETTE.text_primary,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    marginTop: height * 0.2,
+  },
+  emptyTitle: {
+    fontSize: width * 0.055,
+    fontWeight: 'bold',
+    color: PALETTE.text_primary,
+    marginTop: 20,
+  },
+  emptySubtitle: {
+    fontSize: width * 0.04,
+    color: PALETTE.text_secondary,
+    textAlign: "center",
     marginTop: 10,
   },
-  subtitle: {
-    fontSize: 15,
-    color: COLORS.gray,
-    textAlign: "center",
-    marginTop: 6,
+  sectionContainer: {
+    marginBottom: 20,
   },
-  empty: {
-    fontSize: 16,
-    color: COLORS.gray,
-    textAlign: "center",
-    marginTop: 60,
+  sectionTitle: {
+    fontSize: width * 0.055,
+    fontWeight: 'bold',
+    color: PALETTE.text_primary,
+    marginBottom: 15,
+  },
+  cardBorder: {
+    borderRadius: 22,
+    marginBottom: 16,
+    padding: 1,
   },
   card: {
-    marginBottom: 16,
-    borderRadius: 16,
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 4 },
+    borderRadius: 20,
+    overflow: 'hidden',
   },
-  gradient: {
-    padding: 16,
-    borderRadius: 16,
-  },
-  cardRow: {
+  cardContent: {
+    padding: 20,
     flexDirection: "row",
     alignItems: "center",
   },
   cardIcon: {
-    marginRight: 14,
+    marginRight: 15,
   },
-  textContainer: {
+  itemTextContainer: {
     flex: 1,
   },
-  item: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.text,
+  itemText: {
+    fontSize: width * 0.042,
+    fontWeight: "600",
+    color: PALETTE.text_primary,
   },
-  cardText: {
-    fontSize: 13,
-    color: COLORS.gray,
-    fontStyle: "italic",
+  cardSubtitle: {
+    fontSize: width * 0.032,
+    color: PALETTE.text_secondary,
+    marginTop: 3,
+    fontStyle: 'italic',
+  },
+  deleteButton: {
+    marginLeft: 15,
+    padding: 5,
   },
 });
 

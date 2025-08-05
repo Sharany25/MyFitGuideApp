@@ -10,6 +10,7 @@ import {
   Animated,
   Dimensions,
   SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -17,49 +18,70 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useUser } from "../context/UserContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LogoutModal from "../components/LogoutModal";
+import { BlurView } from 'expo-blur';
 
-const { width } = Dimensions.get("window");
-const COLORS = {
-  primary: "#00C27F",
-  bg: "#F7F9FA",
-  text: "#232946",
-  card: "#fff",
-  accent: "#e0f4eb",
-  soft: "#f6fff9",
-  sombra: "#00c27f25",
-  green: "#16a34a",
-  greenLight: "#e6fff3",
-  greenBorder: "#bbf7d0"
+const { width, height } = Dimensions.get("window");
+
+const PALETTE = {
+  background_gradient: ['#1D2A32', '#163B48', '#1D2A32'] as const,
+  primary: '#2CFD89',
+  text_primary: '#FFFFFF',
+  text_secondary: '#B0C4DE',
+  danger: '#FF4757',
+  inactive: 'rgba(255, 255, 255, 0.1)',
+  border: 'rgba(255, 255, 255, 0.15)',
+  pin_red: '#F44336',
+  bmi_normal: '#2CFD89',
+  bmi_overweight: '#FFC107',
+  bmi_obese: '#F44336',
+  bmi_underweight: '#00A3FF',
 };
 
 type NavigationProp = any;
+
+const calculateBMI = (weight: string | null | undefined, height: string | null | undefined): { bmi: number, category: string, color: string } => {
+    const w = parseFloat(weight || '0');
+    const h = parseFloat(height || '0');
+
+    if (w > 0 && h > 0) {
+        const heightInMeters = h / 100;
+        const bmi = w / (heightInMeters * heightInMeters);
+        let category = "N/D";
+        let color = PALETTE.text_secondary;
+
+        if (bmi < 18.5) {
+            category = "Bajo Peso";
+            color = PALETTE.bmi_underweight;
+        } else if (bmi >= 18.5 && bmi <= 24.9) {
+            category = "Peso Normal";
+            color = PALETTE.bmi_normal;
+        } else if (bmi >= 25 && bmi <= 29.9) {
+            category = "Sobrepeso";
+            color = PALETTE.bmi_overweight;
+        } else {
+            category = "Obesidad";
+            color = PALETTE.bmi_obese;
+        }
+        return { bmi: parseFloat(bmi.toFixed(1)), category, color };
+    }
+    return { bmi: 0, category: "N/D", color: PALETTE.text_secondary };
+};
+
 
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { state, dispatch } = useUser();
   const user = state.user;
   const [modalVisible, setModalVisible] = useState(false);
+  
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 600,
-      useNativeDriver: true,
-    }).start();
-    Animated.spring(scaleAnim, {
-      toValue: 1.08,
-      friction: 3,
-      useNativeDriver: true,
-      delay: 650,
-    }).start(() => {
-      Animated.spring(scaleAnim, {
         toValue: 1,
-        friction: 4,
+        duration: 800,
         useNativeDriver: true,
-      }).start();
-    });
+    }).start();
   }, []);
 
   const cerrarSesion = async () => {
@@ -69,377 +91,345 @@ const HomeScreen: React.FC = () => {
   };
 
   const v = (valor: any) => (valor !== undefined && valor !== null && valor !== '' ? valor : 'N/D');
+  const bmiData = calculateBMI(user?.peso, user?.altura);
 
   if (state.loading) {
     return (
-      <View style={styles.centered}>
-        <Animated.View style={{ opacity: fadeAnim }}>
-          <Ionicons name="pulse-outline" size={50} color={COLORS.primary} />
-          <Text style={{ color: COLORS.primary, fontWeight: 'bold', fontSize: 22, marginTop: 14 }}>Cargando...</Text>
-        </Animated.View>
-      </View>
+      <LinearGradient colors={PALETTE.background_gradient} style={styles.centered}>
+        <ActivityIndicator color={PALETTE.primary} size="large" />
+      </LinearGradient>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      {/* Row de botones arriba */}
-      <View style={styles.topRow}>
-        {/* Botón de Quejas y Sugerencias (arriba a la izquierda) */}
-        <TouchableOpacity
-          activeOpacity={0.93}
-          style={styles.quejaTopBtn}
-          onPress={() => navigation.navigate('QuejaSugerencia', { userId: user?.userId })}
-        >
-          <LinearGradient
-            colors={["#e0fbe9", "#00c27f33"]}
-            start={{ x: 0, y: 0.5 }}
-            end={{ x: 0.9, y: 0.5 }}
-            style={styles.quejaBtnGradient}
-          >
-            <Ionicons name="chatbubble-ellipses-outline" size={20} color={COLORS.green} style={{ marginRight: 8 }} />
-            <Text style={styles.quejaBtnText}>¿Tienes una queja o sugerencia?</Text>
-            <Ionicons name="arrow-forward-circle-outline" size={19} color={COLORS.green} style={{ marginLeft: 7 }} />
-          </LinearGradient>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.topLogout}
-          onPress={() => setModalVisible(true)}
-        >
-          <Ionicons name="exit-outline" size={28} color="#E53E3E" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={{ paddingBottom: 70 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header: usuario */}
-        <Animated.View style={{ marginBottom: 20, opacity: fadeAnim }}>
-          <LinearGradient
-            colors={[COLORS.primary, "#00E5A3"]}
-            style={styles.headerCard}
-            start={{ x: 0.1, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <TouchableOpacity
-              style={styles.headerContent}
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate('Perfil', { userId: user?.userId })}
+    <LinearGradient colors={PALETTE.background_gradient} style={{flex: 1}}>
+        <SafeAreaView style={styles.safeArea}>
+            <ScrollView
+                style={styles.container}
+                contentContainerStyle={{ paddingBottom: 120 }}
+                showsVerticalScrollIndicator={false}
             >
-              <Ionicons name="person-circle-outline" size={78} color="#fff" style={{ marginRight: 10 }} />
-              <View style={styles.headerTexts}>
-                <Text style={styles.hello}>
-                  ¡Hola, <Text style={styles.helloName}>{v(user?.nombre)}</Text>!
-                </Text>
-                <Text style={styles.slogan}>Tu bienestar es nuestra meta</Text>
-              </View>
-            </TouchableOpacity>
-          </LinearGradient>
-        </Animated.View>
+                <Animated.View style={{opacity: fadeAnim}}>
+                    <Header user={user} onLogoutPress={() => setModalVisible(true)} />
+                    
+                    <Dashboard user={user} bmiData={bmiData} />
 
-        {/* Accesos rápidos */}
-        <View style={styles.quickAccessRow}>
-          <QuickAccessCard
-            icon={
-              <LinearGradient
-                colors={["#d3fbe9", "#e0f4eb"]}
-                style={styles.quickCardIconBg}
-                start={{ x: 0, y: 0.7 }}
-                end={{ x: 1, y: 0.3 }}
-              >
-                <MaterialCommunityIcons name="food-apple" size={34} color={COLORS.primary} />
-              </LinearGradient>
-            }
-            title="Comidas de la semana"
-            desc="Revisa y ajusta tu plan alimenticio."
-            onPress={() =>
-              navigation.navigate('Dieta', {
-                userId: user?.userId,
-                nombre: v(user?.nombre),
-              })
-            }
-          />
-          <QuickAccessCard
-            icon={
-              <LinearGradient
-                colors={["#d3fbe9", "#e0f4eb"]}
-                style={styles.quickCardIconBg}
-                start={{ x: 1, y: 0.5 }}
-                end={{ x: 0, y: 1 }}
-              >
-                <Ionicons name="barbell" size={34} color={COLORS.primary} />
-              </LinearGradient>
-            }
-            title="Rutina semanal"
-            desc="Verifica o edita tu entrenamiento."
-            onPress={() => navigation.navigate('RutinaIAGenerada', { userId: user?.userId })}
-          />
-        </View>
+                    <View style={styles.actionsRow}>
+                        <ActionButton 
+                            icon={<MaterialCommunityIcons name="pin-outline" size={22} color={PALETTE.pin_red} />} 
+                            label="Favoritos" 
+                            onPress={() => navigation.navigate('Favoritos', { userId: user?.userId })} 
+                        />
+                        <ActionButton 
+                            icon={<Ionicons name="time-outline" size={22} color={PALETTE.primary} />} 
+                            label="Historial" 
+                            onPress={() => navigation.navigate('Historial', { userId: user?.userId })} 
+                        />
+                    </View>
 
-        {/* Favoritos / Historial */}
-        <View style={styles.tagsCard}>
-          <TouchableOpacity
-            style={styles.tagItem}
-            onPress={() => navigation.navigate('Favoritos', { userId: user?.userId })}
-          >
-            <Ionicons name="star" size={20} color={COLORS.primary} />
-            <Text style={styles.tagItemText}>Favoritos</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.tagItem}
-            onPress={() => navigation.navigate('Historial', { userId: user?.userId })}
-          >
-            <Ionicons name="time-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.tagItemText}>Historial</Text>
-          </TouchableOpacity>
-        </View>
+                    <View style={styles.infoCardsRow}>
+                        <InfoCard
+                            icon={<MaterialCommunityIcons name="food-apple-outline" size={width * 0.08} color={PALETTE.primary} />}
+                            title="Dietas Inteligentes"
+                            desc="Planes de comidas personalizados y generados por IA."
+                        />
+                        <InfoCard
+                            icon={<Ionicons name="barbell-outline" size={width * 0.08} color={PALETTE.primary} />}
+                            title="Rutinas a tu Medida"
+                            desc="Entrenamientos adaptados a tus objetivos y preferencias."
+                        />
+                    </View>
 
-        {/* Info usuario */}
-        <View style={styles.profileInfoBox}>
-          <InfoLabel
-            label="Edad"
-            value={v(user?.edad)}
-            icon={<Ionicons name="calendar-outline" size={20} color={COLORS.primary} />}
-          />
-          <InfoLabel
-            label="Género"
-            value={v(user?.genero)}
-            icon={
-              <Ionicons
-                name={
-                  user?.genero?.toLowerCase() === "masculino"
-                    ? "male"
-                    : user?.genero?.toLowerCase() === "femenino"
-                    ? "female"
-                    : "help-outline"
-                }
-                size={20}
-                color={COLORS.primary}
-              />
-            }
-          />
-          <InfoLabel
-            label="Altura"
-            value={user?.altura ? `${user?.altura} cm` : "N/D"}
-            icon={<FontAwesome5 name="ruler-vertical" size={18} color={COLORS.primary} />}
-          />
-          <InfoLabel
-            label="Peso"
-            value={user?.peso ? `${user?.peso} kg` : "N/D"}
-            icon={<MaterialCommunityIcons name="weight-kilogram" size={20} color={COLORS.primary} />}
-          />
-          <InfoLabel
-            label="Objetivo"
-            value={v(user?.objetivo)}
-            icon={<Ionicons name="trophy-outline" size={20} color={COLORS.primary} />}
-          />
-        </View>
-      </ScrollView>
+                    <TouchableOpacity
+                        style={styles.suggestionButton}
+                        onPress={() => navigation.navigate('QuejaSugerencia', { userId: user?.userId })}
+                    >
+                        <Ionicons name="chatbubble-ellipses-outline" size={20} color={PALETTE.text_secondary} />
+                        <Text style={styles.suggestionButtonText}>¿Tienes una queja o sugerencia?</Text>
+                    </TouchableOpacity>
+                </Animated.View>
+            </ScrollView>
 
-      <LogoutModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onConfirm={cerrarSesion}
-      />
-    </SafeAreaView>
+            <LogoutModal
+                visible={modalVisible}
+                onClose={() => setModalVisible(false)}
+                onConfirm={cerrarSesion}
+            />
+        </SafeAreaView>
+    </LinearGradient>
   );
 };
 
-const QuickAccessCard = ({
-  icon,
-  title,
-  desc,
-  onPress,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  desc: string;
-  onPress: () => void;
-}) => (
-  <TouchableOpacity
-    style={styles.quickCard}
-    onPress={onPress}
-    activeOpacity={0.87}
-  >
-    <View style={{ marginBottom: 14 }}>{icon}</View>
-    <Text style={styles.quickCardTitle}>{title}</Text>
-    <Text style={styles.quickCardDesc}>{desc}</Text>
-  </TouchableOpacity>
+const Header = ({ user, onLogoutPress }: { user: any, onLogoutPress: () => void }) => {
+    const navigation = useNavigation<NavigationProp>();
+    return(
+        <View style={styles.headerContainer}>
+            <TouchableOpacity onPress={() => navigation.navigate('Perfil', { userId: user?.userId })}>
+                <LinearGradient colors={['#2CFD89', '#00A3FF']} style={styles.avatar}>
+                    <Ionicons name="person-outline" size={width * 0.1} color="#1D2A32" />
+                </LinearGradient>
+            </TouchableOpacity>
+            <View style={styles.headerTextContainer}>
+                <Text style={styles.greetingText}>¡Hola, {user?.nombre || 'Usuario'}!</Text>
+                <Text style={styles.sloganText}>Tu bienestar es nuestra meta.</Text>
+            </View>
+            <TouchableOpacity onPress={onLogoutPress} style={styles.logoutButton}>
+                <Ionicons name="exit-outline" size={28} color={PALETTE.danger} />
+            </TouchableOpacity>
+        </View>
+    )
+}
+
+const Dashboard = ({ user, bmiData }: { user: any, bmiData: any }) => {
+    const v = (valor: any) => (valor !== undefined && valor !== null && valor !== '' ? valor : 'N/D');
+    return (
+        <BlurView intensity={50} tint="dark" style={styles.dashboardContainer}>
+            <Text style={styles.dashboardTitle}>Tu Progreso</Text>
+            
+            <View style={styles.bmiSection}>
+                <View style={[styles.bmiRing, { borderColor: bmiData.color }]}>
+                    <Text style={styles.bmiValue}>{bmiData.bmi > 0 ? bmiData.bmi : "--"}</Text>
+                </View>
+                <View style={styles.bmiInfo}>
+                    <Text style={styles.bmiLabel}>Índice de Masa Corporal (IMC)</Text>
+                    <Text style={[styles.bmiCategoryText, { color: bmiData.color }]}>{bmiData.category}</Text>
+                </View>
+            </View>
+
+            <View style={styles.statsGrid}>
+                <StatItem label="Edad" value={v(user?.edad)} />
+                <StatItem label="Altura" value={user?.altura ? `${user.altura} cm` : 'N/D'} />
+                <StatItem label="Peso" value={user?.peso ? `${user.peso} kg` : 'N/D'} />
+                <StatItem label="Objetivo" value={v(user?.objetivo)} />
+            </View>
+        </BlurView>
+    );
+};
+
+const InfoCard = ({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) => (
+    <View style={styles.infoCardWrapper}>
+        <BlurView intensity={50} tint="dark" style={styles.infoCard}>
+            {icon}
+            <View style={styles.infoCardTextContainer}>
+                <Text style={styles.infoCardTitle}>{title}</Text>
+                <Text style={styles.infoCardDesc}>{desc}</Text>
+            </View>
+        </BlurView>
+    </View>
 );
 
-const InfoLabel = ({ label, value, icon }: { label: string; value: string | number; icon: React.ReactNode }) => (
-  <View style={styles.infoBox}>
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
-      {icon}
-      <Text style={styles.infoLabel}>{label}</Text>
-    </View>
-    <Text style={styles.infoValue} numberOfLines={1}>
-      {value}
-    </Text>
-  </View>
+const ActionButton = ({ icon, label, onPress }: { icon: React.ReactNode, label: string, onPress: () => void }) => (
+    <TouchableOpacity onPress={onPress} style={styles.actionButtonWrapper}>
+        <LinearGradient colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.05)']} style={styles.actionButtonBorder}>
+            <BlurView intensity={50} tint="dark" style={styles.actionButton}>
+                {icon}
+                <Text style={[styles.actionButtonText, { color: label === 'Favoritos' ? PALETTE.pin_red : PALETTE.primary }]}>{label}</Text>
+            </BlurView>
+        </LinearGradient>
+    </TouchableOpacity>
 );
+
+const StatItem = ({ label, value }: { label: string, value: string }) => (
+    <View style={styles.statItem}>
+        <Text style={styles.statLabel}>{label}</Text>
+        <Text style={styles.statValue}>{value}</Text>
+    </View>
+);
+
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: COLORS.bg,
-    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight ?? 22) : 16,
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight : 0,
   },
-  container: { flex: 1, backgroundColor: COLORS.bg, paddingHorizontal: 10 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.bg },
-
-  topRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    marginTop: 6,
-    marginBottom: 2,
+  container: { 
+      flex: 1, 
+      paddingHorizontal: width * 0.05,
   },
-  quejaTopBtn: {},
-  quejaBtnGradient: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 7,
-    paddingHorizontal: 15,
-    borderRadius: 16,
-    elevation: 2,
-    backgroundColor: COLORS.soft,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.07,
-    shadowRadius: 5,
+  centered: { 
+      flex: 1, 
+      justifyContent: 'center', 
+      alignItems: 'center' 
   },
-  quejaBtnText: {
-    color: COLORS.green,
-    fontWeight: "bold",
-    fontSize: width > 400 ? 15 : 13.7,
-    letterSpacing: 0.13,
+  headerContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingBottom: 25,
+      marginTop: 10,
   },
-  topLogout: {
-    alignSelf: 'flex-end',
-    backgroundColor: "#fff",
-    borderRadius: 22,
-    padding: 5,
-    elevation: 4,
-    shadowColor: COLORS.sombra,
-    shadowOpacity: 0.13,
-    shadowRadius: 7,
-    shadowOffset: { width: 0, height: 2 },
+  avatar: {
+      width: width * 0.15,
+      height: width * 0.15,
+      borderRadius: (width * 0.15) / 2,
+      justifyContent: 'center',
+      alignItems: 'center',
   },
-
-  headerCard: {
-    borderRadius: 28,
-    padding: 19,
-    marginHorizontal: 2,
-    marginTop: 6,
-    elevation: 8,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.13,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 6 },
+  headerTextContainer: {
+      flex: 1,
+      marginLeft: 15,
   },
-  headerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 5,
-    paddingBottom: 2,
+  greetingText: {
+      color: PALETTE.text_primary,
+      fontSize: width * 0.065,
+      fontWeight: 'bold',
   },
-  headerTexts: {
-    flex: 1,
-    marginLeft: 11,
-    justifyContent: 'center',
+  sloganText: {
+      color: PALETTE.text_secondary,
+      fontSize: width * 0.04,
+      marginTop: 2,
   },
-  hello: { fontSize: width * 0.064, color: COLORS.card, fontWeight: '700', letterSpacing: 0.4 },
-  helloName: { fontWeight: 'bold', color: "#fff" },
-  slogan: { fontSize: width * 0.040, color: COLORS.accent, fontWeight: '600', opacity: 0.98, marginTop: 4, letterSpacing: 0.2 },
-
-  quickAccessRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 15, marginBottom: 16, marginTop: 3 },
-  quickCard: {
-    flex: 1,
-    borderRadius: 21,
-    padding: width > 400 ? 18 : 13,
-    alignItems: 'center',
-    backgroundColor: COLORS.card,
-    elevation: 5,
-    marginHorizontal: 2,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.11,
-    shadowRadius: 13,
-    shadowOffset: { width: 0, height: 7 },
-    minHeight: 128,
+  logoutButton: {
+      padding: 8,
+      backgroundColor: PALETTE.inactive,
+      borderRadius: 50,
   },
-  quickCardIconBg: {
-    borderRadius: 17,
-    padding: 8,
-    marginBottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.soft,
+  dashboardContainer: {
+      borderRadius: 25,
+      padding: 20,
+      borderWidth: 1,
+      borderColor: PALETTE.border,
+      overflow: 'hidden',
+      marginVertical: 10,
   },
-  quickCardTitle: { fontWeight: 'bold', color: COLORS.primary, fontSize: 17, textAlign: 'center', letterSpacing: 0.28, marginBottom: 1 },
-  quickCardDesc: { color: "#3e5769", fontSize: 13.5, textAlign: 'center', opacity: 0.93, fontWeight: '400', marginTop: 2 },
-
-  tagsCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    backgroundColor: COLORS.card,
-    paddingVertical: 13,
-    marginHorizontal: 2,
-    borderRadius: 20,
-    marginTop: 3,
-    marginBottom: 18,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 3,
-    gap: 4,
+  dashboardTitle: {
+      color: PALETTE.text_primary,
+      fontSize: width * 0.05,
+      fontWeight: 'bold',
+      marginBottom: 20,
+      textAlign: 'center',
   },
-  tagItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.accent,
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-    borderRadius: 21,
+  bmiSection: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 10,
+      gap: 20,
   },
-  tagItemText: {
-    marginLeft: 8,
-    fontWeight: '700',
-    color: COLORS.primary,
-    fontSize: 15.5,
-    letterSpacing: 0.26,
+  bmiRing: {
+      width: width * 0.28,
+      height: width * 0.28,
+      borderRadius: (width * 0.28) / 2,
+      borderWidth: 10,
+      justifyContent: 'center',
+      alignItems: 'center',
   },
-
-  profileInfoBox: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    gap: 9,
-    padding: width > 400 ? 17 : 12,
-    borderRadius: 22,
-    backgroundColor: COLORS.soft,
-    elevation: 2,
-    shadowColor: COLORS.primary,
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    marginTop: 18,
-    marginBottom: 28,
+  bmiValue: {
+      color: PALETTE.text_primary,
+      fontSize: width * 0.08,
+      fontWeight: 'bold',
   },
-  infoBox: {
-    width: '48%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: "#e0fbe9",
-    padding: 10,
-    borderRadius: 12,
-    marginBottom: 3,
+  bmiInfo: {
+      flex: 1,
   },
-  infoLabel: { color: "#3b5165", fontSize: 15, fontWeight: '700' },
-  infoValue: { color: COLORS.primary, fontSize: 16, fontWeight: '800', maxWidth: '54%', textAlign: 'right' },
+  bmiLabel: {
+      color: PALETTE.text_secondary,
+      fontSize: width * 0.04,
+  },
+  bmiCategoryText: {
+      fontSize: width * 0.05,
+      fontWeight: 'bold',
+      marginTop: 5,
+  },
+  statsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      justifyContent: 'space-between',
+      borderTopWidth: 1,
+      borderTopColor: PALETTE.border,
+      marginTop: 20,
+      paddingTop: 20,
+  },
+  statItem: {
+      width: '48%',
+      alignItems: 'center',
+      marginBottom: 20,
+  },
+  statLabel: {
+      color: PALETTE.text_secondary,
+      fontSize: width * 0.038,
+  },
+  statValue: {
+      color: PALETTE.text_primary,
+      fontSize: width * 0.05,
+      fontWeight: 'bold',
+      marginTop: 5,
+  },
+  actionsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-around',
+      gap: 15,
+      marginVertical: 25,
+  },
+  actionButtonWrapper: {
+      flex: 1,
+  },
+  actionButtonBorder: {
+      borderRadius: 50,
+      padding: 1,
+  },
+  actionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: 50,
+      paddingVertical: 15,
+      overflow: 'hidden',
+  },
+  actionButtonText: {
+      fontWeight: 'bold',
+      marginLeft: 10,
+      fontSize: width * 0.038,
+  },
+  infoCardsRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      gap: 15,
+      marginVertical: 10,
+  },
+  infoCardWrapper: {
+      flex: 1,
+  },
+  infoCard: {
+      borderRadius: 20,
+      padding: 20,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: PALETTE.border,
+      overflow: 'hidden',
+      height: height * 0.22,
+      justifyContent: 'center',
+  },
+  infoCardTextContainer: {
+      alignItems: 'center',
+      marginTop: 15,
+  },
+  infoCardTitle: {
+      color: PALETTE.text_primary,
+      fontSize: width * 0.042,
+      fontWeight: 'bold',
+      textAlign: 'center',
+  },
+  infoCardDesc: {
+      color: PALETTE.text_secondary,
+      fontSize: width * 0.032,
+      textAlign: 'center',
+      marginTop: 5,
+  },
+  suggestionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: PALETTE.inactive,
+      borderRadius: 15,
+      padding: 15,
+      marginTop: 15,
+  },
+  suggestionButtonText: {
+      color: PALETTE.text_secondary,
+      fontWeight: '600',
+      marginLeft: 8,
+      fontSize: width * 0.035,
+  },
 });
 
 export default HomeScreen;

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   ScrollView,
@@ -8,9 +8,12 @@ import {
   Platform,
   Dimensions,
   TouchableOpacity,
+  SafeAreaView,
+  StatusBar,
+  ActivityIndicator,
+  TextInput,
+  Animated,
 } from "react-native";
-import { TextInput } from "react-native-paper";
-import { Ionicons } from "@expo/vector-icons";
 import { useRoute, useNavigation, RouteProp, CommonActions } from "@react-navigation/native";
 import type { StackNavigationProp } from "@react-navigation/stack";
 import { RootStackParamList } from "../navigation/StackNavigator";
@@ -19,30 +22,38 @@ import CustomToast from "../components/CustomToast";
 import { useRutina } from "../hooks/useRutina";
 import { useUser } from "../context/UserContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { LinearGradient } from "expo-linear-gradient";
+import { BlurView } from 'expo-blur';
+import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const { width, height } = Dimensions.get("window");
-const PRIMARY_COLOR = "#28a745";
-const TEXT_COLOR = "#232946";
-const FIELD_DISABLED_BG = "#F4F4F4";
-const FIELD_DISABLED_TEXT = "#A4A4A4";
+const { width } = Dimensions.get("window");
+
+const PALETTE = {
+  background_gradient: ['#1D2A32', '#163B48', '#1D2A32'] as const,
+  primary: '#2CFD89',
+  text_primary: '#FFFFFF',
+  text_secondary: '#B0C4DE',
+  inactive: 'rgba(255, 255, 255, 0.1)',
+  border: 'rgba(255, 255, 255, 0.15)',
+  danger: '#FF4757',
+  dark: '#1D2A32',
+};
+
+const opcionesPreferencia = [
+  { label: "Gimnasio", value: "gimnasio", icon: "barbell-outline" as const },
+  { label: "Casa", value: "casa", icon: "home-outline" as const },
+  { label: "Calistenia", value: "calistenia", icon: "walk-outline" as const },
+];
 
 type RutinaRouteProp = RouteProp<RootStackParamList, "Rutina">;
 type NavigationProp = StackNavigationProp<RootStackParamList, "Rutina">;
 
-const opcionesPreferencia = [
-  { label: "Gimnasio", value: "gimnasio", icon: "barbell-outline" },
-  { label: "Casa", value: "casa", icon: "home-outline" },
-  { label: "Calistenia", value: "calistenia", icon: "walk-outline" },
-];
-
 const RutinaScreen: React.FC = () => {
   const route = useRoute<RutinaRouteProp>();
   const navigation = useNavigation<NavigationProp>();
-  const { userId, nombre, objetivo } = route.params || {
-    userId: "",
-    nombre: "",
-    objetivo: "",
-  };
+  const insets = useSafeAreaInsets();
+  const { userId, nombre, objetivo } = route.params || { userId: "", nombre: "", objetivo: "" };
 
   const [edad, setEdad] = useState("");
   const [preferenciaSeleccionada, setPreferenciaSeleccionada] = useState("");
@@ -58,6 +69,16 @@ const RutinaScreen: React.FC = () => {
     setSuccess: setShowSuccess,
     setError: setShowError,
   } = useRutina();
+
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+    }).start();
+  }, []);
 
   const handleEdadChange = (text: string) => {
     setEdad(text.replace(/[^0-9]/g, ""));
@@ -88,24 +109,12 @@ const RutinaScreen: React.FC = () => {
     if (result) {
       const updatedUser = {
         ...state.user,
-        userId,
-        nombre,
-        objetivo,
         edad,
         preferencias: [preferenciaSeleccionada],
         dias: dias?.toString(),
         lesiones,
-        correoElectronico: state.user?.correoElectronico ?? "",
-        fechaNacimiento: state.user?.fechaNacimiento ?? "",
-        ubicacion: state.user?.ubicacion ?? "",
-        genero: state.user?.genero ?? "",
-        altura: state.user?.altura ?? "",
-        peso: state.user?.peso ?? "",
-        alergias: state.user?.alergias ?? [],
-        presupuesto: state.user?.presupuesto ?? "",
       };
-
-      dispatch({ type: "SET_USER", payload: updatedUser });
+      dispatch({ type: "SET_USER", payload: updatedUser as any });
       await AsyncStorage.setItem("userProfile", JSON.stringify(updatedUser));
 
       setShowSuccess(true);
@@ -126,416 +135,254 @@ const RutinaScreen: React.FC = () => {
     }
   };
 
-  // Días en grid responsivo (4+3)
-  const renderDiasGrid = () => {
-    const items = [1, 2, 3, 4, 5, 6, 7];
-    return (
-      <View style={styles.diasGridContainer}>
-        <View style={styles.diasGridRow}>
-          {items.slice(0, 4).map((num) => (
-            <TouchableOpacity
-              key={num}
-              style={[
-                styles.diaCirculo,
-                dias === num && styles.diaCirculoSeleccionado,
-              ]}
-              onPress={() => setDias(num)}
-              activeOpacity={0.85}
-            >
-              <Text
-                style={[
-                  styles.diaCirculoTexto,
-                  dias === num && styles.diaCirculoTextoSeleccionado,
-                ]}
-              >
-                {num}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        <View style={styles.diasGridRow}>
-          {items.slice(4).map((num) => (
-            <TouchableOpacity
-              key={num}
-              style={[
-                styles.diaCirculo,
-                dias === num && styles.diaCirculoSeleccionado,
-              ]}
-              onPress={() => setDias(num)}
-              activeOpacity={0.85}
-            >
-              <Text
-                style={[
-                  styles.diaCirculoTexto,
-                  dias === num && styles.diaCirculoTextoSeleccionado,
-                ]}
-              >
-                {num}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    );
-  };
-
   return (
-    <>
-      <CustomToast
-        message="¡Rutina generada con éxito!"
-        visible={showSuccess}
-        onHide={() => setShowSuccess(false)}
-        type="success"
-      />
-      <CustomToast
-        message="Error: verifica tus datos"
-        visible={showError}
-        onHide={() => setShowError(false)}
-        type="error"
-      />
-      <KeyboardAvoidingView
-        style={styles.keyboard}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 80 : 20}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContainer}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+    <LinearGradient colors={PALETTE.background_gradient} style={{ flex: 1 }}>
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <View style={styles.card}>
-            <Text style={styles.appName}>MyFitGuide</Text>
-            <ProgressStepper currentStep="Rutina" />
-            <Text style={styles.subtitle}>Diseñemos tu rutina ideal</Text>
+          <CustomToast message="¡Rutina generada con éxito!" visible={showSuccess} onHide={() => setShowSuccess(false)} type="success" />
+          <CustomToast message="Error: verifica tus datos" visible={showError} onHide={() => setShowError(false)} type="error" />
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Nombre</Text>
-              <TextInput
-                mode="flat"
-                label=""
-                value={nombre}
-                style={[styles.input, styles.inputDisabled]}
-                left={<TextInput.Icon icon="account" color={PRIMARY_COLOR} />}
-                editable={false}
-                pointerEvents="none"
-                theme={{
-                  colors: {
-                    text: FIELD_DISABLED_TEXT,
-                    primary: PRIMARY_COLOR,
-                    background: FIELD_DISABLED_BG,
-                    placeholder: FIELD_DISABLED_TEXT,
-                  },
-                }}
-              />
-            </View>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Edad</Text>
-              <TextInput
-                mode="flat"
-                label=""
-                placeholder="Ejemplo: 22"
-                value={edad}
-                keyboardType="numeric"
-                onChangeText={handleEdadChange}
-                style={styles.input}
-                left={<TextInput.Icon icon="calendar-outline" color={PRIMARY_COLOR} />}
-                theme={{ colors: { primary: PRIMARY_COLOR, text: TEXT_COLOR } }}
-                maxLength={2}
-                returnKeyType="done"
-              />
-            </View>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>Objetivo</Text>
-              <TextInput
-                mode="flat"
-                label=""
-                value={objetivo}
-                style={[styles.input, styles.inputDisabled]}
-                left={<TextInput.Icon icon="flag-outline" color={PRIMARY_COLOR} />}
-                editable={false}
-                pointerEvents="none"
-                theme={{
-                  colors: {
-                    text: FIELD_DISABLED_TEXT,
-                    primary: PRIMARY_COLOR,
-                    background: FIELD_DISABLED_BG,
-                    placeholder: FIELD_DISABLED_TEXT,
-                  },
-                }}
-              />
-            </View>
-
-            <Text style={styles.label}>¿Dónde prefieres entrenar?</Text>
-            <View style={styles.preferenciaGridContainer}>
-              {opcionesPreferencia.map((item) => (
-                <TouchableOpacity
-                  key={item.value}
-                  style={[
-                    styles.preferenciaCard,
-                    preferenciaSeleccionada === item.value && styles.preferenciaCardActiva,
-                  ]}
-                  onPress={() => setPreferenciaSeleccionada(item.value)}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons
-                    name={item.icon as any}
-                    size={30}
-                    color={preferenciaSeleccionada === item.value ? "#fff" : PRIMARY_COLOR}
-                    style={{ marginBottom: 5 }}
-                  />
-                  <Text
-                    style={[
-                      styles.preferenciaCardTexto,
-                      preferenciaSeleccionada === item.value && styles.preferenciaCardTextoActivo,
-                    ]}
-                  >
-                    {item.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={styles.label}>¿Cuántos días quieres entrenar?</Text>
-            {renderDiasGrid()}
-
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>¿Tienes lesiones? (opcional)</Text>
-              <View style={styles.lesionesBox}>
-                <Ionicons name="medkit" size={24} color={PRIMARY_COLOR} style={styles.lesionesIcon} />
-                <TextInput
-                  mode="flat"
-                  label=""
-                  value={lesiones}
-                  onChangeText={setLesiones}
-                  style={styles.lesionesInput}
-                  theme={{
-                    colors: { primary: PRIMARY_COLOR, text: TEXT_COLOR, placeholder: "#B6B6B6" },
-                  }}
-                  multiline
-                  placeholder="Escribe si tienes alguna lesión..."
-                  placeholderTextColor="#B6B6B6"
-                  textAlignVertical="top"
-                  underlineColor="transparent"
-                  underlineColorAndroid="transparent"
-                  numberOfLines={3}
-                  blurOnSubmit
-                />
-              </View>
-            </View>
-            <TouchableOpacity
-              style={[styles.boton, isSubmitting && { backgroundColor: "#92dda6" }]}
-              onPress={onGenerarRutina}
-              disabled={isSubmitting}
-              activeOpacity={0.9}
-            >
-              <Text style={styles.botonTexto}>
-                {isSubmitting ? "Generando..." : "Generar Rutina"}
-              </Text>
+           <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+                <Ionicons name="chevron-back" size={28} color={PALETTE.text_primary} />
             </TouchableOpacity>
+            <Text style={styles.headerTitle}>Tu Rutina</Text>
+            <View style={{width: 44}}/>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </>
+
+          <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+            <Animated.View style={{opacity: fadeAnim}}>
+                <BlurView intensity={50} tint="dark" style={styles.card}>
+                  <ProgressStepper currentStep="Rutina" />
+                  <Text style={styles.subtitle}>Diseñemos tu rutina ideal</Text>
+
+                  <StaticInfo label="Nombre" value={nombre} icon="person-outline" />
+                  <StaticInfo label="Objetivo" value={objetivo} icon="flag-outline" />
+
+                  <CustomInput label="Edad" value={edad} onChangeText={handleEdadChange} placeholder="Ej: 22" keyboardType="numeric" maxLength={2} icon="calendar-outline" />
+
+                  <Text style={styles.label}>¿Dónde prefieres entrenar?</Text>
+                  <View style={styles.preferenceContainer}>
+                    {opcionesPreferencia.map((item) => (
+                      <TouchableOpacity
+                        key={item.value}
+                        style={[styles.preferenceCard, preferenciaSeleccionada === item.value && { borderColor: PALETTE.primary }]}
+                        onPress={() => setPreferenciaSeleccionada(item.value)}
+                      >
+                        <Ionicons name={item.icon} size={width * 0.08} color={preferenciaSeleccionada === item.value ? PALETTE.primary : PALETTE.text_secondary} />
+                        <Text style={[styles.preferenceText, preferenciaSeleccionada === item.value && { color: PALETTE.primary }]}>{item.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+
+                  <Text style={styles.label}>¿Cuántos días quieres entrenar?</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daysContainer}>
+                    {[1, 2, 3, 4, 5, 6, 7].map((num) => (
+                      <TouchableOpacity
+                        key={num}
+                        style={[styles.dayCircle, dias === num && { backgroundColor: PALETTE.primary }]}
+                        onPress={() => setDias(num)}
+                      >
+                        <Text style={[styles.dayText, dias === num && { color: PALETTE.dark }]}>{num}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+
+                  <CustomInput
+                    label="¿Tienes lesiones? (Opcional)"
+                    value={lesiones}
+                    onChangeText={setLesiones}
+                    placeholder="Ej: Dolor en rodilla derecha..."
+                    icon="medkit-outline"
+                    multiline
+                    height={100}
+                  />
+
+                  <TouchableOpacity
+                    style={{ opacity: isSubmitting ? 0.6 : 1 }}
+                    onPress={onGenerarRutina}
+                    disabled={isSubmitting}
+                  >
+                    <LinearGradient colors={['#2CFD89', '#00A3FF']} style={styles.generateButton}>
+                        {isSubmitting ? <ActivityIndicator color={PALETTE.dark} /> : <Text style={styles.generateButtonText}>Generar Rutina</Text>}
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </BlurView>
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </LinearGradient>
   );
 };
 
-const CARD_SIZE = width < 400 ? width * 0.25 : 90;
-const CARD_FONT = width < 400 ? 13 : 15;
-const CIRC_SIZE = width < 380 ? 37 : 45;
-const CIRC_FONT = width < 380 ? 17 : 20;
+const CustomInput = ({ label, icon, ...props }: any) => {
+    const [isFocused, setIsFocused] = useState(false);
+    return (
+        <View style={{marginBottom: 15}}>
+            <Text style={styles.label}>{label}</Text>
+            <View style={[styles.inputWrapper, isFocused && styles.inputFocused]}>
+                {icon && <Ionicons name={icon} size={22} color={isFocused ? PALETTE.primary : PALETTE.text_secondary} style={styles.leftIcon} />}
+                <TextInput
+                    style={styles.input}
+                    placeholderTextColor={PALETTE.text_secondary}
+                    onFocus={() => setIsFocused(true)}
+                    onBlur={() => setIsFocused(false)}
+                    {...props}
+                />
+            </View>
+        </View>
+    );
+};
+
+const StaticInfo = ({ label, value, icon }: { label: string, value: string, icon: keyof typeof Ionicons.glyphMap }) => (
+    <View style={{marginBottom: 15}}>
+        <Text style={styles.label}>{label}</Text>
+        <View style={styles.staticInfoWrapper}>
+            <Ionicons name={icon} size={22} color={PALETTE.text_secondary} style={styles.leftIcon} />
+            <Text style={styles.staticInfoText}>{value}</Text>
+        </View>
+    </View>
+);
 
 const styles = StyleSheet.create({
-  keyboard: {
-    flex: 1,
-    backgroundColor: "#f0f0f0",
-  },
+  safeArea: { flex: 1 },
   scrollContainer: {
     flexGrow: 1,
-    justifyContent: "center",
-    padding: 20,
-    paddingBottom: 80,
-    minHeight: height,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight ?? 10 : 10,
+    paddingBottom: 10,
+  },
+  backBtn: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontWeight: "800",
+    color: PALETTE.text_primary,
+    fontSize: width * 0.06,
   },
   card: {
-    width: "100%",
-    maxWidth: 400,
-    backgroundColor: "#fff",
+    borderRadius: 25,
     padding: 25,
-    borderRadius: 15,
-    alignSelf: "center",
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    marginTop: 20,
-    marginBottom: 30,
-  },
-  appName: {
-    fontWeight: "700",
-    color: PRIMARY_COLOR,
-    textAlign: "center",
-    fontSize: width * 0.07,
-    marginBottom: 10,
-    marginTop: 0,
+    borderWidth: 1,
+    borderColor: PALETTE.border,
+    overflow: 'hidden',
+    marginTop: 10,
   },
   subtitle: {
     fontSize: width * 0.045,
-    color: TEXT_COLOR,
+    color: PALETTE.text_secondary,
     textAlign: "center",
-    marginBottom: 20,
-    fontWeight: "500",
+    marginBottom: 30,
   },
   label: {
     fontSize: width * 0.04,
-    fontWeight: "500",
-    color: "#333",
-    marginBottom: 6,
-    marginTop: 7,
-  },
-  inputContainer: {
+    fontWeight: "600",
+    color: PALETTE.text_secondary,
     marginBottom: 10,
   },
-  input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    backgroundColor: "#fff",
-    fontSize: 16,
-    marginBottom: 0,
-    justifyContent: "center",
-  },
-  inputDisabled: {
-    backgroundColor: FIELD_DISABLED_BG,
-    color: FIELD_DISABLED_TEXT,
-    borderColor: "#eee",
-    opacity: 0.8,
-  },
-  // PREFERENCIAS GRID
-  preferenciaGridContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 22,
-    marginTop: 10,
-    gap: 10,
-  },
-  preferenciaCard: {
-    width: CARD_SIZE,
-    height: CARD_SIZE + 12,
-    backgroundColor: "#f8f8f8",
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#eee",
-    elevation: 2,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    gap: 1,
-  },
-  preferenciaCardActiva: {
-    backgroundColor: PRIMARY_COLOR,
-    borderColor: PRIMARY_COLOR,
-    elevation: 3,
-  },
-  preferenciaCardTexto: {
-    fontWeight: "700",
-    color: PRIMARY_COLOR,
-    fontSize: CARD_FONT,
-    textAlign: "center",
-    marginTop: 3,
-    letterSpacing: 0.08,
-  },
-  preferenciaCardTextoActivo: {
-    color: "#fff",
-  },
-  // DIAS EN GRID
-  diasGridContainer: {
-    flexDirection: "column",
-    alignItems: "center",
-    marginBottom: 18,
-    marginTop: 8,
-    gap: 7,
-  },
-  diasGridRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 7,
-  },
-  diaCirculo: {
-    width: CIRC_SIZE,
-    height: CIRC_SIZE,
-    borderRadius: CIRC_SIZE / 2,
-    borderWidth: 2,
-    borderColor: PRIMARY_COLOR,
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
-    marginHorizontal: 3,
-    elevation: 2,
-  },
-  diaCirculoSeleccionado: {
-    backgroundColor: PRIMARY_COLOR,
-    borderColor: PRIMARY_COLOR,
-  },
-  diaCirculoTexto: {
-    fontWeight: "700",
-    color: PRIMARY_COLOR,
-    fontSize: CIRC_FONT,
-    textAlign: "center",
-  },
-  diaCirculoTextoSeleccionado: {
-    color: "#fff",
-  },
-  // INPUT LESIONES mejorado
-  lesionesBox: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    borderWidth: 2,
-    borderColor: PRIMARY_COLOR,
-    backgroundColor: "#f9f9f9",
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PALETTE.inactive,
     borderRadius: 15,
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    minHeight: 70,
-    marginTop: 2,
-    marginBottom: 5,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
-  lesionesIcon: {
-    marginTop: 2,
-    marginRight: 8,
-  },
-  lesionesInput: {
+  input: {
     flex: 1,
-    minHeight: 45,
-    maxHeight: 100,
+    height: 55,
+    paddingHorizontal: 15,
+    color: PALETTE.text_primary,
     fontSize: 16,
-    backgroundColor: "transparent",
-    paddingTop: 0,
-    paddingBottom: 0,
-    marginBottom: 0,
-    marginTop: 0,
   },
-  boton: {
-    backgroundColor: PRIMARY_COLOR,
-    paddingVertical: 14,
-    borderRadius: 10,
+  inputFocused: {
+    borderColor: PALETTE.primary,
+  },
+  staticInfoWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 15,
+    height: 55,
+  },
+  staticInfoText: {
+    flex: 1,
+    paddingHorizontal: 15,
+    color: PALETTE.text_secondary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  leftIcon: {
+    paddingLeft: 15,
+  },
+  preferenceContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 25,
+  },
+  preferenceCard: {
+    flex: 1,
+    backgroundColor: PALETTE.inactive,
+    borderRadius: 15,
+    padding: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    minHeight: 100,
+  },
+  preferenceText: {
+    marginTop: 10,
+    color: PALETTE.text_secondary,
+    fontWeight: 'bold',
+    fontSize: width * 0.038,
+  },
+  daysContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 25,
+    paddingVertical: 5,
+  },
+  dayCircle: {
+    width: width * 0.12,
+    height: width * 0.12,
+    borderRadius: (width * 0.12) / 2,
+    backgroundColor: PALETTE.inactive,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  dayText: {
+    color: PALETTE.text_secondary,
+    fontWeight: 'bold',
+    fontSize: width * 0.045,
+  },
+  generateButton: {
+    paddingVertical: 18,
+    borderRadius: 15,
     alignItems: "center",
-    marginTop: 25,
-    elevation: 2,
-    shadowColor: PRIMARY_COLOR,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 6,
+    shadowColor: PALETTE.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+    marginTop: 20,
   },
-  botonTexto: {
-    color: "#fff",
+  generateButtonText: {
+    color: PALETTE.dark,
     fontSize: 18,
-    fontWeight: "600",
-    letterSpacing: 0.2,
+    fontWeight: "bold",
   },
 });
 
