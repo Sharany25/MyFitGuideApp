@@ -144,18 +144,12 @@ const RutinaScreen: React.FC = () => {
         >
           <CustomToast message="¡Rutina generada con éxito!" visible={showSuccess} onHide={() => setShowSuccess(false)} type="success" />
           <CustomToast message="Error: verifica tus datos" visible={showError} onHide={() => setShowError(false)} type="error" />
-
-           <View style={styles.header}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-                <Ionicons name="chevron-back" size={28} color={PALETTE.text_primary} />
-            </TouchableOpacity>
-            <Text style={styles.headerTitle}>Tu Rutina</Text>
-            <View style={{width: 44}}/>
-          </View>
+          
 
           <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
             <Animated.View style={{opacity: fadeAnim}}>
                 <BlurView intensity={50} tint="dark" style={styles.card}>
+                  <Text style={styles.title}>MyFitGuide</Text>
                   <ProgressStepper currentStep="Rutina" />
                   <Text style={styles.subtitle}>Diseñemos tu rutina ideal</Text>
 
@@ -252,24 +246,18 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   scrollContainer: {
     flexGrow: 1,
+    justifyContent: "center",
     paddingHorizontal: 20,
+    paddingTop: 60, // Space for the absolute back button
     paddingBottom: 40,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight ?? 10 : 10,
-    paddingBottom: 10,
-  },
   backBtn: {
+    position: 'absolute',
+    left: 20,
+    zIndex: 10,
+    backgroundColor: PALETTE.inactive,
+    borderRadius: 50,
     padding: 8,
-  },
-  headerTitle: {
-    fontWeight: "800",
-    color: PALETTE.text_primary,
-    fontSize: width * 0.06,
   },
   card: {
     borderRadius: 25,
@@ -277,7 +265,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: PALETTE.border,
     overflow: 'hidden',
-    marginTop: 10,
+  },
+  title: {
+    fontWeight: "800",
+    color: PALETTE.primary,
+    textAlign: "center",
+    fontSize: width * 0.08,
+    marginBottom: 15,
   },
   subtitle: {
     fontSize: width * 0.045,
