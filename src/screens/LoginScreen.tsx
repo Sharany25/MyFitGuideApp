@@ -46,6 +46,7 @@ type FormData = {
   password: string;
 };
 
+// Se mantiene CustomInput aquí, pero idealmente debería estar en un componente compartido (ej. src/components/CustomInput.tsx)
 const CustomInput = ({ control, name, rules, placeholder, iconName, errors, secureTextEntry = false, keyboardType = 'default', autoCapitalize = 'sentences', rightIcon, rightIconPress }: any) => {
   const hasError = errors[name];
   const [isFocused, setIsFocused] = useState(false);
@@ -184,7 +185,7 @@ const LoginScreen: React.FC = () => {
 
             <Animated.View style={{ transform: [{ translateY: formAnim }] }}>
               <BlurView intensity={50} tint="dark" style={styles.formContainer}>
-                 <CustomInput
+                <CustomInput
                   control={control}
                   errors={errors}
                   name="email"
@@ -212,6 +213,13 @@ const LoginScreen: React.FC = () => {
                   rightIcon={passwordVisible ? "eye-off" : "eye"}
                   rightIconPress={() => setPasswordVisible(!passwordVisible)}
                 />
+
+                <TouchableOpacity 
+                  onPress={() => navigation.navigate("ResetContraseña")} 
+                  style={styles.forgotPasswordButton}
+                >
+                  <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
+                </TouchableOpacity>
 
                 <TouchableOpacity onPress={handleSubmit(onSubmit)} disabled={loading} style={{ marginTop: 25 }}>
                   <LinearGradient colors={['#2CFD89', '#00A3FF']} style={styles.button}>
@@ -354,6 +362,19 @@ const styles = StyleSheet.create({
   helpLinkText: {
     color: PALETTE.text_secondary,
     fontSize: 14,
+  },
+  forgotPasswordButton: {
+    alignSelf: 'flex-end',
+    marginTop: -5,
+    marginBottom: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+  },
+  forgotPasswordText: {
+    color: PALETTE.text_secondary,
+    fontSize: 14,
+    textDecorationLine: 'underline',
+    
   },
 });
 
