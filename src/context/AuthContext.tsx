@@ -5,6 +5,7 @@ export interface UserData {
   _id: string;
   nombre: string;
   fechaNacimiento: string;
+  foto: string;
   objetivo?: string;
   genero?: string;
   altura?: number;

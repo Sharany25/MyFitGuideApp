@@ -9,6 +9,8 @@ import {
   View,
   Animated,
   TouchableOpacity,
+  Image,
+  TextInput,
 } from 'react-native';
 import { useRoute, RouteProp, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from '../navigation/StackNavigator';
@@ -115,10 +117,8 @@ const PerfilScreen: React.FC = () => {
   }
 
   const personalData = usuario ? [
-    { label: "Nombre", value: v(usuario.nombre) },
     { label: "Correo", value: v(usuario.correoElectronico) },
     { label: "Nacimiento", value: usuario.fechaNacimiento ? new Date(usuario.fechaNacimiento).toLocaleDateString() : 'N/D' },
-    { label: "Ubicación", value: v(usuario.ubicacion) },
   ] : [];
 
   const dietData = dieta ? [
@@ -138,6 +138,13 @@ const PerfilScreen: React.FC = () => {
     { label: "Lesiones", value: v(rutina.lesiones) },
   ] : [];
 
+  const handleEditPhoto = () => {
+    // Aquí puedes agregar la lógica para seleccionar una nueva foto
+    // Por ejemplo, abrir la galería o la cámara del dispositivo.
+    console.log("¡Editar foto de perfil!");
+    // navigation.navigate('ImagePickerScreen'); // Ejemplo de navegación a una pantalla de selección de imagen
+  };
+
   return (
     <LinearGradient colors={PALETTE.background_gradient} style={styles.container}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
@@ -148,9 +155,18 @@ const PerfilScreen: React.FC = () => {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View style={[styles.headerContainer, { transform: [{ translateY: headerAnim }] }]}>
-          <View style={styles.avatarContainer}>
-            <Ionicons name="person" size={width * 0.15} color={PALETTE.primary} />
-          </View>
+          <TouchableOpacity onPress={handleEditPhoto} activeOpacity={0.8} style={styles.avatarWrapper}>
+            <View style={styles.avatarContainer}>
+              {usuario?.foto ? (
+                <Image source={{ uri: usuario.foto }} style={styles.avatarImage} />
+              ) : (
+                <Ionicons name="person" size={width * 0.15} color={PALETTE.primary} />
+              )}
+            </View>
+            <TouchableOpacity onPress={handleEditPhoto} style={styles.cameraIconContainer}>
+              <Ionicons name="camera-outline" size={width * 0.05} color={PALETTE.white} />
+            </TouchableOpacity>
+          </TouchableOpacity>
           <Text style={styles.headerName}>
             {usuario?.nombre || 'Mi Perfil'}
           </Text>
@@ -223,14 +239,19 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     marginTop: 50, 
   },
-  avatarContainer: {
+  avatarWrapper: {
+    position: 'relative', // Necesario para posicionar el icono de cámara absolutamente
     width: width * 0.28,
     height: width * 0.28,
+    marginBottom: 15,
+  },
+  avatarContainer: {
+    width: '100%', // Ocupa todo el wrapper
+    height: '100%', // Ocupa todo el wrapper
     borderRadius: (width * 0.28) / 2,
     backgroundColor: 'rgba(44, 253, 137, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 15,
     borderWidth: 2,
     borderColor: PALETTE.primary,
     shadowColor: PALETTE.primary,
@@ -238,6 +259,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.8,
     shadowRadius: 15,
     elevation: 10,
+    overflow: 'hidden',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: (width * 0.28) / 2,
+  },
+  cameraIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Fondo oscuro semitransparente
+    borderRadius: (width * 0.08) / 2, // Hace el contenedor circular
+    padding: 5,
+    borderWidth: 1,
+    borderColor: PALETTE.primary,
   },
   headerName: {
     fontSize: width * 0.08,

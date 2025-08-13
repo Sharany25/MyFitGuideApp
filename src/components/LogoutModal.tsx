@@ -1,89 +1,128 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Modal, View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+
+const { width } = Dimensions.get('window');
+
+const PALETTE = {
+    primary: '#2CFD89',
+    accent_blue: '#00A3FF',
+    text_primary: '#FFFFFF',
+    text_secondary: '#B0C4DE',
+    danger: '#FF4757',
+    inactive: 'rgba(255, 255, 255, 0.1)',
+    border: 'rgba(255, 255, 255, 0.15)',
+    dark_overlay: 'rgba(0,0,0,0.7)',
+    card_background_dark: 'rgba(30, 45, 55, 0.95)',
+    button_cancel_text: '#B0C4DE',
+};
 
 interface LogoutModalProps {
-  visible: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
+    visible: boolean;
+    onClose: () => void;
+    onConfirm: () => void;
 }
 
 const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onClose, onConfirm }) => {
-  return (
-    <Modal transparent visible={visible} animationType="fade">
-      <View style={styles.overlay}>
-        <View style={styles.modalContent}>
-          <Ionicons name="alert-circle-outline" size={50} color="#E53E3E" style={{ marginBottom: 12 }} />
-          <Text style={styles.title}>¿Cerrar sesión?</Text>
-          <Text style={styles.message}>Perderás acceso a tus datos hasta volver a iniciar sesión.</Text>
+    return (
+        <Modal transparent visible={visible} animationType="fade" statusBarTranslucent>
+            <View style={styles.overlay}>
+                <BlurView intensity={70} tint="dark" style={styles.modalContent}>
+                    <Ionicons name="log-out-outline" size={width * 0.14} color={PALETTE.danger} style={styles.icon} />
+                    <Text style={styles.title}>¿Cerrar sesión?</Text>
+                    <Text style={styles.message}>
+                        Tu sesión se cerrará y deberás iniciarla de nuevo para acceder a tus datos.
+                    </Text>
 
-          <View style={styles.buttons}>
-            <TouchableOpacity style={[styles.button, styles.cancel]} onPress={onClose}>
-              <Text style={[styles.buttonText, { color: '#374151' }]}>Cancelar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, styles.confirm]} onPress={onConfirm}>
-              <Text style={[styles.buttonText, { color: '#fff' }]}>Cerrar sesión</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
+                    <View style={styles.buttons}>
+                        <TouchableOpacity style={styles.buttonCancel} onPress={onClose}>
+                            <Text style={[styles.buttonText, { color: PALETTE.button_cancel_text }]}>Cancelar</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.buttonConfirmWrapper} onPress={onConfirm}>
+                            <LinearGradient
+                                colors={[PALETTE.danger, '#CC3344']}
+                                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                                style={styles.buttonConfirmGradient}
+                            >
+                                <Text style={[styles.buttonText, { color: PALETTE.text_primary }]}>Salir</Text>
+                            </LinearGradient>
+                        </TouchableOpacity>
+                    </View>
+                </BlurView>
+            </View>
+        </Modal>
+    );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: '#00000088',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    width: '85%',
-    backgroundColor: '#fff',
-    padding: 28,
-    borderRadius: 20,
-    alignItems: 'center',
-    elevation: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 6 },
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: '700',
-    textAlign: 'center',
-    color: '#111827',
-    marginBottom: 6,
-  },
-  message: {
-    fontSize: 15,
-    textAlign: 'center',
-    color: '#6B7280',
-    marginBottom: 24,
-  },
-  buttons: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  button: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  cancel: {
-    backgroundColor: '#F3F4F6',
-  },
-  confirm: {
-    backgroundColor: '#EF4444',
-  },
-  buttonText: {
-    fontWeight: '700',
-    fontSize: 15,
-  },
+    overlay: {
+        flex: 1,
+        backgroundColor: PALETTE.dark_overlay,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        width: '85%',
+        padding: 30,
+        borderRadius: 25,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.4,
+        shadowRadius: 20,
+        elevation: 20,
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: PALETTE.border,
+        overflow: 'hidden',
+    },
+    icon: {
+        marginBottom: 25,
+    },
+    title: {
+        fontSize: width * 0.065,
+        fontWeight: '700',
+        textAlign: 'center',
+        color: PALETTE.text_primary,
+        marginBottom: 10,
+    },
+    message: {
+        fontSize: width * 0.042,
+        textAlign: 'center',
+        color: PALETTE.text_secondary,
+        marginBottom: 35,
+        lineHeight: 24,
+    },
+    buttons: {
+        flexDirection: 'row',
+        gap: 15,
+        width: '100%',
+    },
+    buttonCancel: {
+        flex: 1,
+        paddingVertical: 16,
+        borderRadius: 15,
+        alignItems: 'center',
+        backgroundColor: PALETTE.inactive,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.08)',
+    },
+    buttonConfirmWrapper: {
+        flex: 1,
+        borderRadius: 15,
+        overflow: 'hidden',
+    },
+    buttonConfirmGradient: {
+        paddingVertical: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 15,
+    },
+    buttonText: {
+        fontWeight: '700',
+        fontSize: width * 0.042,
+    },
 });
 
 export default LogoutModal;

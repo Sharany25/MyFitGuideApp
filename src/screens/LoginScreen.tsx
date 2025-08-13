@@ -46,7 +46,6 @@ type FormData = {
   password: string;
 };
 
-// Se mantiene CustomInput aquí, pero idealmente debería estar en un componente compartido (ej. src/components/CustomInput.tsx)
 const CustomInput = ({ control, name, rules, placeholder, iconName, errors, secureTextEntry = false, keyboardType = 'default', autoCapitalize = 'sentences', rightIcon, rightIconPress }: any) => {
   const hasError = errors[name];
   const [isFocused, setIsFocused] = useState(false);
@@ -142,8 +141,8 @@ const LoginScreen: React.FC = () => {
         nombre: perfilCompleto?.usuario?.nombre || "",
         correoElectronico: perfilCompleto?.usuario?.correoElectronico || "",
         fechaNacimiento: perfilCompleto?.usuario?.fechaNacimiento || "",
-        ubicacion: perfilCompleto?.usuario?.ubicacion || "",
         edad: edadStr,
+        foto: perfilCompleto?.usuario?.foto || "",
         objetivo: perfilCompleto?.dieta?.objetivo || "",
         genero: perfilCompleto?.dieta?.genero || "",
         altura: perfilCompleto?.dieta?.altura?.toString() || "",

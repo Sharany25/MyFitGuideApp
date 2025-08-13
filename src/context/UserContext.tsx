@@ -6,7 +6,7 @@ export type UserProfile = {
   nombre: string;
   correoElectronico: string;
   fechaNacimiento?: string;
-  ubicacion?: string | null;
+  foto: string;
   edad?: string;
   objetivo?: string;
   alergias?: string[];

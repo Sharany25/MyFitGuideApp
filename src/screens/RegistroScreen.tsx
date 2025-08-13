@@ -13,14 +13,13 @@ import {
   ActivityIndicator,
   TextInput,
   Animated,
+  Image, // Importar Image para la previsualización
 } from "react-native";
 import { Checkbox } from "react-native-paper";
-import * as Location from "expo-location";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/StackNavigator";
 import ProgressStepper from "../components/ProgressStepper";
-import UbicacionAlerta from "../components/UbicacionAlerta";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import CustomToast from "../components/CustomToast";
 import { useRegistro } from "../hooks/useRegistro";
@@ -28,8 +27,9 @@ import { useUser } from "../context/UserContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from 'expo-blur';
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons"; // Importar Ionicons para el icono de cámara
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as ImagePicker from 'expo-image-picker'; // Importar ImagePicker
 
 const { width } = Dimensions.get("window");
 
@@ -65,11 +65,9 @@ const RegistroScreen: React.FC = () => {
   const [fechaNacimiento, setFechaNacimiento] = useState("");
   const [fechaDate, setFechaDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [ubicacion, setUbicacion] = useState<string | null>(null);
   const [aceptoTerminos, setAceptoTerminos] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [loadingLocation, setLoadingLocation] = useState(false);
-  const [showUbicacionModal, setShowUbicacionModal] = useState(false);
+  const [foto, setFoto] = useState<string>(''); // Estado para la URI de la foto seleccionada
 
   const {
     registrar,
@@ -90,22 +88,24 @@ const RegistroScreen: React.FC = () => {
     }).start();
   }, []);
 
-  const solicitarUbicacion = async () => {
-    setLoadingLocation(true);
-    const { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== "granted") {
-      setShowUbicacionModal(true);
-      setLoadingLocation(false);
+  const pickImage = async () => {
+    // Solicitar permisos de acceso a la galería
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      alert('Se necesita permiso para acceder a la galería de fotos.');
       return;
     }
-    try {
-      await Location.getCurrentPositionAsync({});
-      setUbicacion("OK");
-      setShowUbicacionModal(true);
-    } catch {
-      setShowUbicacionModal(true);
-    } finally {
-      setLoadingLocation(false);
+
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1], // Aspecto cuadrado para la foto de perfil
+      quality: 0.5, // Reducir la calidad para un mejor rendimiento
+      base64: false, // No necesitamos base64 si vamos a subir la imagen a un servicio de almacenamiento
+    });
+
+    if (!result.canceled) {
+      setFoto(result.assets[0].uri); // Guardar la URI de la imagen seleccionada
     }
   };
 
@@ -136,12 +136,19 @@ const RegistroScreen: React.FC = () => {
 
     const emailToSend = correo.toLowerCase();
 
+    // Aquí, si necesitas subir la imagen a un servidor de almacenamiento de archivos (ej. Cloudinary, Firebase Storage)
+    // antes de enviar la URI a tu backend NestJS, la lógica iría aquí.
+    // Por ahora, solo se envía la URI local. Tu backend NestJS debería ser capaz de manejar
+    // una URI de imagen (si es una URL pública) o un base64 si decides cambiarlo.
+    // Si la foto es local (file://), tu backend NO la recibirá directamente.
+    // Necesitarías subirla a un servicio de almacenamiento y obtener una URL pública.
+
     const userId = await registrar({
       nombre,
       correoElectronico: emailToSend,
       contraseña: contrasena,
       fechaNacimiento: fechaISO,
-      ubicacion,
+      foto, // Incluye la URI de la foto en el payload de registro
     });
 
     if (userId) {
@@ -150,7 +157,7 @@ const RegistroScreen: React.FC = () => {
         nombre,
         correoElectronico: emailToSend,
         fechaNacimiento: fechaISO,
-        ubicacion: ubicacion ?? undefined,
+        foto, // Incluye la foto en el perfil de usuario almacenado localmente
       };
 
       dispatch({ type: "SET_USER", payload: userProfile });
@@ -229,9 +236,20 @@ const RegistroScreen: React.FC = () => {
                     />
                   )}
 
-                  <TouchableOpacity onPress={solicitarUbicacion} style={styles.outlineButton}>
-                    {loadingLocation ? <ActivityIndicator color={PALETTE.primary} /> : <Text style={styles.outlineButtonText}>Activar ubicación</Text>}
-                  </TouchableOpacity>
+                  {/* Campo para seleccionar la foto */}
+                  <View style={styles.photoPickerContainer}>
+                    <Text style={styles.label}>Foto de Perfil (opcional)</Text>
+                    <TouchableOpacity onPress={pickImage} style={styles.photoPickerButton}>
+                      {foto ? (
+                        <Image source={{ uri: foto }} style={styles.photoPreview} />
+                      ) : (
+                        <View style={styles.photoPlaceholder}>
+                          <Ionicons name="camera-outline" size={40} color={PALETTE.text_secondary} />
+                          <Text style={styles.photoPlaceholderText}>Seleccionar Foto</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  </View>
 
                   <View style={styles.checkboxContainer}>
                     <Checkbox.Android status={aceptoTerminos ? "checked" : "unchecked"} onPress={() => setAceptoTerminos(!aceptoTerminos)} color={PALETTE.primary} uncheckedColor={PALETTE.text_secondary} />
@@ -250,8 +268,6 @@ const RegistroScreen: React.FC = () => {
                 </BlurView>
             </Animated.View>
           </ScrollView>
-
-          <UbicacionAlerta visible={showUbicacionModal} onClose={() => setShowUbicacionModal(false)} onConfirm={() => setShowUbicacionModal(false)} />
         </KeyboardAvoidingView>
       </SafeAreaView>
     </LinearGradient>
@@ -382,6 +398,35 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
+  // Nuevos estilos para el selector de foto
+  photoPickerContainer: {
+    marginBottom: 15,
+    alignItems: 'center',
+  },
+  photoPickerButton: {
+    width: width * 0.4,
+    height: width * 0.4,
+    borderRadius: (width * 0.4) / 2,
+    backgroundColor: PALETTE.inactive,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: PALETTE.border,
+  },
+  photoPreview: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  photoPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoPlaceholderText: {
+    color: PALETTE.text_secondary,
+    fontSize: 14,
+    marginTop: 5,
+  },
 });
-
 export default RegistroScreen;

@@ -11,6 +11,7 @@ import {
   Dimensions,
   SafeAreaView,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -167,11 +168,55 @@ const HomeScreen: React.FC = () => {
 
 const Header = ({ user, onLogoutPress }: { user: any, onLogoutPress: () => void }) => {
     const navigation = useNavigation<NavigationProp>();
+    const glowAnim = useRef(new Animated.Value(0)).current;
+
+    useEffect(() => {
+        Animated.loop(
+            Animated.sequence([
+                Animated.timing(glowAnim, {
+                    toValue: 1,
+                    duration: 1500,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(glowAnim, {
+                    toValue: 0,
+                    duration: 1500,
+                    useNativeDriver: true,
+                }),
+            ])
+        ).start();
+    }, [glowAnim]);
+
+    const animatedShadowOpacity = glowAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [0.3, 0.8],
+    });
+
+    const animatedShadowRadius = glowAnim.interpolate({
+        inputRange: [0, 1],
+        outputRange: [4, 10],
+    });
+
     return(
         <View style={styles.headerContainer}>
-            <TouchableOpacity onPress={() => navigation.navigate('Perfil', { userId: user?.userId })}>
+            <TouchableOpacity 
+                onPress={() => navigation.navigate('Perfil', { userId: user?.userId })} 
+                style={[
+                    styles.avatarButtonWrapper, 
+                    {
+                        shadowOpacity: animatedShadowOpacity,
+                        shadowRadius: animatedShadowRadius as any, // Corrección aquí
+                        elevation: animatedShadowRadius as any, // Corrección aquí
+                    }
+                ]} 
+                activeOpacity={0.7}
+            >
                 <LinearGradient colors={['#2CFD89', '#00A3FF']} style={styles.avatar}>
-                    <Ionicons name="person-outline" size={width * 0.1} color="#1D2A32" />
+                    {user?.foto ? (
+                        <Image source={{ uri: user.foto }} style={styles.avatarImageHeader} />
+                    ) : (
+                        <View style={styles.avatarFallback} /> 
+                    )}
                 </LinearGradient>
             </TouchableOpacity>
             <View style={styles.headerTextContainer}>
@@ -262,12 +307,30 @@ const styles = StyleSheet.create({
       paddingBottom: 25,
       marginTop: 10,
   },
-  avatar: {
+  avatarButtonWrapper: { 
+      position: 'relative', 
       width: width * 0.15,
       height: width * 0.15,
       borderRadius: (width * 0.15) / 2,
+      shadowColor: PALETTE.primary,
+      shadowOffset: { width: 0, height: 0 },
+  },
+  avatar: {
+      width: '100%', 
+      height: '100%', 
+      borderRadius: (width * 0.15) / 2,
       justifyContent: 'center',
       alignItems: 'center',
+      overflow: 'hidden',
+  },
+  avatarImageHeader: {
+    width: '100%',
+    height: '100%',
+    borderRadius: (width * 0.15) / 2,
+  },
+  avatarFallback: {
+    width: '100%',
+    height: '100%',
   },
   headerTextContainer: {
       flex: 1,

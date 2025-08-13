@@ -6,7 +6,7 @@ export interface RegistroPayload {
   correoElectronico: string;
   contraseña: string;
   fechaNacimiento: string;
-  ubicacion: string | null;
+  foto?: string;
 }
 
 export const useRegistro = () => {
@@ -20,7 +20,7 @@ export const useRegistro = () => {
     setError(false);
 
     try {
-      const response = await fetch(`${API_URL}Usuarios`, {
+      const response = await fetch(`${API_URL}/usuarios`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -28,6 +28,8 @@ export const useRegistro = () => {
 
       if (!response.ok) {
         setError(true);
+        const errorData = await response.json();
+        console.error("Error en el registro:", errorData);
         return null;
       }
 
@@ -35,7 +37,8 @@ export const useRegistro = () => {
       setSuccess(true);
 
       return data._id || data.idUsuario || data.id || null;
-    } catch {
+    } catch (e) {
+      console.error("Error de red o desconocido en el registro:", e);
       setError(true);
       return null;
     } finally {
