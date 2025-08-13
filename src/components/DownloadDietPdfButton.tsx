@@ -29,10 +29,17 @@ const DownloadDietPdfButton: React.FC<Props> = ({
   const [loading, setLoading] = React.useState(false);
 
   const handleDownload = async () => {
-    if (!data?.resultado?.semana) return;
+    if (!data?.resultado?.semana || data.resultado.semana.length === 0) {
+      Alert.alert('Error', 'No hay datos de dieta para generar el PDF.');
+      return;
+    }
     setLoading(true);
 
     const semana = data.resultado.semana;
+    const fechaGeneracion = data.creado ? new Date(data.creado).toLocaleString() : 'Fecha no disponible';
+
+    const displayNombreUsuario = nombreUsuario || 'Usuario Desconocido';
+    const nombreLimpio = displayNombreUsuario.replace(/[^\w]/gi, '');
 
     const html = `
 <!DOCTYPE html>
@@ -179,30 +186,30 @@ const DownloadDietPdfButton: React.FC<Props> = ({
     <div class="cover-content">
       <div class="cover-title">Plan semanal de dieta</div>
       <div class="cover-desc">Tu plan personalizado generado con MyFitGuide</div>
-      <div class="nombre-user">Usuario: ${nombreUsuario}</div>
-      <div class="fecha">🕒 Generada el: ${new Date(data.creado).toLocaleString()}</div>
+      <div class="nombre-user">${displayNombreUsuario}</div>
+      <div class="fecha">🕒 Generada el: ${fechaGeneracion}</div>
     </div>
   </div>
   ${semana.map((dia: any, idx: number) => `
     <div class="main-card">
-      <div class="dia-title">${dia.dia}</div>
+      <div class="dia-title">${dia.dia || `Día ${idx + 1}`}</div>
       <div class="macros-row">
-        <div class="macro-box"><div class="macro-label">Calorías</div><div class="macro-val macro-cal">${dia.totales_dia.calorias} kcal</div></div>
-        <div class="macro-box"><div class="macro-label">Proteínas</div><div class="macro-val macro-prot">${dia.totales_dia.proteinas}g</div></div>
-        <div class="macro-box"><div class="macro-label">Carbohidratos</div><div class="macro-val macro-carb">${dia.totales_dia.carbohidratos}g</div></div>
-        <div class="macro-box"><div class="macro-label">Grasas</div><div class="macro-val macro-fat">${dia.totales_dia.grasas}g</div></div>
+        <div class="macro-box"><div class="macro-label">Calorías</div><div class="macro-val macro-cal">${dia.totales_dia?.calorias ?? 0} kcal</div></div>
+        <div class="macro-box"><div class="macro-label">Proteínas</div><div class="macro-val macro-prot">${dia.totales_dia?.proteinas ?? 0}g</div></div>
+        <div class="macro-box"><div class="macro-label">Carbohidratos</div><div class="macro-val macro-carb">${dia.totales_dia?.carbohidratos ?? 0}g</div></div>
+        <div class="macro-box"><div class="macro-label">Grasas</div><div class="macro-val macro-fat">${dia.totales_dia?.grasas ?? 0}g</div></div>
       </div>
       <div class="comidas-block">
         <div class="comidas-label">Comidas:</div>
-        ${dia.comidas.map((comida: any) => `
+        ${(dia.comidas || []).map((comida: any) => `
           <div class="comida-item">
             <div class="comida-row">
               <div>
-                <span class="comida-tipo">${comida.tipo}</span>
+                <span class="comida-tipo">${comida.tipo || 'N/D'}</span>
                 <span class="platillo-nombre">
                   ${typeof comida.platillo === 'string'
                     ? comida.platillo
-                    : comida.platillo?.platillo || ''}
+                    : comida.platillo?.platillo || 'Platillo N/D'}
                 </span>
               </div>
               <div class="costo">Costo: $${comida.costo || comida.platillo?.costo || 0} MXN</div>
@@ -211,8 +218,8 @@ const DownloadDietPdfButton: React.FC<Props> = ({
             <div class="ingredientes-list">
               <ul>
                 ${
-                  (typeof comida.platillo === 'string' ? comida.ingredientes : comida.platillo?.ingredientes || [])
-                    .map((ing: any) => `<li>${ing.nombre}: ${ing.cantidad}</li>`).join('')
+                  ((typeof comida.platillo === 'string' ? comida.ingredientes : comida.platillo?.ingredientes) || [])
+                    .map((ing: any) => `<li>${ing.nombre || 'N/D'}: ${ing.cantidad || 'N/D'}</li>`).join('')
                 }
               </ul>
             </div>
@@ -230,7 +237,6 @@ const DownloadDietPdfButton: React.FC<Props> = ({
 
     try {
       const { uri } = await Print.printToFileAsync({ html });
-      const nombreLimpio = nombreUsuario.replace(/[^\w]/gi, '');
       const nombreArchivo = `Dieta-${nombreLimpio}.pdf`;
       const destPath =
         Platform.OS === 'ios'
@@ -245,7 +251,8 @@ const DownloadDietPdfButton: React.FC<Props> = ({
       }
     } catch (e) {
       setLoading(false);
-      Alert.alert('Error', 'No se pudo generar o compartir el PDF');
+      console.error("Error al generar o compartir PDF:", e);
+      Alert.alert('Error', 'No se pudo generar o compartir el PDF. Revisa la consola para más detalles.');
     }
   };
 

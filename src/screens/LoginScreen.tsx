@@ -14,7 +14,7 @@ import {
   TextInput,
   Animated,
 } from "react-native";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, Control, FieldErrors } from "react-hook-form";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -46,7 +46,21 @@ type FormData = {
   password: string;
 };
 
-const CustomInput = ({ control, name, rules, placeholder, iconName, errors, secureTextEntry = false, keyboardType = 'default', autoCapitalize = 'sentences', rightIcon, rightIconPress }: any) => {
+interface CustomInputProps {
+  control: Control<FormData, any>;
+  name: keyof FormData;
+  rules: Record<string, any>;
+  placeholder: string;
+  iconName: string;
+  errors: FieldErrors<FormData>;
+  secureTextEntry?: boolean;
+  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  rightIcon?: string;
+  rightIconPress?: () => void;
+}
+
+const CustomInput: React.FC<CustomInputProps> = ({ control, name, rules, placeholder, iconName, errors, secureTextEntry = false, keyboardType = 'default', autoCapitalize = 'sentences', rightIcon, rightIconPress }) => {
   const hasError = errors[name];
   const [isFocused, setIsFocused] = useState(false);
 
@@ -59,10 +73,10 @@ const CustomInput = ({ control, name, rules, placeholder, iconName, errors, secu
         render={({ field: { onChange, onBlur, value } }) => (
           <View>
             <View style={[styles.inputContainer, hasError ? styles.inputErrorBorder : isFocused && styles.inputFocusedBorder]}>
-              <Feather name={iconName} size={20} color={hasError ? PALETTE.danger : isFocused ? PALETTE.primary : PALETTE.text_secondary} style={styles.inputIcon} />
+              <Feather name={iconName as any} size={20} color={hasError ? PALETTE.danger : isFocused ? PALETTE.primary : PALETTE.text_secondary} style={styles.inputIcon} />
               <TextInput
                 placeholder={placeholder}
-                value={value}
+                value={value as string}
                 onChangeText={onChange}
                 onBlur={() => { onBlur(); setIsFocused(false); }}
                 onFocus={() => setIsFocused(true)}
@@ -74,7 +88,7 @@ const CustomInput = ({ control, name, rules, placeholder, iconName, errors, secu
               />
               {rightIcon && (
                 <TouchableOpacity onPress={rightIconPress} style={styles.rightIcon}>
-                  <Feather name={rightIcon} size={22} color={PALETTE.text_secondary} />
+                  <Feather name={rightIcon as any} size={22} color={PALETTE.text_secondary} />
                 </TouchableOpacity>
               )}
             </View>
@@ -93,6 +107,7 @@ const LoginScreen: React.FC = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [successToastMessage, setSuccessToastMessage] = useState("¡Login exitoso!");
 
   const { login, loading, error } = useLogin();
   const { dispatch } = useUser();
@@ -157,6 +172,7 @@ const LoginScreen: React.FC = () => {
       dispatch({ type: 'SET_USER', payload: userProfile });
       await AsyncStorage.setItem("userProfile", JSON.stringify(userProfile));
 
+      setSuccessToastMessage(`¡Bienvenido, ${userProfile.nombre || 'usuario'}!`);
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
@@ -169,7 +185,7 @@ const LoginScreen: React.FC = () => {
 
   return (
     <>
-      <SuccessToast message="¡Login exitoso!" visible={showSuccess} onHide={() => setShowSuccess(false)} />
+      <SuccessToast message={successToastMessage} visible={showSuccess} onHide={() => setShowSuccess(false)} />
       <ErrorToast message={error || "Correo o contraseña incorrectos"} visible={showError} onHide={() => setShowError(false)} />
 
       <LinearGradient colors={PALETTE.background_gradient} style={styles.base}>

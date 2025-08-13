@@ -205,8 +205,8 @@ const Header = ({ user, onLogoutPress }: { user: any, onLogoutPress: () => void 
                     styles.avatarButtonWrapper, 
                     {
                         shadowOpacity: animatedShadowOpacity,
-                        shadowRadius: animatedShadowRadius as any, // Corrección aquí
-                        elevation: animatedShadowRadius as any, // Corrección aquí
+                        shadowRadius: animatedShadowRadius as any,
+                        elevation: animatedShadowRadius as any,
                     }
                 ]} 
                 activeOpacity={0.7}

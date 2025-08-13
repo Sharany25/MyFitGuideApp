@@ -24,6 +24,7 @@ import { API_URL } from '../api/api';
 import DownloadDietPdfButton from '../components/DownloadDietPdfButton';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { useUser } from '../context/UserContext'; // Importar useUser
 
 const { width, height } = Dimensions.get('window');
 
@@ -38,13 +39,11 @@ const PALETTE = {
   carbs: '#FFC107',
   fats: '#E91E63',
   inactive: 'rgba(255, 255, 255, 0.1)',
-  pin_red: '#F44336', // Color for the pin icon
+  pin_red: '#F44336',
 };
 
 const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const alimentos = ['food-variant', 'food-apple', 'food-drumstick', 'food-fork-drink', 'water'] as const;
-
-// --- Componentes Modulares ---
 
 const LoadingDieta = () => {
   const spinValue = useRef(new Animated.Value(0)).current;
@@ -158,15 +157,14 @@ const MealCard = ({ comida, index, editState, favoritoState, handlers, animation
   );
 };
 
-// --- Componente Principal ---
-
 const DietaIAGenerada: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const { userId, nombre } = route.params as { userId: string; nombre: string };
+  const { userId, nombre: nombreFromRoute } = route.params as { userId: string; nombre: string }; // Renombrar 'nombre' de route.params
   const { obtenerDietaPorUsuario, loading, error } = useDieta();
   const { ComidasFavoritas } = useFavoritos();
+  const { state: userContextState } = useUser(); // Obtener el estado del UserContext
 
   const [data, setData] = useState<any>(null);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
@@ -275,8 +273,10 @@ const DietaIAGenerada: React.FC = () => {
 
   const { semana } = data.resultado;
   const diaActual = semana[selectedDayIndex];
-  const nombreUsuario = data?.usuario?.nombre ?? 'Usuario';
-
+  
+  // Obtener el nombre del usuario de UserContext o de route.params como fallback
+  const nombreUsuarioParaPdf = userContextState.user?.nombre || nombreFromRoute || 'Usuario';
+  
   return (
     <LinearGradient colors={PALETTE.background_gradient} style={styles.base}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -287,7 +287,7 @@ const DietaIAGenerada: React.FC = () => {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <HeaderActions onSummaryPress={() => navigation.navigate('ResumenSemanalDieta', { userId })} data={data} nombreUsuario={nombreUsuario} />
+          <HeaderActions onSummaryPress={() => navigation.navigate('ResumenSemanalDieta', { userId })} data={data} nombreUsuario={nombreUsuarioParaPdf} />
           <DaySelector semana={semana} selectedDayIndex={selectedDayIndex} onSelectDay={setSelectedDayIndex} />
           <Text style={styles.sectionTitle}>Comidas del día</Text>
 
