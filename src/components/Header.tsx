@@ -30,7 +30,7 @@ const PALETTE = {
 
 const { width } = Dimensions.get("window");
 
-const Logo = require("../../assets/Logo.png");
+const Logo = require("../../assets/FondoNuevo.jpg");
 
 type User = {
   userId: string;
@@ -47,7 +47,6 @@ const Header: React.FC<HeaderProps> = ({ user, onLogoutPress }) => {
   const navigation = useNavigation<any>();
   const [menuVisible, setMenuVisible] = useState(false);
   const menuAnim = useRef(new Animated.Value(0)).current;
-  const logoScaleAnim = useRef(new Animated.Value(1)).current; // Animación para la escala del logo
 
   useEffect(() => {
     Animated.timing(menuAnim, {
@@ -95,34 +94,12 @@ const Header: React.FC<HeaderProps> = ({ user, onLogoutPress }) => {
     outputRange: [4, 10],
   });
 
-  // Funciones para la animación del logo al presionar
-  const handleLogoPressIn = () => {
-    Animated.spring(logoScaleAnim, {
-      toValue: 0.9,
-      useNativeDriver: true,
-    }).start();
-  };
-
-  const handleLogoPressOut = () => {
-    Animated.spring(logoScaleAnim, {
-      toValue: 1,
-      friction: 3, // Controla la "elasticidad"
-      tension: 40, // Controla la velocidad
-      useNativeDriver: true,
-    }).start();
-  };
-
   return (
     <View style={styles.headerContainer}>
       <View style={styles.topRow}>
         <View style={styles.leftHeaderSection}>
-          <TouchableOpacity
-            onPressIn={handleLogoPressIn}
-            onPressOut={handleLogoPressOut}
-            activeOpacity={1} // Elimina el feedback de opacidad por defecto de TouchableOpacity
-          >
-            <Animated.Image source={Logo} style={[styles.logo, { transform: [{ scale: logoScaleAnim }] }]} />
-          </TouchableOpacity>
+          {/* Imagen del logo ahora estática sin animación */}
+          <Image source={Logo} style={styles.logo} />
           <Text style={styles.appTitle}>MyFitGuide</Text>
         </View>
         <TouchableOpacity onPress={toggleMenu} style={styles.menuButton}>
@@ -232,7 +209,7 @@ const styles = StyleSheet.create({
     borderRadius: (width * 0.1) / 2,
   },
   appTitle: {
-    color: PALETTE.text_primary, // Cambiado de PALETTE.primary a PALETTE.text_primary (blanco)
+    color: PALETTE.text_primary,
     fontSize: width * 0.075,
     fontWeight: '900',
     letterSpacing: 0.5,
