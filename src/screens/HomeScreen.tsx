@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   Platform,
   StatusBar,
   Animated,
@@ -12,14 +11,17 @@ import {
   SafeAreaView,
   ActivityIndicator,
   Image,
+  TouchableOpacity,
 } from "react-native";
-import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useUser } from "../context/UserContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LogoutModal from "../components/LogoutModal";
 import { BlurView } from 'expo-blur';
+
+import Header from "../components/Header";
 
 const { width, height } = Dimensions.get("window");
 
@@ -68,7 +70,6 @@ const calculateBMI = (weight: string | null | undefined, height: string | null |
     return { bmi: 0, category: "N/D", color: PALETTE.text_secondary };
 };
 
-
 const HomeScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
   const { state, dispatch } = useUser();
@@ -115,24 +116,6 @@ const HomeScreen: React.FC = () => {
                     
                     <Dashboard user={user} bmiData={bmiData} />
 
-                    <View style={styles.actionsRow}>
-                        <ActionButton 
-                            icon={<MaterialCommunityIcons name="pin-outline" size={22} color={PALETTE.pin_red} />} 
-                            label="Favoritos" 
-                            onPress={() => navigation.navigate('Favoritos', { userId: user?.userId })} 
-                        />
-                        <ActionButton 
-                            icon={<Ionicons name="time-outline" size={22} color={PALETTE.primary} />} 
-                            label="Historial" 
-                            onPress={() => navigation.navigate('Historial', { userId: user?.userId })} 
-                        />
-                        <ActionButton 
-                            icon={<Ionicons name="map-outline" size={22} color={PALETTE.primary} />} 
-                            label="Cercanos" 
-                            onPress={() => navigation.navigate('Map', { userId: user?.userId })} 
-                        />
-                    </View>
-
                     <View style={styles.infoCardsRow}>
                         <InfoCard
                             icon={<MaterialCommunityIcons name="food-apple-outline" size={width * 0.08} color={PALETTE.primary} />}
@@ -145,14 +128,6 @@ const HomeScreen: React.FC = () => {
                             desc="Entrenamientos adaptados a tus objetivos y preferencias."
                         />
                     </View>
-
-                    <TouchableOpacity
-                        style={styles.suggestionButton}
-                        onPress={() => navigation.navigate('QuejaSugerencia', { userId: user?.userId })}
-                    >
-                        <Ionicons name="chatbubble-ellipses-outline" size={20} color={PALETTE.text_secondary} />
-                        <Text style={styles.suggestionButtonText}>¿Tienes una queja o sugerencia?</Text>
-                    </TouchableOpacity>
                 </Animated.View>
             </ScrollView>
 
@@ -165,70 +140,6 @@ const HomeScreen: React.FC = () => {
     </LinearGradient>
   );
 };
-
-const Header = ({ user, onLogoutPress }: { user: any, onLogoutPress: () => void }) => {
-    const navigation = useNavigation<NavigationProp>();
-    const glowAnim = useRef(new Animated.Value(0)).current;
-
-    useEffect(() => {
-        Animated.loop(
-            Animated.sequence([
-                Animated.timing(glowAnim, {
-                    toValue: 1,
-                    duration: 1500,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(glowAnim, {
-                    toValue: 0,
-                    duration: 1500,
-                    useNativeDriver: true,
-                }),
-            ])
-        ).start();
-    }, [glowAnim]);
-
-    const animatedShadowOpacity = glowAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [0.3, 0.8],
-    });
-
-    const animatedShadowRadius = glowAnim.interpolate({
-        inputRange: [0, 1],
-        outputRange: [4, 10],
-    });
-
-    return(
-        <View style={styles.headerContainer}>
-            <TouchableOpacity 
-                onPress={() => navigation.navigate('Perfil', { userId: user?.userId })} 
-                style={[
-                    styles.avatarButtonWrapper, 
-                    {
-                        shadowOpacity: animatedShadowOpacity,
-                        shadowRadius: animatedShadowRadius as any,
-                        elevation: animatedShadowRadius as any,
-                    }
-                ]} 
-                activeOpacity={0.7}
-            >
-                <LinearGradient colors={['#2CFD89', '#00A3FF']} style={styles.avatar}>
-                    {user?.foto ? (
-                        <Image source={{ uri: user.foto }} style={styles.avatarImageHeader} />
-                    ) : (
-                        <View style={styles.avatarFallback} /> 
-                    )}
-                </LinearGradient>
-            </TouchableOpacity>
-            <View style={styles.headerTextContainer}>
-                <Text style={styles.greetingText}>¡Hola, {user?.nombre || 'Usuario'}!</Text>
-                <Text style={styles.sloganText}>Tu bienestar es nuestra meta.</Text>
-            </View>
-            <TouchableOpacity onPress={onLogoutPress} style={styles.logoutButton}>
-                <Ionicons name="exit-outline" size={28} color={PALETTE.danger} />
-            </TouchableOpacity>
-        </View>
-    )
-}
 
 const Dashboard = ({ user, bmiData }: { user: any, bmiData: any }) => {
     const v = (valor: any) => (valor !== undefined && valor !== null && valor !== '' ? valor : 'N/D');
@@ -286,7 +197,6 @@ const StatItem = ({ label, value }: { label: string, value: string }) => (
     </View>
 );
 
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -300,56 +210,6 @@ const styles = StyleSheet.create({
       flex: 1, 
       justifyContent: 'center', 
       alignItems: 'center' 
-  },
-  headerContainer: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingBottom: 25,
-      marginTop: 10,
-  },
-  avatarButtonWrapper: { 
-      position: 'relative', 
-      width: width * 0.15,
-      height: width * 0.15,
-      borderRadius: (width * 0.15) / 2,
-      shadowColor: PALETTE.primary,
-      shadowOffset: { width: 0, height: 0 },
-  },
-  avatar: {
-      width: '100%', 
-      height: '100%', 
-      borderRadius: (width * 0.15) / 2,
-      justifyContent: 'center',
-      alignItems: 'center',
-      overflow: 'hidden',
-  },
-  avatarImageHeader: {
-    width: '100%',
-    height: '100%',
-    borderRadius: (width * 0.15) / 2,
-  },
-  avatarFallback: {
-    width: '100%',
-    height: '100%',
-  },
-  headerTextContainer: {
-      flex: 1,
-      marginLeft: 15,
-  },
-  greetingText: {
-      color: PALETTE.text_primary,
-      fontSize: width * 0.065,
-      fontWeight: 'bold',
-  },
-  sloganText: {
-      color: PALETTE.text_secondary,
-      fontSize: width * 0.04,
-      marginTop: 2,
-  },
-  logoutButton: {
-      padding: 8,
-      backgroundColor: PALETTE.inactive,
-      borderRadius: 50,
   },
   dashboardContainer: {
       borderRadius: 25,

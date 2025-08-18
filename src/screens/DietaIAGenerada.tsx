@@ -24,7 +24,7 @@ import { API_URL } from '../api/api';
 import DownloadDietPdfButton from '../components/DownloadDietPdfButton';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { useUser } from '../context/UserContext'; // Importar useUser
+import { useUser } from '../context/UserContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -161,10 +161,10 @@ const DietaIAGenerada: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const { userId, nombre: nombreFromRoute } = route.params as { userId: string; nombre: string }; // Renombrar 'nombre' de route.params
+  const { userId, nombre: nombreFromRoute } = route.params as { userId: string; nombre: string };
   const { obtenerDietaPorUsuario, loading, error } = useDieta();
   const { ComidasFavoritas } = useFavoritos();
-  const { state: userContextState } = useUser(); // Obtener el estado del UserContext
+  const { state: userContextState } = useUser();
 
   const [data, setData] = useState<any>(null);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
@@ -274,7 +274,6 @@ const DietaIAGenerada: React.FC = () => {
   const { semana } = data.resultado;
   const diaActual = semana[selectedDayIndex];
   
-  // Obtener el nombre del usuario de UserContext o de route.params como fallback
   const nombreUsuarioParaPdf = userContextState.user?.nombre || nombreFromRoute || 'Usuario';
   
   return (

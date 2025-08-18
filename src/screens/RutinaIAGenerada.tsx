@@ -17,6 +17,8 @@ import { useRutina } from "../hooks/useRutina";
 import { useFavoritos } from "../hooks/useFavoritos";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from 'expo-blur';
+import { useRoute } from '@react-navigation/native';
+import DownloadRoutinePdfButton from "../components/DownloadRoutinePdfButton"; 
 
 const { width } = Dimensions.get("window");
 
@@ -63,15 +65,32 @@ const LoaderAlert = ({ text = "Cargando tu rutina...", sub = "Esto puede tardar 
   );
 };
 
+const HeaderActions = ({ onPdfPress, rutinaData, nombreUsuario, fechaGeneracionRutina }: any) => (
+  <View style={styles.headerRow}>
+    <DownloadRoutinePdfButton 
+        rutinaData={rutinaData} 
+        nombreUsuario={nombreUsuario} 
+        fechaGeneracionRutina={fechaGeneracionRutina}
+        style={styles.headerButton} 
+        title="PDF Rutina" 
+        iconSize={width * 0.05} 
+    />
+  </View>
+);
+
 const RutinaIAGenerada: React.FC = () => {
-  const { state } = useUser();
-  const userId = state.user?.userId || "";
+  const { state: userContextState } = useUser();
+  const userId = userContextState.user?.userId || "";
+  const nombreUsuario = userContextState.user?.nombre || 'Usuario';
   const { obtenerRutinaPorId, loading, error } = useRutina();
   const { getFavoritos, EjerciciosFavoritos } = useFavoritos();
+  const route = useRoute();
 
   const [rutinaData, setRutinaData] = useState<any[]>([]);
   const [selectedDiaIndex, setSelectedDiaIndex] = useState(0);
   const [favoritosLocal, setFavoritosLocal] = useState<{ [key: string]: boolean }>({});
+  const [fechaCreacionRutina, setFechaCreacionRutina] = useState<string | undefined>(undefined);
+
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -81,6 +100,7 @@ const RutinaIAGenerada: React.FC = () => {
       const result = await obtenerRutinaPorId(userId);
       if (result?.rutina?.rutina) {
         setRutinaData(result.rutina.rutina);
+        setFechaCreacionRutina(result.creado ? new Date(result.creado).toLocaleString() : undefined);
         Animated.timing(fadeAnim, { toValue: 1, duration: 600, useNativeDriver: true }).start();
       }
 
@@ -125,6 +145,14 @@ const RutinaIAGenerada: React.FC = () => {
             </ScrollView>
         </View>
 
+        <View style={styles.pdfButtonContainer}>
+            <HeaderActions 
+                rutinaData={rutinaData} 
+                nombreUsuario={nombreUsuario} 
+                fechaGeneracionRutina={fechaCreacionRutina}
+            />
+        </View>
+
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
             {rutinaDelDia ? (
                 <Animated.View style={{opacity: fadeAnim}}>
@@ -137,7 +165,6 @@ const RutinaIAGenerada: React.FC = () => {
                         <Ionicons name="information-circle-outline" size={22} color={PALETTE.text_secondary} />
                         <Text style={styles.infoBannerText}>Los pesos en cada ejercicio son independientes para cada persona.</Text>
                     </View>
-
                     {rutinaDelDia.ejercicios.map((ejercicio: any, i: number) => (
                         <LinearGradient key={i} colors={['rgba(44, 253, 137, 0.15)', 'rgba(0, 163, 255, 0.05)']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cardBorder}>
                             <BlurView intensity={50} tint="dark" style={styles.exerciseCard}>
@@ -161,7 +188,7 @@ const RutinaIAGenerada: React.FC = () => {
                 </Animated.View>
             ) : (
                 <View style={styles.centeredScreen}>
-                    <Text style={styles.errorText}>No hay rutina disponible.</Text>
+                    <Text style={styles.errorText}>No hay rutina disponible para este día.</Text>
                 </View>
             )}
         </ScrollView>
@@ -170,9 +197,13 @@ const RutinaIAGenerada: React.FC = () => {
   );
 };
 
-const StatItem = ({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap, label: string, value: string }) => (
+const StatItem = ({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap | keyof typeof MaterialCommunityIcons.glyphMap, label: string, value: string | number }) => (
     <View style={styles.statItem}>
-        <Ionicons name={icon} size={20} color={PALETTE.text_secondary} />
+        {icon === "repeat" || icon === "barbell" || icon === "timer-outline" ? (
+            <Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={20} color={PALETTE.text_secondary} />
+        ) : (
+            <MaterialCommunityIcons name={icon as keyof typeof MaterialCommunityIcons.glyphMap} size={20} color={PALETTE.text_secondary} />
+        )}
         <Text style={styles.statValue}>{value}</Text>
         <Text style={styles.statLabel}>{label}</Text>
     </View>
@@ -204,6 +235,33 @@ const styles = StyleSheet.create({
     color: PALETTE.danger,
     fontSize: width * 0.045,
     textAlign: 'center',
+  },
+  pdfButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginVertical: 15,
+    paddingHorizontal: width * 0.05,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    width: '100%',
+  },
+  headerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PALETTE.inactive,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 20
+  },
+  headerButtonText: {
+    color: PALETTE.text_primary,
+    fontWeight: '600',
+    marginLeft: 8,
+    fontSize: width * 0.035
   },
   daySelectorContainer: {
     backgroundColor: PALETTE.inactive,
