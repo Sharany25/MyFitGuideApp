@@ -30,7 +30,7 @@ const PALETTE = {
 
 const { width } = Dimensions.get("window");
 
-const Logo = require("../../assets/FondoNuevo.jpg");
+const Logo = require("../../assets/Logo.png");
 
 type User = {
   userId: string;
@@ -98,7 +98,6 @@ const Header: React.FC<HeaderProps> = ({ user, onLogoutPress }) => {
     <View style={styles.headerContainer}>
       <View style={styles.topRow}>
         <View style={styles.leftHeaderSection}>
-          {/* Imagen del logo ahora estática sin animación */}
           <Image source={Logo} style={styles.logo} />
           <Text style={styles.appTitle}>MyFitGuide</Text>
         </View>
@@ -150,7 +149,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogoutPress }) => {
             }]
           }
         ]}>
-          <BlurView intensity={100} tint="dark" style={styles.menuBlurBackground}>
+          <BlurView intensity={90} tint="dark" style={styles.menuBlurBackground}>
             <TouchableOpacity onPress={() => handleMenuItemPress('Favoritos')} style={styles.menuItem}>
               <MaterialCommunityIcons name="pin-outline" size={20} color={PALETTE.pin_red} />
               <Text style={styles.menuItemText}>Favoritos</Text>
@@ -161,7 +160,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogoutPress }) => {
             </TouchableOpacity>
             <TouchableOpacity onPress={() => handleMenuItemPress('Map')} style={styles.menuItem}>
               <Ionicons name="map-outline" size={20} color={PALETTE.primary} />
-              <Text style={styles.menuItemText}>Gym cercanos</Text>
+              <Text style={styles.menuItemText}>Lugares cercanos</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => handleMenuItemPress('QuejaSugerencia')} style={styles.menuItem}>
               <Ionicons name="chatbubble-ellipses-outline" size={20} color={PALETTE.text_secondary} />
@@ -210,12 +209,12 @@ const styles = StyleSheet.create({
   },
   appTitle: {
     color: PALETTE.text_primary,
-    fontSize: width * 0.075,
+    fontSize: width * 0.08,
     fontWeight: '900',
-    letterSpacing: 0.5,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
+    textShadowOffset: { width: 1.5, height: 1.5 },
+    textShadowRadius: 3,
   },
   menuButton: {
     padding: 8,
@@ -271,7 +270,7 @@ const styles = StyleSheet.create({
     top: 50,
     right: 0,
     width: width * 0.55,
-    backgroundColor: 'rgba(29, 42, 50, 0.95)',
+    backgroundColor: PALETTE.background_gradient[0],
     borderRadius: 15,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -286,6 +285,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: PALETTE.border,
+    backgroundColor: 'rgba(29, 42, 50, 0.7)',
   },
   menuItem: {
     flexDirection: 'row',
