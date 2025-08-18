@@ -47,6 +47,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogoutPress }) => {
   const navigation = useNavigation<any>();
   const [menuVisible, setMenuVisible] = useState(false);
   const menuAnim = useRef(new Animated.Value(0)).current;
+  const logoScaleAnim = useRef(new Animated.Value(1)).current; // Animación para la escala del logo
 
   useEffect(() => {
     Animated.timing(menuAnim, {
@@ -94,11 +95,34 @@ const Header: React.FC<HeaderProps> = ({ user, onLogoutPress }) => {
     outputRange: [4, 10],
   });
 
+  // Funciones para la animación del logo al presionar
+  const handleLogoPressIn = () => {
+    Animated.spring(logoScaleAnim, {
+      toValue: 0.9,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleLogoPressOut = () => {
+    Animated.spring(logoScaleAnim, {
+      toValue: 1,
+      friction: 3, // Controla la "elasticidad"
+      tension: 40, // Controla la velocidad
+      useNativeDriver: true,
+    }).start();
+  };
+
   return (
     <View style={styles.headerContainer}>
       <View style={styles.topRow}>
         <View style={styles.leftHeaderSection}>
-          <Image source={Logo} style={styles.logo} />
+          <TouchableOpacity
+            onPressIn={handleLogoPressIn}
+            onPressOut={handleLogoPressOut}
+            activeOpacity={1} // Elimina el feedback de opacidad por defecto de TouchableOpacity
+          >
+            <Animated.Image source={Logo} style={[styles.logo, { transform: [{ scale: logoScaleAnim }] }]} />
+          </TouchableOpacity>
           <Text style={styles.appTitle}>MyFitGuide</Text>
         </View>
         <TouchableOpacity onPress={toggleMenu} style={styles.menuButton}>
@@ -149,18 +173,18 @@ const Header: React.FC<HeaderProps> = ({ user, onLogoutPress }) => {
             }]
           }
         ]}>
-          <BlurView intensity={80} tint="dark" style={styles.menuBlurBackground}>
+          <BlurView intensity={100} tint="dark" style={styles.menuBlurBackground}>
             <TouchableOpacity onPress={() => handleMenuItemPress('Favoritos')} style={styles.menuItem}>
               <MaterialCommunityIcons name="pin-outline" size={20} color={PALETTE.pin_red} />
               <Text style={styles.menuItemText}>Favoritos</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => handleMenuItemPress('Historial')} style={styles.menuItem}>
               <Ionicons name="time-outline" size={20} color={PALETTE.primary} />
-              <Text style={styles.menuItemText}>Historial</Text>
+              <Text style={styles.menuItemText}>Historial de cambios</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => handleMenuItemPress('Map')} style={styles.menuItem}>
               <Ionicons name="map-outline" size={20} color={PALETTE.primary} />
-              <Text style={styles.menuItemText}>Cercanos</Text>
+              <Text style={styles.menuItemText}>Gym cercanos</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => handleMenuItemPress('QuejaSugerencia')} style={styles.menuItem}>
               <Ionicons name="chatbubble-ellipses-outline" size={20} color={PALETTE.text_secondary} />
@@ -208,9 +232,13 @@ const styles = StyleSheet.create({
     borderRadius: (width * 0.1) / 2,
   },
   appTitle: {
-    color: PALETTE.text_primary,
-    fontSize: width * 0.065,
-    fontWeight: 'bold',
+    color: PALETTE.text_primary, // Cambiado de PALETTE.primary a PALETTE.text_primary (blanco)
+    fontSize: width * 0.075,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 2,
   },
   menuButton: {
     padding: 8,
@@ -266,7 +294,7 @@ const styles = StyleSheet.create({
     top: 50,
     right: 0,
     width: width * 0.55,
-    backgroundColor: 'transparent',
+    backgroundColor: 'rgba(29, 42, 50, 0.95)',
     borderRadius: 15,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -285,14 +313,14 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14, // Aumenta el padding vertical para más espacio
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: PALETTE.inactive,
   },
   menuItemText: {
     color: PALETTE.text_primary,
-    fontSize: width * 0.042, // Aumenta el tamaño de la fuente
-    marginLeft: 12, // Ajusta el margen para más espacio
+    fontSize: width * 0.042,
+    marginLeft: 12,
   },
 });
 
