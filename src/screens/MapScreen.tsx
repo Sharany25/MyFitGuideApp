@@ -20,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
@@ -35,7 +36,7 @@ const PALETTE = {
 
 const PEXELS_API_KEY = "Y2SubFuD5dpJLdWZLSxS71D9Vr0swU5t2m9h3AQRpYSP91yam0HbjrmJ";
 
-const getGymImageFromPexels = async () => {
+const getGymImageFromPexels = async (): Promise<string> => {
   try {
     const response = await fetch("https://api.pexels.com/v1/search?query=gym%20fitness&per_page=20", {
       headers: { Authorization: PEXELS_API_KEY },
@@ -47,11 +48,12 @@ const getGymImageFromPexels = async () => {
     }
     return "https://placehold.co/600x400/1D2A32/FFFFFF?text=Gimnasio";
   } catch (error) {
+    console.error("Error al obtener imagen de gimnasio de Pexels:", error);
     return "https://placehold.co/600x400/1D2A32/FFFFFF?text=Gimnasio";
   }
 };
 
-const getParkImageFromPexels = async () => {
+const getParkImageFromPexels = async (): Promise<string> => {
   try {
     const response = await fetch("https://api.pexels.com/v1/search?query=park%20nature&per_page=20", {
       headers: { Authorization: PEXELS_API_KEY },
@@ -63,6 +65,7 @@ const getParkImageFromPexels = async () => {
     }
     return "https://placehold.co/600x400/263c3f/FFFFFF?text=Parque";
   } catch (error) {
+    console.error("Error al obtener imagen de parque de Pexels:", error);
     return "https://placehold.co/600x400/263c3f/FFFFFF?text=Parque";
   }
 };
@@ -86,44 +89,62 @@ export default function MapScreen() {
   const [selectedItem, setSelectedItem] = useState<MapItem | null>(null);
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
   const [routeLoading, setRouteLoading] = useState(false);
-  const [showUbicacionAlerta, setShowUbicacionAlerta] = useState(true);
+  const [showUbicacionAlerta, setShowUbicacionAlerta] = useState(false);
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
   const cardAnim = useRef(new Animated.Value(300)).current;
 
+  useEffect(() => {
+    const checkAlertStatus = async () => {
+      try {
+        const value = await AsyncStorage.getItem('@hasSeenLocationAlert');
+        if (value === null) {
+          setShowUbicacionAlerta(true);
+        } else {
+          pedirPermisoUbicacion();
+        }
+      } catch (error) {
+        console.error("Error al leer de AsyncStorage:", error);
+        setShowUbicacionAlerta(true);
+      }
+    };
+    checkAlertStatus();
+  }, []);
+
   const pedirPermisoUbicacion = async () => {
     setLoading(true);
     const { status } = await Location.requestForegroundPermissionsAsync();
+
     if (status !== "granted") {
       setLoading(false);
       return;
     }
-    const loc = await Location.getCurrentPositionAsync({});
-    setLocation(loc.coords);
 
-    const [nearbyGyms, nearbyParks] = await Promise.all([
-        fetchGymsNearby(loc.coords.latitude, loc.coords.longitude, 2000),
-        fetchParksNearby(loc.coords.latitude, loc.coords.longitude, 2000)
-    ]);
+    try {
+      const loc = await Location.getCurrentPositionAsync({});
+      setLocation(loc.coords);
 
-    const gymsWithImages = await Promise.all(
-      nearbyGyms.map(async (gym) => ({ ...gym, image: await getGymImageFromPexels(), type: 'gym' as const }))
-    );
-    setGyms(gymsWithImages);
+      const [nearbyGyms, nearbyParks] = await Promise.all([
+          fetchGymsNearby(loc.coords.latitude, loc.coords.longitude, 2000),
+          fetchParksNearby(loc.coords.latitude, loc.coords.longitude, 2000)
+      ]);
 
-    const parksWithImages = await Promise.all(
-      nearbyParks.map(async (park) => ({ ...park, image: await getParkImageFromPexels(), type: 'park' as const }))
-    );
-    setParks(parksWithImages);
+      const gymsWithImages = await Promise.all(
+        nearbyGyms.map(async (gym) => ({ ...gym, image: await getGymImageFromPexels(), type: 'gym' as const }))
+      );
+      setGyms(gymsWithImages);
 
-    setLoading(false);
-  };
+      const parksWithImages = await Promise.all(
+        nearbyParks.map(async (park) => ({ ...park, image: await getParkImageFromPexels(), type: 'park' as const }))
+      );
+      setParks(parksWithImages);
 
-  useEffect(() => {
-    if (!showUbicacionAlerta) {
-      pedirPermisoUbicacion();
+    } catch (error) {
+      console.error("Error al obtener la ubicación o datos cercanos:", error);
+    } finally {
+      setLoading(false);
     }
-  }, [showUbicacionAlerta]);
+  };
 
   useEffect(() => {
     if (selectedItem) {
@@ -139,44 +160,82 @@ export default function MapScreen() {
             useNativeDriver: true,
         }).start();
     }
-  }, [selectedItem]);
+  }, [selectedItem, cardAnim]);
 
   useEffect(() => {
     const getRoute = async () => {
-      if (!location || !selectedItem) return;
+      if (!location || !selectedItem) return; 
+
       setRouteLoading(true);
       try {
         const apiKey = "5b3ce3597851110001cf6248149e21a82dda488e80568b769c230794";
         const url = `https://api.openrouteservice.org/v2/directions/foot-walking?api_key=${apiKey}`;
-        const body = { coordinates: [[location.longitude, location.latitude], [selectedItem.lon, selectedItem.lat]] };
-        const response = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+        const body = { 
+            coordinates: [
+                [location.longitude, location.latitude],
+                [selectedItem.lon, selectedItem.lat]
+            ] 
+        };
+        const response = await fetch(url, { 
+            method: "POST", 
+            headers: { "Content-Type": "application/json" }, 
+            body: JSON.stringify(body) 
+        });
         const json = await response.json();
+        
         const coords = json.features[0]?.geometry?.coordinates?.map(([lng, lat]: [number, number]) => ({ latitude: lat, longitude: lng }));
         setRouteCoords(coords || []);
-        if (mapRef.current && coords) {
+
+        if (mapRef.current && coords && coords.length > 0) {
             mapRef.current.fitToCoordinates(coords, {
                 edgePadding: { top: 50, right: 50, bottom: 300, left: 50 },
                 animated: true,
             });
         }
       } catch (err) {
+        console.error("Error al obtener la ruta:", err);
         setRouteCoords([]);
+      } finally {
+        setRouteLoading(false);
       }
-      setRouteLoading(false);
     };
     if (selectedItem) getRoute();
     else setRouteCoords([]);
   }, [selectedItem, location]);
 
-  if (loading || !location) {
+  const handleCloseAlert = async () => {
+    setShowUbicacionAlerta(false);
+    setLoading(false);
+    await AsyncStorage.setItem('@hasSeenLocationAlert', 'true');
+  };
+
+  const handleConfirmAlert = async () => {
+    setShowUbicacionAlerta(false);
+    await AsyncStorage.setItem('@hasSeenLocationAlert', 'true');
+    pedirPermisoUbicacion();
+  };
+
+  if (showUbicacionAlerta) {
     return (
       <LinearGradient colors={PALETTE.background_gradient} style={styles.loading}>
         <UbicacionAlerta
           visible={showUbicacionAlerta}
-          onClose={() => { setShowUbicacionAlerta(false); setLoading(false); }}
-          onConfirm={() => setShowUbicacionAlerta(false)}
+          onClose={handleCloseAlert}
+          onConfirm={handleConfirmAlert}
         />
-        {!showUbicacionAlerta && <ActivityIndicator size="large" color={PALETTE.primary} />}
+      </LinearGradient>
+    );
+  }
+
+  if (loading || !location) {
+    return (
+      <LinearGradient colors={PALETTE.background_gradient} style={styles.loading}>
+        <ActivityIndicator size="large" color={PALETTE.primary} />
+        {!loading && !location && ( 
+          <Text style={{ color: PALETTE.text_secondary, marginTop: 20, textAlign: 'center', paddingHorizontal: 30 }}>
+            No se pudo obtener la ubicación. Por favor, asegúrate de que los servicios de ubicación estén activados y la app tenga permisos en la configuración de tu dispositivo.
+          </Text>
+        )}
       </LinearGradient>
     );
   }
@@ -186,6 +245,7 @@ export default function MapScreen() {
       <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backBtn, {top: insets.top + 10}]}>
         <Ionicons name="chevron-back" size={28} color={PALETTE.text_primary} />
       </TouchableOpacity>
+      
       <MapView
         ref={mapRef}
         style={styles.map}
@@ -200,26 +260,44 @@ export default function MapScreen() {
         customMapStyle={mapStyle}
       >
         {gyms.map((gym) => (
-          <Marker key={`gym-${gym.id}`} coordinate={{ latitude: gym.lat, longitude: gym.lon }} onPress={() => setSelectedItem(gym)}>
+          <Marker 
+            key={`gym-${gym.id}`} 
+            coordinate={{ latitude: gym.lat, longitude: gym.lon }} 
+            onPress={() => setSelectedItem(gym)}
+          >
             <View style={styles.markerContainer}>
                 <Image source={require("../../assets/logoMaps.png")} style={styles.markerImg} />
             </View>
           </Marker>
         ))}
         {parks.map((park) => (
-          <Marker key={`park-${park.id}`} coordinate={{ latitude: park.lat, longitude: park.lon }} onPress={() => setSelectedItem(park)}>
-             <View style={styles.markerContainer}>
+          <Marker 
+            key={`park-${park.id}`} 
+            coordinate={{ latitude: park.lat, longitude: park.lon }} 
+            onPress={() => setSelectedItem(park)}
+          >
+              <View style={styles.markerContainer}>
                 <Image source={require("../../assets/logoMapsPark.png")} style={styles.markerImg} />
             </View>
           </Marker>
         ))}
         {routeCoords.length > 1 && (
-          <Polyline coordinates={routeCoords} strokeColor={PALETTE.primary} strokeWidth={5} />
+          <Polyline 
+            coordinates={routeCoords} 
+            strokeColor={PALETTE.primary} 
+            strokeWidth={5} 
+          />
         )}
       </MapView>
 
       {selectedItem && (
-        <Animated.View style={[styles.infoCardContainer, { bottom: insets.bottom > 0 ? insets.bottom + 5 : 95, transform: [{translateY: cardAnim}] }]}>
+        <Animated.View style={[
+          styles.infoCardContainer, 
+          { 
+            bottom: insets.bottom > 0 ? insets.bottom + 5 : 95,
+            transform: [{translateY: cardAnim}] 
+          }
+        ]}>
             <BlurView intensity={50} tint="dark" style={styles.infoCard}>
               <TouchableOpacity style={styles.closeButton} onPress={() => setSelectedItem(null)}>
                 <Ionicons name="close" size={24} color={PALETTE.text_primary} />
@@ -232,12 +310,15 @@ export default function MapScreen() {
                 <Text style={styles.cardTitle}>{selectedItem.name}</Text>
                 <TouchableOpacity
                   onPress={() => {
-                    const url = `https://www.google.com/maps/dir/?api=1&origin=${location.latitude},${location.longitude}&destination=${selectedItem.lat},${selectedItem.lon}&travelmode=walking`;
+                    const url = `https://www.google.com/maps/dir/?api=1&origin=${location!.latitude},${location!.longitude}&destination=${selectedItem.lat},${selectedItem.lon}&travelmode=walking`; 
                     Linking.openURL(url);
                   }}
                 >
                     <LinearGradient colors={['#2CFD89', '#00A3FF']} style={styles.navigateButton}>
-                        {routeLoading ? <ActivityIndicator color={PALETTE.dark} /> : <Text style={styles.navigateButtonText}>Navegar en Google Maps</Text>}
+                        {routeLoading ? 
+                            <ActivityIndicator color={PALETTE.dark} /> : 
+                            <Text style={styles.navigateButtonText}>Navegar en Google Maps</Text>
+                        }
                     </LinearGradient>
                 </TouchableOpacity>
               </View>
@@ -288,7 +369,13 @@ const styles = StyleSheet.create({
   },
   cardImage: { width: "100%", height: 150 },
   cardContent: { padding: 20 },
-  cardTitle: { fontSize: width * 0.05, fontWeight: "bold", color: PALETTE.text_primary, textAlign: "center", marginBottom: 15 },
+  cardTitle: { 
+    fontSize: width * 0.05, 
+    fontWeight: "bold", 
+    color: PALETTE.text_primary, 
+    textAlign: "center", 
+    marginBottom: 15 
+  },
   navigateButton: { 
     borderRadius: 15, 
     paddingVertical: 15, 
@@ -300,8 +387,23 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 10,
   },
-  navigateButtonText: { color: PALETTE.dark, fontWeight: "bold", fontSize: 16 },
-  closeButton: { position: "absolute", top: 10, right: 10, zIndex: 10, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20, width: 32, height: 32, alignItems: "center", justifyContent: "center" },
+  navigateButtonText: { 
+    color: PALETTE.dark, 
+    fontWeight: "bold", 
+    fontSize: 16 
+  },
+  closeButton: { 
+    position: "absolute", 
+    top: 10, 
+    right: 10, 
+    zIndex: 10, 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    borderRadius: 20, 
+    width: 32, 
+    height: 32, 
+    alignItems: "center", 
+    justifyContent: "center" 
+  },
 });
 
 const mapStyle = [ { "elementType": "geometry", "stylers": [ { "color": "#242f3e" } ] }, { "elementType": "labels.text.fill", "stylers": [ { "color": "#746855" } ] }, { "elementType": "labels.text.stroke", "stylers": [ { "color": "#242f3e" } ] }, { "featureType": "administrative.locality", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "poi", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "poi.park", "elementType": "geometry", "stylers": [ { "color": "#263c3f" } ] }, { "featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [ { "color": "#6b9a76" } ] }, { "featureType": "road", "elementType": "geometry", "stylers": [ { "color": "#38414e" } ] }, { "featureType": "road", "elementType": "geometry.stroke", "stylers": [ { "color": "#212a37" } ] }, { "featureType": "road", "elementType": "labels.text.fill", "stylers": [ { "color": "#9ca5b3" } ] }, { "featureType": "road.highway", "elementType": "geometry", "stylers": [ { "color": "#746855" } ] }, { "featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [ { "color": "#1f2835" } ] }, { "featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [ { "color": "#f3d19c" } ] }, { "featureType": "transit", "elementType": "geometry", "stylers": [ { "color": "#2f3948" } ] }, { "featureType": "transit.station", "elementType": "labels.text.fill", "stylers": [ { "color": "#d59563" } ] }, { "featureType": "water", "elementType": "geometry", "stylers": [ { "color": "#17263c" } ] }, { "featureType": "water", "elementType": "labels.text.fill", "stylers": [ { "color": "#515c6d" } ] }, { "featureType": "water", "elementType": "labels.text.stroke", "stylers": [ { "color": "#17263c" } ] } ];
