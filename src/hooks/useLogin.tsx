@@ -8,7 +8,6 @@ interface LoginData {
   contraseña: string;
 }
 
-// Suponiendo que tu API regresa { user, token }
 export const useLogin = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +24,6 @@ export const useLogin = () => {
       });
       const result = await response.json();
 
-      // Este bloque depende de la estructura de tu backend
       if (response.ok && result) {
         dispatch({ type: 'SET_USER', payload: result });
         await AsyncStorage.setItem("userProfile", JSON.stringify(result));

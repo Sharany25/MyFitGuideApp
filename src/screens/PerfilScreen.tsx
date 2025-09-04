@@ -138,11 +138,9 @@ const PerfilScreen: React.FC = () => {
     { label: "Lesiones", value: v(rutina.lesiones) },
   ] : [];
 
+  // Función para manejar la edición de la foto de perfil
   const handleEditPhoto = () => {
-    // Aquí puedes agregar la lógica para seleccionar una nueva foto
-    // Por ejemplo, abrir la galería o la cámara del dispositivo.
     console.log("¡Editar foto de perfil!");
-    // navigation.navigate('ImagePickerScreen'); // Ejemplo de navegación a una pantalla de selección de imagen
   };
 
   return (
@@ -240,14 +238,14 @@ const styles = StyleSheet.create({
     marginTop: 50, 
   },
   avatarWrapper: {
-    position: 'relative', // Necesario para posicionar el icono de cámara absolutamente
+    position: 'relative',
     width: width * 0.28,
     height: width * 0.28,
     marginBottom: 15,
   },
   avatarContainer: {
-    width: '100%', // Ocupa todo el wrapper
-    height: '100%', // Ocupa todo el wrapper
+    width: '100%', 
+    height: '100%',
     borderRadius: (width * 0.28) / 2,
     backgroundColor: 'rgba(44, 253, 137, 0.1)',
     justifyContent: 'center',
@@ -270,8 +268,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Fondo oscuro semitransparente
-    borderRadius: (width * 0.08) / 2, // Hace el contenedor circular
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', 
+    borderRadius: (width * 0.08) / 2,
     padding: 5,
     borderWidth: 1,
     borderColor: PALETTE.primary,

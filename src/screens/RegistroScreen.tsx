@@ -13,7 +13,7 @@ import {
   ActivityIndicator,
   TextInput,
   Animated,
-  Image, // Importar Image para la previsualización
+  Image,
 } from "react-native";
 import { Checkbox } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
@@ -27,9 +27,9 @@ import { useUser } from "../context/UserContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from 'expo-blur';
-import { Feather, Ionicons } from "@expo/vector-icons"; // Importar Ionicons para el icono de cámara
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import * as ImagePicker from 'expo-image-picker'; // Importar ImagePicker
+import * as ImagePicker from 'expo-image-picker';
 
 const { width } = Dimensions.get("window");
 
@@ -67,7 +67,7 @@ const RegistroScreen: React.FC = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [aceptoTerminos, setAceptoTerminos] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [foto, setFoto] = useState<string>(''); // Estado para la URI de la foto seleccionada
+  const [foto, setFoto] = useState<string>('');
 
   const {
     registrar,
@@ -89,7 +89,6 @@ const RegistroScreen: React.FC = () => {
   }, []);
 
   const pickImage = async () => {
-    // Solicitar permisos de acceso a la galería
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       alert('Se necesita permiso para acceder a la galería de fotos.');
@@ -99,13 +98,13 @@ const RegistroScreen: React.FC = () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [1, 1], // Aspecto cuadrado para la foto de perfil
-      quality: 0.5, // Reducir la calidad para un mejor rendimiento
-      base64: false, // No necesitamos base64 si vamos a subir la imagen a un servicio de almacenamiento
+      aspect: [1, 1], 
+      quality: 0.5, 
+      base64: false,
     });
 
     if (!result.canceled) {
-      setFoto(result.assets[0].uri); // Guardar la URI de la imagen seleccionada
+      setFoto(result.assets[0].uri);
     }
   };
 
@@ -136,19 +135,12 @@ const RegistroScreen: React.FC = () => {
 
     const emailToSend = correo.toLowerCase();
 
-    // Aquí, si necesitas subir la imagen a un servidor de almacenamiento de archivos (ej. Cloudinary, Firebase Storage)
-    // antes de enviar la URI a tu backend NestJS, la lógica iría aquí.
-    // Por ahora, solo se envía la URI local. Tu backend NestJS debería ser capaz de manejar
-    // una URI de imagen (si es una URL pública) o un base64 si decides cambiarlo.
-    // Si la foto es local (file://), tu backend NO la recibirá directamente.
-    // Necesitarías subirla a un servicio de almacenamiento y obtener una URL pública.
-
     const userId = await registrar({
       nombre,
       correoElectronico: emailToSend,
       contraseña: contrasena,
       fechaNacimiento: fechaISO,
-      foto, // Incluye la URI de la foto en el payload de registro
+      foto,
     });
 
     if (userId) {
@@ -157,7 +149,7 @@ const RegistroScreen: React.FC = () => {
         nombre,
         correoElectronico: emailToSend,
         fechaNacimiento: fechaISO,
-        foto, // Incluye la foto en el perfil de usuario almacenado localmente
+        foto,
       };
 
       dispatch({ type: "SET_USER", payload: userProfile });
@@ -398,7 +390,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
-  // Nuevos estilos para el selector de foto
+
   photoPickerContainer: {
     marginBottom: 15,
     alignItems: 'center',

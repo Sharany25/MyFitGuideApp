@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: 20,
-    paddingTop: 60, // Space for the absolute back button
+    paddingTop: 60,
     paddingBottom: 40,
   },
   backBtn: {

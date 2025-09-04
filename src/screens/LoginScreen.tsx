@@ -27,6 +27,7 @@ import { obtenerPerfilCompleto } from "../hooks/usePerfil";
 import { MaterialIcons, Feather } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { appTheme } from "../themes/appTheme";
 
 const logo = require("../../assets/Logo.png");
 const { width, height } = Dimensions.get("window");
@@ -231,7 +232,7 @@ const LoginScreen: React.FC = () => {
 
                 <TouchableOpacity 
                   onPress={() => navigation.navigate("ResetContraseña")} 
-                  style={styles.forgotPasswordButton}
+                  style={appTheme.forgotPasswordButton}
                 >
                   <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
                 </TouchableOpacity>
@@ -377,13 +378,6 @@ const styles = StyleSheet.create({
   helpLinkText: {
     color: PALETTE.text_secondary,
     fontSize: 14,
-  },
-  forgotPasswordButton: {
-    alignSelf: 'flex-end',
-    marginTop: -5,
-    marginBottom: 10,
-    paddingVertical: 5,
-    paddingHorizontal: 10,
   },
   forgotPasswordText: {
     color: PALETTE.text_secondary,

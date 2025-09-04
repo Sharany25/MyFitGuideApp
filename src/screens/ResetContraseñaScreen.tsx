@@ -63,9 +63,8 @@ const CustomInput = ({ control, name, rules, placeholder, iconName, errors, secu
                   keyboardType={keyboardType}
                   autoCapitalize={autoCapitalize}
                   maxLength={rules?.maxLength?.value}
-                  // Asegura que las props para números sean correctas si es un campo numérico
+
                   {...(keyboardType === 'number-pad' && {
-                    // Solo permite la entrada de dígitos para number-pad
                     onChangeText: (text) => onChange(text.replace(/[^0-9]/g, '')),
                   })}
                 />
@@ -122,7 +121,7 @@ const ResetContraseñaScreen: React.FC = () => {
       newPassword: '',
       confirmPassword: '',
     },
-    mode: 'onBlur', // Valida al perder el foco para evitar validación inmediata al escribir
+    mode: 'onBlur',
   });
   const newPasswordValue = watch('newPassword');
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -255,7 +254,7 @@ const ResetContraseñaScreen: React.FC = () => {
                     iconName="key"
                     keyboardType="number-pad"
                     autoCapitalize="none"
-                    customKey={`token-input-${step}`} // Fuerza un re-montaje para limpiar estado
+                    customKey={`token-input-${step}`}
                   />
                   <CustomInput
                     control={resetControl}
