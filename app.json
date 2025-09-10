@@ -20,10 +20,16 @@
         "foregroundImage": "./assets/Logo.png",
         "backgroundColor": "#1D2A32"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.sharany.MyFitGuide"
     },
     "web": {
       "favicon": "./assets/Logo.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "e2cfc5ec-7958-49f6-b726-c09e6b312e09"
+      }
     }
   }
 }

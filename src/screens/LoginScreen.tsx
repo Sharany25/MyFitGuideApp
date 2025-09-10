@@ -109,8 +109,11 @@ const LoginScreen: React.FC = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
   const [successToastMessage, setSuccessToastMessage] = useState("¡Login exitoso!");
+  const [loadingLogin, setLoadingLogin] = useState(false);
 
-  const { login, loading, error } = useLogin();
+
+  const { login, error } = useLogin(); // Se obtiene la variable 'error' del hook
+
   const { dispatch } = useUser();
 
   const logoAnim = useRef(new Animated.Value(0)).current;
@@ -134,51 +137,58 @@ const LoginScreen: React.FC = () => {
   const onSubmit = async (data: FormData) => {
     if (!data.email || !data.password) return;
 
+    setLoadingLogin(true); // Se inicia el estado de carga
     const emailLower = data.email.toLowerCase();
     const loginData = { correoElectronico: emailLower, contraseña: data.password };
     const result = await login(loginData);
+    setLoadingLogin(false); // Se finaliza el estado de carga
 
     if (result) {
-      const userId = result._id || result.idUsuario || result.userId || "";
-      const perfilCompleto = await obtenerPerfilCompleto(userId);
+      try {
+        const userId = result._id || result.idUsuario || result.userId || "";
+        const perfilCompleto = await obtenerPerfilCompleto(userId);
+  
+        let edadStr = "";
+        if (perfilCompleto?.usuario?.fechaNacimiento) {
+          const fechaNacimiento = new Date(perfilCompleto.usuario.fechaNacimiento);
+          const hoy = new Date();
+          let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
+          const m = hoy.getMonth() - fechaNacimiento.getMonth();
+          if (m < 0 || (m === 0 && hoy.getDate() < fechaNacimiento.getDate())) edad--;
+          edadStr = edad.toString();
+        }
 
-      let edadStr = "";
-      if (perfilCompleto?.usuario?.fechaNacimiento) {
-        const fechaNacimiento = new Date(perfilCompleto.usuario.fechaNacimiento);
-        const hoy = new Date();
-        let edad = hoy.getFullYear() - fechaNacimiento.getFullYear();
-        const m = hoy.getMonth() - fechaNacimiento.getMonth();
-        if (m < 0 || (m === 0 && hoy.getDate() < fechaNacimiento.getDate())) edad--;
-        edadStr = edad.toString();
+        const userProfile = {
+          userId,
+          nombre: perfilCompleto?.usuario?.nombre || "",
+          correoElectronico: perfilCompleto?.usuario?.correoElectronico || "",
+          fechaNacimiento: perfilCompleto?.usuario?.fechaNacimiento || "",
+          edad: edadStr,
+          foto: perfilCompleto?.usuario?.foto || "",
+          objetivo: perfilCompleto?.dieta?.objetivo || "",
+          genero: perfilCompleto?.dieta?.genero || "",
+          altura: perfilCompleto?.dieta?.altura?.toString() || "",
+          peso: perfilCompleto?.dieta?.peso?.toString() || "",
+          alergias: perfilCompleto?.dieta?.alergias || [],
+          presupuesto: perfilCompleto?.dieta?.presupuesto?.toString() || "",
+          preferencias: perfilCompleto?.rutina?.preferencias || [],
+          dias: perfilCompleto?.rutina?.dias?.toString() || "",
+          lesiones: perfilCompleto?.rutina?.lesiones || "",
+        };
+
+        dispatch({ type: 'SET_USER', payload: userProfile });
+        await AsyncStorage.setItem("userProfile", JSON.stringify(userProfile));
+
+        setSuccessToastMessage(`¡Bienvenido, ${userProfile.nombre || 'usuario'}!`);
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+          navigation.replace("Tabs", { userId });
+        }, 1200);
+      } catch (e) {
+        console.error("Error al obtener perfil o guardar en AsyncStorage:", e);
+        setShowError(true);
       }
-
-      const userProfile = {
-        userId,
-        nombre: perfilCompleto?.usuario?.nombre || "",
-        correoElectronico: perfilCompleto?.usuario?.correoElectronico || "",
-        fechaNacimiento: perfilCompleto?.usuario?.fechaNacimiento || "",
-        edad: edadStr,
-        foto: perfilCompleto?.usuario?.foto || "",
-        objetivo: perfilCompleto?.dieta?.objetivo || "",
-        genero: perfilCompleto?.dieta?.genero || "",
-        altura: perfilCompleto?.dieta?.altura?.toString() || "",
-        peso: perfilCompleto?.dieta?.peso?.toString() || "",
-        alergias: perfilCompleto?.dieta?.alergias || [],
-        presupuesto: perfilCompleto?.dieta?.presupuesto?.toString() || "",
-        preferencias: perfilCompleto?.rutina?.preferencias || [],
-        dias: perfilCompleto?.rutina?.dias?.toString() || "",
-        lesiones: perfilCompleto?.rutina?.lesiones || "",
-      };
-
-      dispatch({ type: 'SET_USER', payload: userProfile });
-      await AsyncStorage.setItem("userProfile", JSON.stringify(userProfile));
-
-      setSuccessToastMessage(`¡Bienvenido, ${userProfile.nombre || 'usuario'}!`);
-      setShowSuccess(true);
-      setTimeout(() => {
-        setShowSuccess(false);
-        navigation.replace("Tabs", { userId });
-      }, 1200);
     } else {
       setShowError(true);
     }
@@ -237,9 +247,9 @@ const LoginScreen: React.FC = () => {
                   <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity onPress={handleSubmit(onSubmit)} disabled={loading} style={{ marginTop: 25 }}>
+                <TouchableOpacity onPress={handleSubmit(onSubmit)} disabled={loadingLogin} style={{ marginTop: 25 }}>
                   <LinearGradient colors={['#2CFD89', '#00A3FF']} style={styles.button}>
-                    {loading ? (
+                    {loadingLogin ? (
                       <ActivityIndicator color={PALETTE.dark} />
                     ) : (
                       <Text style={styles.buttonText}>Iniciar Sesión</Text>
