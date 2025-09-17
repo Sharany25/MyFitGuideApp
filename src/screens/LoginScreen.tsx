@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -16,7 +16,6 @@ import {
 } from "react-native";
 import { useForm, Controller, Control, FieldErrors } from "react-hook-form";
 import { useNavigation } from "@react-navigation/native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from "../navigation/StackNavigator";
 import SuccessToast from "../components/SuccessToast";
@@ -28,6 +27,7 @@ import { MaterialIcons, Feather } from "@expo/vector-icons";
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { appTheme } from "../themes/appTheme";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const logo = require("../../assets/Logo.png");
 const { width, height } = Dimensions.get("window");
@@ -135,13 +135,17 @@ const LoginScreen: React.FC = () => {
   }, []);
 
   const onSubmit = async (data: FormData) => {
-    if (!data.email || !data.password) return;
+    if (!data.email || !data.password) {
+      setToastMessage("Por favor, completa todos los campos.");
+      setShowError(true);
+      return;
+    }
 
-    setLoadingLogin(true); // Se inicia el estado de carga
+    setLoadingLogin(true);
     const emailLower = data.email.toLowerCase();
     const loginData = { correoElectronico: emailLower, contraseña: data.password };
     const result = await login(loginData);
-    setLoadingLogin(false); // Se finaliza el estado de carga
+    setLoadingLogin(false);
 
     if (result) {
       try {
@@ -186,18 +190,21 @@ const LoginScreen: React.FC = () => {
           navigation.replace("Tabs", { userId });
         }, 1200);
       } catch (e) {
-        console.error("Error al obtener perfil o guardar en AsyncStorage:", e);
+        setToastMessage("Error al obtener perfil o guardar datos. Revisa tu conexión.");
         setShowError(true);
       }
     } else {
+      setToastMessage(error || "Correo o contraseña incorrectos.");
       setShowError(true);
     }
   };
 
+  const [toastMessage, setToastMessage] = useState("");
+
   return (
     <>
-      <SuccessToast message={successToastMessage} visible={showSuccess} onHide={() => setShowSuccess(false)} />
-      <ErrorToast message={error || "Correo o contraseña incorrectos"} visible={showError} onHide={() => setShowError(false)} />
+      <SuccessToast message={toastMessage} visible={showSuccess} onHide={() => setShowSuccess(false)} />
+      <ErrorToast message={toastMessage} visible={showError} onHide={() => setShowError(false)} />
 
       <LinearGradient colors={PALETTE.background_gradient} style={styles.base}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
