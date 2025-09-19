@@ -17,6 +17,7 @@ import FavoritosScreen from '../screens/FavoritosScreen';
 import QuejaSugerenciaScreen from '../screens/QuejaSugerenciaScreen';
 import MapScreen from '../screens/MapScreen';
 import ResetContraseñaScreen from '../screens/ResetContraseñaScreen';
+import { ChatbotScreen } from '../screens/ChatbotScreen';
 
 
 // Tipos de navegación principales
@@ -36,6 +37,7 @@ export type RootStackParamList = {
   QuejaSugerencia: { userId: string };
   Map: { userId: string };
   ResetContraseña: undefined;
+  ChatbotScreen: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -57,6 +59,7 @@ const StackNavigator: React.FC = () => (
       <Stack.Screen name="QuejaSugerencia" component={QuejaSugerenciaScreen} />
       <Stack.Screen name="Map" component={MapScreen} />
       <Stack.Screen name="ResetContraseña" component={ResetContraseñaScreen} />
+      <Stack.Screen name="ChatbotScreen" component={ChatbotScreen} />
     </Stack.Navigator>
   </NavigationContainer>
 );

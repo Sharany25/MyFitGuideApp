@@ -209,6 +209,12 @@ const LoginScreen: React.FC = () => {
       <LinearGradient colors={PALETTE.background_gradient} style={styles.base}>
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
           <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
+            <TouchableOpacity
+                  style={styles.chatbotButton}
+                  onPress={() => navigation.navigate("ChatbotScreen")}
+              >
+                <Feather name="message-circle" size={24} color="#fff" />
+            </TouchableOpacity>
             <Animated.View style={[styles.logoContainer, { opacity: logoAnim, transform: [{ scale: logoAnim }] }]}>
               <View style={styles.logoWrapper}>
                 <Image source={logo} style={styles.logo} />
@@ -276,6 +282,7 @@ const LoginScreen: React.FC = () => {
                 <MaterialIcons name="help-outline" size={20} color={PALETTE.text_secondary} style={{ marginRight: 6 }} />
                 <Text style={styles.helpLinkText}>Manual de Uso / Preguntas Frecuentes</Text>
               </TouchableOpacity>
+
             </Animated.View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -402,6 +409,21 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
     
   },
+  chatbotButton: {
+  position: 'absolute',
+  bottom: 40,
+  right: 20,
+  backgroundColor: '#2CFD89',
+  borderRadius: 30,
+  padding: 15,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.3,
+  shadowRadius: 5,
+  elevation: 5,
+  zIndex: 999,
+},
+
 });
 
 export default LoginScreen;
