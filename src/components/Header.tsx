@@ -26,6 +26,7 @@ const PALETTE = {
   bmi_overweight: '#FFC107',
   bmi_obese: '#F44336',
   bmi_underweight: '#00A3FF',
+  dark: '#1D2A32',
 };
 
 const { width } = Dimensions.get("window");
@@ -150,14 +151,19 @@ const Header: React.FC<HeaderProps> = ({ user, onLogoutPress }) => {
           }
         ]}>
           <BlurView intensity={90} tint="dark" style={styles.menuBlurBackground}>
+            <TouchableOpacity onPress={() => handleMenuItemPress('ChatbotScreen')} style={styles.chatbotMenuItem}>
+              <Ionicons name="chatbubble-ellipses-outline" size={20} color={PALETTE.dark} />
+              <Text style={[styles.menuItemText, { fontWeight: 'bold', color: PALETTE.dark }]}>Asistente IA (Chatbot)</Text>
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => handleMenuItemPress('Favoritos')} style={styles.menuItem}>
               <MaterialCommunityIcons name="pin-outline" size={20} color={PALETTE.pin_red} />
               <Text style={styles.menuItemText}>Favoritos</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => handleMenuItemPress('Historial')} style={styles.menuItem}>
+            {/* Boton de historial comentado por no terminar funcionalidad*/}
+            {/*<TouchableOpacity onPress={() => handleMenuItemPress('Historial')} style={styles.menuItem}>
               <Ionicons name="time-outline" size={20} color={PALETTE.primary} />
               <Text style={styles.menuItemText}>Historial de cambios</Text>
-            </TouchableOpacity>
+            </TouchableOpacity>*/}
             <TouchableOpacity onPress={() => handleMenuItemPress('Map')} style={styles.menuItem}>
               <Ionicons name="map-outline" size={20} color={PALETTE.primary} />
               <Text style={styles.menuItemText}>Lugares cercanos</Text>
@@ -166,7 +172,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogoutPress }) => {
               <Ionicons name="chatbubble-ellipses-outline" size={20} color={PALETTE.text_secondary} />
               <Text style={styles.menuItemText}>Quejas y Sugerencias</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={onLogoutPress} style={styles.menuItem}>
+            <TouchableOpacity onPress={onLogoutPress} style={styles.logoutMenuItem}>
               <Ionicons name="exit-outline" size={20} color={PALETTE.danger} />
               <Text style={[styles.menuItemText, { color: PALETTE.danger }]}>Cerrar Sesión</Text>
             </TouchableOpacity>
@@ -267,38 +273,60 @@ const styles = StyleSheet.create({
   },
   dropdownMenu: {
     position: 'absolute',
-    top: 50,
-    right: 0,
-    width: width * 0.55,
+    top: 55,
+    right: width * 0.03,
+    width: width * 0.65,
     backgroundColor: PALETTE.background_gradient[0],
-    borderRadius: 15,
+    borderRadius: 18,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
     elevation: 8,
   },
   menuBlurBackground: {
-    borderRadius: 15,
-    padding: 15,
+    borderRadius: 18,
+    padding: 18,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: PALETTE.border,
-    backgroundColor: 'rgba(29, 42, 50, 0.7)',
+    backgroundColor: 'rgba(29, 42, 50, 0.75)',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: PALETTE.inactive,
+    marginBottom: 5,
   },
   menuItemText: {
     color: PALETTE.text_primary,
-    fontSize: width * 0.042,
+    fontSize: width * 0.04,
     marginLeft: 12,
   },
+  chatbotMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: PALETTE.primary,
+    borderRadius: 12,
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+    marginBottom: 15,
+    shadowColor: PALETTE.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.7,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  logoutMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    marginTop: 10,
+    backgroundColor: 'rgba(255, 71, 87, 0.1)',
+  }
 });
 
 export default Header;

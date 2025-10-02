@@ -108,7 +108,7 @@ const LoginScreen: React.FC = () => {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showError, setShowError] = useState(false);
-  const [successToastMessage, setSuccessToastMessage] = useState("¡Login exitoso!");
+  const [toastMessage, setToastMessage] = useState("");
   const [loadingLogin, setLoadingLogin] = useState(false);
 
 
@@ -183,7 +183,7 @@ const LoginScreen: React.FC = () => {
         dispatch({ type: 'SET_USER', payload: userProfile });
         await AsyncStorage.setItem("userProfile", JSON.stringify(userProfile));
 
-        setSuccessToastMessage(`¡Bienvenido, ${userProfile.nombre || 'usuario'}!`);
+        setToastMessage(`¡Bienvenido a MyFitGuide, ${userProfile.nombre || 'usuario'}!`);
         setShowSuccess(true);
         setTimeout(() => {
           setShowSuccess(false);
@@ -198,8 +198,6 @@ const LoginScreen: React.FC = () => {
       setShowError(true);
     }
   };
-
-  const [toastMessage, setToastMessage] = useState("");
 
   return (
     <>
@@ -410,19 +408,19 @@ const styles = StyleSheet.create({
     
   },
   chatbotButton: {
-  position: 'absolute',
-  bottom: 40,
-  right: 20,
-  backgroundColor: '#2CFD89',
-  borderRadius: 30,
-  padding: 15,
-  shadowColor: '#000',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.3,
-  shadowRadius: 5,
-  elevation: 5,
-  zIndex: 999,
-},
+    position: 'absolute',
+    bottom: height * 0.05, 
+    right: width * 0.05, 
+    backgroundColor: PALETTE.primary,
+    borderRadius: 30,
+    padding: 18, 
+    shadowColor: PALETTE.dark,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 10,
+    zIndex: 999,
+  },
 
 });
 

@@ -1,36 +1,187 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, Platform, Alert } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle, Platform, Dimensions, Modal, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
+import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 
-const COLORS = {
-  primary: '#00C27F',
-  dark: '#029865',
-  white: '#fff',
+const { width } = Dimensions.get('window');
+
+const PALETTE = {
+  primary: '#2CFD89',
+  secondary_blue: '#00A3FF',
+  text_primary: '#FFFFFF',
+  text_dark: '#1D2A32',
+  danger: '#FF4757',
+  inactive_border: 'rgba(255, 255, 255, 0.15)',
+  dark_overlay: 'rgba(0,0,0,0.85)',
+  text_secondary: '#B0C4DE',
 };
+
+// --- CustomAlertDialog Component (Integrado) ---
+interface CustomAlertDialogProps {
+    visible: boolean;
+    onClose: () => void;
+    title: string;
+    message: string;
+    type: 'error' | 'info' | 'success';
+    actionButtonText?: string;
+    onActionPress?: () => void;
+}
+
+const CustomAlertDialog: React.FC<CustomAlertDialogProps> = ({
+    visible,
+    onClose,
+    title,
+    message,
+    type,
+    actionButtonText,
+    onActionPress,
+}) => {
+    const isError = type === 'error';
+    const iconName: any = isError ? 'close-circle' : (type === 'success' ? 'checkmark-circle' : 'information-circle');
+    const iconColor = isError ? PALETTE.danger : PALETTE.primary;
+
+    if (!visible) return null;
+
+    return (
+        <Modal transparent visible={visible} animationType="fade" statusBarTranslucent>
+            {/* 1. Usar BlurView para el fondo de pantalla completa */}
+            <BlurView intensity={70} tint="dark" style={dialogStyles.overlay}>
+                <View style={dialogStyles.modalWrapper}>
+                    <View style={dialogStyles.modalContent}>
+                        <Ionicons name={iconName} size={width * 0.12} color={iconColor} style={dialogStyles.icon} />
+                        <Text style={dialogStyles.title}>{title}</Text>
+                        <Text style={dialogStyles.message}>{message}</Text>
+
+                        <View style={dialogStyles.buttons}>
+                            <TouchableOpacity 
+                                style={[dialogStyles.buttonBase, dialogStyles.buttonClose]} 
+                                onPress={onClose}
+                            >
+                                <Text style={[dialogStyles.buttonText, { color: PALETTE.text_primary }]}>Cerrar</Text>
+                            </TouchableOpacity>
+
+                            {onActionPress && actionButtonText && (
+                                <TouchableOpacity 
+                                    style={dialogStyles.buttonActionWrapper} 
+                                    onPress={onActionPress}
+                                >
+                                    <LinearGradient
+                                        colors={isError ? [PALETTE.danger, '#CC3344'] : [PALETTE.primary, PALETTE.secondary_blue]}
+                                        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                                        style={dialogStyles.buttonBase}
+                                    >
+                                        <Text style={[dialogStyles.buttonText, { color: PALETTE.text_dark }]}>{actionButtonText}</Text>
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            )}
+                        </View>
+                    </View>
+                </View>
+            </BlurView>
+        </Modal>
+    );
+};
+
+const dialogStyles = StyleSheet.create({
+    // MODIFICADO: Ahora es un contenedor centrado que usa BlurView para el desenfoque
+    overlay: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: 'transparent', // Importante para que BlurView funcione
+    },
+    modalWrapper: {
+        width: '88%',
+        borderRadius: 20,
+        overflow: 'hidden',
+        borderWidth: StyleSheet.hairlineWidth,
+        borderColor: PALETTE.inactive_border,
+        backgroundColor: 'rgba(29, 42, 50, 0.95)', // Fondo oscuro semi-opaco para el contenido del modal
+    },
+    modalContent: {
+        padding: 30,
+        alignItems: 'center',
+    },
+    icon: {
+        marginBottom: 20,
+    },
+    title: {
+        fontSize: width * 0.06,
+        fontWeight: '700',
+        textAlign: 'center',
+        color: PALETTE.text_primary,
+        marginBottom: 8,
+    },
+    message: {
+        fontSize: width * 0.04,
+        textAlign: 'center',
+        color: PALETTE.text_secondary,
+        marginBottom: 30,
+        lineHeight: width * 0.055,
+    },
+    buttons: {
+        flexDirection: 'row',
+        gap: 15,
+        width: '100%',
+    },
+    buttonBase: {
+        flex: 1,
+        paddingVertical: 14,
+        borderRadius: 15,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    buttonClose: {
+        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+        borderWidth: 1,
+        borderColor: PALETTE.inactive_border,
+    },
+    buttonActionWrapper: {
+        flex: 1,
+        borderRadius: 15,
+        overflow: 'hidden',
+    },
+    buttonText: {
+        fontWeight: '700',
+        fontSize: width * 0.042,
+    },
+});
+// --- Fin de CustomAlertDialog ---
 
 interface Props {
   data: any;
   nombreUsuario: string;
-  title?: string;
-  iconSize?: number;
   style?: ViewStyle;
 }
 
-const DownloadDietPdfButton: React.FC<Props> = ({
-  data,
-  nombreUsuario,
-  title = 'Dieta PDF',
-  iconSize = 21,
-  style,
-}) => {
+const DownloadDietPdfButton: React.FC<Props> = ({ data, nombreUsuario, style }) => {
   const [loading, setLoading] = React.useState(false);
+  const [alertVisible, setAlertVisible] = React.useState(false);
+  const [alertData, setAlertData] = React.useState({ title: '', message: '', type: 'info', action: () => {}, actionText: '' });
+
+  const showCustomAlert = (title: string, message: string, type: 'error' | 'info' | 'success', action?: () => void, actionText?: string) => {
+    setAlertData({
+      title,
+      message,
+      type,
+      action: action || (() => setAlertVisible(false)),
+      actionText: actionText || 'Aceptar',
+    });
+    setAlertVisible(true);
+  };
+
+  const handleShare = async (path: string) => {
+    setAlertVisible(false);
+    await Sharing.shareAsync(path, { mimeType: 'application/pdf', dialogTitle: 'Guardar Dieta PDF' });
+  };
 
   const handleDownload = async () => {
     if (!data?.resultado?.semana || data.resultado.semana.length === 0) {
-      Alert.alert('Error', 'No hay datos de dieta para generar el PDF.');
+      showCustomAlert('Error de Datos', 'No hay datos de dieta para generar el PDF.', 'error');
       return;
     }
     setLoading(true);
@@ -48,6 +199,7 @@ const DownloadDietPdfButton: React.FC<Props> = ({
   <meta charset="utf-8" />
   <title>Plan Semanal - Dieta</title>
   <style>
+    /* Estilos del PDF omitidos por brevedad */
     body {
       font-family: 'Montserrat', Arial, sans-serif;
       background: #f4fefc;
@@ -238,62 +390,112 @@ const DownloadDietPdfButton: React.FC<Props> = ({
     try {
       const { uri } = await Print.printToFileAsync({ html });
       const nombreArchivo = `Dieta-${nombreLimpio}.pdf`;
+      
+      // Mover el archivo a una ubicación temporal interna
       const destPath =
         Platform.OS === 'ios'
           ? `${FileSystem.documentDirectory}${nombreArchivo}`
           : `${FileSystem.cacheDirectory}${nombreArchivo}`;
+          
       await FileSystem.moveAsync({ from: uri, to: destPath });
       setLoading(false);
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(destPath, { mimeType: 'application/pdf', dialogTitle: title });
+      
+      // Usaremos la lógica específica para cada plataforma
+      if (Platform.OS === 'android') {
+        // En Android, solicitamos permiso para abrir el diálogo de guardado
+        const permissions = await FileSystem.StorageAccessFramework.requestDirectoryPermissionsAsync();
+
+        if (permissions.granted) {
+            // Acción principal de descarga (guarda el archivo donde el usuario elija)
+            const createdFileUri = await FileSystem.StorageAccessFramework.createFileAsync(
+                permissions.directoryUri, 
+                nombreArchivo, 
+                'application/pdf'
+            );
+
+            if (createdFileUri) {
+                // Escribir el contenido del archivo en la ubicación seleccionada
+                const fileContent = await FileSystem.readAsStringAsync(destPath, {
+                    encoding: FileSystem.EncodingType.Base64,
+                });
+                await FileSystem.writeAsStringAsync(createdFileUri, fileContent, {
+                    encoding: FileSystem.EncodingType.Base64,
+                });
+
+                showCustomAlert("¡Descarga Exitosa!", "El plan de dieta se ha guardado correctamente en la ubicación seleccionada.", 'success');
+            } else {
+                 showCustomAlert('Descarga Cancelada', 'No se seleccionó una ubicación válida para guardar el archivo.', 'info');
+            }
+        } else {
+             showCustomAlert('Acceso Requerido', 'Necesitamos su permiso para guardar el archivo en su dispositivo. Por favor, intente de nuevo y conceda el permiso.', 'error');
+        }
+
       } else {
-        Alert.alert('Archivo guardado', `El PDF se guardó en:\n${destPath}`);
+          // iOS: Abrir la hoja de compartir, que incluye la opción "Guardar en Archivos".
+          showCustomAlert(
+              "PDF Generado", 
+              "Selecciona 'Guardar en Archivos' o 'Imprimir' en el menú de compartir para almacenar el plan en tu dispositivo.", 
+              'info', 
+              () => handleShare(destPath), 
+              "Compartir/Guardar"
+          );
       }
+
     } catch (e) {
       setLoading(false);
-      console.error("Error al generar o compartir PDF:", e);
-      Alert.alert('Error', 'No se pudo generar o compartir el PDF. Revisa la consola para más detalles.');
+      console.error("Error al generar o descargar PDF:", e);
+      showCustomAlert('Error Fatal', 'No se pudo generar o descargar el PDF. Revisa la consola para más detalles.', 'error');
     }
   };
 
   return (
-    <TouchableOpacity
-      style={[pdfBtnStyles.btnSmall, style]}
-      onPress={handleDownload}
-      activeOpacity={0.9}
-      disabled={loading}
-    >
-      {loading ? (
-        <ActivityIndicator color={COLORS.white} size="small" />
-      ) : (
-        <Ionicons name="cloud-download-outline" size={iconSize} color={COLORS.white} />
-      )}
-      <Text style={pdfBtnStyles.btnText}>{title}</Text>
-    </TouchableOpacity>
+    <>
+      <CustomAlertDialog
+        visible={alertVisible}
+        onClose={() => setAlertVisible(false)}
+        title={alertData.title}
+        message={alertData.message}
+        type={alertData.type as any}
+        actionButtonText={alertData.actionText}
+        onActionPress={alertData.action}
+      />
+      <TouchableOpacity
+        style={[pdfBtnStyles.buttonBase, style]}
+        onPress={handleDownload}
+        activeOpacity={0.8}
+        disabled={loading}
+      >
+        {loading ? (
+          <ActivityIndicator color={PALETTE.text_dark} size="small" />
+        ) : (
+          <>
+            <Ionicons name="cloud-download-outline" size={width * 0.05} color={PALETTE.text_dark} />
+            <Text style={pdfBtnStyles.buttonText}>PDF</Text>
+          </>
+        )}
+      </TouchableOpacity>
+    </>
   );
 };
 
 const pdfBtnStyles = StyleSheet.create({
-  btnSmall: {
+  buttonBase: {
     flexDirection: 'row',
-    backgroundColor: COLORS.primary,
-    borderRadius: 11,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#00c27f99',
-    shadowOpacity: 0.14,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    marginLeft: 5
+    justifyContent: 'center',
+    backgroundColor: PALETTE.primary,
+    borderRadius: 20,
+    paddingHorizontal: width * 0.035,
+    paddingVertical: width * 0.03,
+    flexGrow: 1,
+    marginLeft: 10,
+    height: width * 0.12,
   },
-  btnText: {
-    color: COLORS.white,
+  buttonText: {
+    color: PALETTE.text_dark,
     fontWeight: '700',
-    fontSize: 16,
-    marginLeft: 7,
-    letterSpacing: 0.14,
+    fontSize: width * 0.038,
+    marginLeft: 8,
   }
 });
 

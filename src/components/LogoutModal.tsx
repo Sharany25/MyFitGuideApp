@@ -1,7 +1,6 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
@@ -12,10 +11,9 @@ const PALETTE = {
     text_primary: '#FFFFFF',
     text_secondary: '#B0C4DE',
     danger: '#FF4757',
-    inactive: 'rgba(255, 255, 255, 0.1)',
+    inactive: 'rgba(255, 255, 255, 0.15)', // Más opaco
     border: 'rgba(255, 255, 255, 0.15)',
-    dark_overlay: 'rgba(0,0,0,0.7)',
-    card_background_dark: 'rgba(30, 45, 55, 0.95)',
+    dark_overlay: 'rgba(0,0,0,0.95)', // Fondo casi negro sólido
     button_cancel_text: '#B0C4DE',
 };
 
@@ -29,7 +27,7 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onClose, onConfirm }
     return (
         <Modal transparent visible={visible} animationType="fade" statusBarTranslucent>
             <View style={styles.overlay}>
-                <BlurView intensity={70} tint="dark" style={styles.modalContent}>
+                <View style={styles.modalContent}>
                     <Ionicons name="log-out-outline" size={width * 0.14} color={PALETTE.danger} style={styles.icon} />
                     <Text style={styles.title}>¿Cerrar sesión?</Text>
                     <Text style={styles.message}>
@@ -50,7 +48,7 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onClose, onConfirm }
                             </LinearGradient>
                         </TouchableOpacity>
                     </View>
-                </BlurView>
+                </View>
             </View>
         </Modal>
     );
@@ -59,23 +57,25 @@ const LogoutModal: React.FC<LogoutModalProps> = ({ visible, onClose, onConfirm }
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: PALETTE.dark_overlay,
         justifyContent: 'center',
         alignItems: 'center',
+        backgroundColor: PALETTE.dark_overlay, 
     },
     modalContent: {
         width: '85%',
         padding: 30,
         borderRadius: 25,
         alignItems: 'center',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.4,
-        shadowRadius: 20,
-        elevation: 20,
-        borderWidth: StyleSheet.hairlineWidth,
-        borderColor: PALETTE.border,
+        // Sombra más intensa para que flote sobre el fondo oscuro
+        shadowColor: PALETTE.danger,
+        shadowOffset: { width: 0, height: 12 },
+        shadowOpacity: 0.5,
+        shadowRadius: 30,
+        elevation: 25,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 71, 87, 0.5)', // Borde más visible
         overflow: 'hidden',
+        backgroundColor: 'rgba(29, 42, 50, 1)',
     },
     icon: {
         marginBottom: 25,

@@ -100,8 +100,6 @@ const ResumenSemanalDieta = () => {
                         <ProgressBar label="Grasas" value={totales.grasas_total ?? 0} max={450} color={PALETTE.fat} unit="g" />
                         <View style={styles.divider} />
                         <View style={styles.costContainer}>
-                            <Ionicons name="cash-outline" size={24} color={PALETTE.primary} />
-                            <Text style={styles.costoText}>Costo total estimado: ${totales.costo_total?.toFixed(2) ?? 0} MXN</Text>
                         </View>
                     </BlurView>
                 </LinearGradient>
