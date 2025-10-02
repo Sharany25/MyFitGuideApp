@@ -8,7 +8,6 @@ import {
   StatusBar,
   Animated,
   Dimensions,
-  SafeAreaView,
   ActivityIndicator,
   Image,
   TouchableOpacity,
@@ -20,6 +19,7 @@ import { useUser } from "../context/UserContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import LogoutModal from "../components/LogoutModal";
 import { BlurView } from 'expo-blur';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import Header from "../components/Header";
 

@@ -12,7 +12,6 @@ import {
   useWindowDimensions,
   Keyboard,
   ActivityIndicator,
-  SafeAreaView,
   StatusBar,
   Dimensions,
   Animated,
@@ -24,6 +23,7 @@ import { enviarQuejaSugerencia } from "../hooks/useQuejaSugerencia";
 import ConfirmacionEnvio from "../components/ConfirmacionEnvio";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from 'expo-blur';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 type Props = StackScreenProps<RootStackParamList, "QuejaSugerencia">;
 

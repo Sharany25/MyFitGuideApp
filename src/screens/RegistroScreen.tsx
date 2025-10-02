@@ -8,7 +8,6 @@ import {
   Platform,
   Dimensions,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   ActivityIndicator,
   TextInput,
@@ -30,6 +29,7 @@ import { BlurView } from 'expo-blur';
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from 'expo-image-picker';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get("window");
 

@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Platform,
   StatusBar,
-  SafeAreaView,
   ActivityIndicator,
   Animated,
 } from 'react-native';
@@ -18,6 +17,7 @@ import { RootStackParamList } from '../navigation/StackNavigator';
 import { useUserPerfil } from '../hooks/usePerfil';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 

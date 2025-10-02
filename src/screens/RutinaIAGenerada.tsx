@@ -9,7 +9,6 @@ import {
   Platform,
   StatusBar,
   Animated,
-  SafeAreaView,
   ActivityIndicator,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -20,6 +19,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from 'expo-blur';
 import { useRoute } from '@react-navigation/native';
 import DownloadRoutinePdfButton from "../components/DownloadRoutinePdfButton"; 
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get("window");
 

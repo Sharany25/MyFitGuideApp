@@ -12,14 +12,13 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Dimensions,
-  SafeAreaView,
 } from 'react-native';
 import { useChatbot } from '../hooks/useChatbot';
 import { Feather } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 

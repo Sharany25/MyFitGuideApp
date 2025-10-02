@@ -10,7 +10,6 @@ import {
   Platform,
   StatusBar,
   Animated,
-  SafeAreaView,
 } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -18,6 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useFavoritos } from "../hooks/useFavoritos";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { BlurView } from 'expo-blur';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width, height } = Dimensions.get("window");
 
