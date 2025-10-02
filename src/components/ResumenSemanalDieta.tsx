@@ -9,10 +9,11 @@ import {
   Dimensions,
   Platform,
   StatusBar,
-  SafeAreaView,
   Animated,
 } from 'react-native';
+// Importamos el hook moderno para el manejo de áreas seguras
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useDieta } from '../hooks/useDieta';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,7 +28,7 @@ const PALETTE = {
   text_secondary: '#B0C4DE',
   inactive: 'rgba(255, 255, 255, 0.1)',
   border: 'rgba(255, 255, 255, 0.15)',
-  danger: '#FF4757', // Error color added
+  danger: '#FF4757',
   cal: '#2CFD89',
   prot: '#00A3FF',
   carb: '#FFC107',
@@ -41,6 +42,8 @@ interface Params {
 const ResumenSemanalDieta = () => {
   const route = useRoute();
   const navigation = useNavigation<any>();
+  // Inicializamos useSafeAreaInsets
+  const insets = useSafeAreaInsets();
   const { userId } = route.params as Params;
   const { obtenerDietaPorUsuario, loading, error } = useDieta();
   const [totales, setTotales] = useState<any>(null);
@@ -76,8 +79,9 @@ const ResumenSemanalDieta = () => {
   }
 
   return (
-    <LinearGradient colors={PALETTE.background_gradient} style={{flex: 1}}>
-        <SafeAreaView style={styles.safeArea}>
+    <LinearGradient colors={PALETTE.background_gradient} style={styles.base}>
+        {/* MODIFICACIÓN: Aplicamos el padding superior y la barra de estado directamente al View que contiene el Header */}
+        <View style={[styles.safeArea, { paddingTop: insets.top }]}>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <Ionicons name="chevron-back" size={28} color={PALETTE.text_primary} />
@@ -100,11 +104,14 @@ const ResumenSemanalDieta = () => {
                         <ProgressBar label="Grasas" value={totales.grasas_total ?? 0} max={450} color={PALETTE.fat} unit="g" />
                         <View style={styles.divider} />
                         <View style={styles.costContainer}>
+                            {fechaCreacion && (
+                                <Text style={styles.fecha}>Generado: {new Date(fechaCreacion).toLocaleDateString()}</Text>
+                            )}
                         </View>
                     </BlurView>
                 </LinearGradient>
             </ScrollView>
-        </SafeAreaView>
+        </View>
     </LinearGradient>
   );
 };
@@ -116,7 +123,7 @@ const ProgressBar = ({ label, value, max, color, unit }: { label: string; value:
         Animated.timing(animatedWidth, {
             toValue: max > 0 ? Math.min(value / max, 1) : 0,
             duration: 1000,
-            useNativeDriver: false, // width animation not supported by native driver
+            useNativeDriver: false,
         }).start();
     }, [value, max]);
 
@@ -139,9 +146,12 @@ const ProgressBar = ({ label, value, max, color, unit }: { label: string; value:
 };
 
 const styles = StyleSheet.create({
+  base: {
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    // Eliminado paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
     flexDirection: 'row',

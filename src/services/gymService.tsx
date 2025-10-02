@@ -18,7 +18,7 @@ export interface Park {
 export const fetchGymsNearby = async (
   lat: number,
   lon: number,
-  radiusM: number = 2000
+  radiusM: number = 100
 ): Promise<Gym[]> => {
   try {
     const query = `
@@ -33,6 +33,14 @@ export const fetchGymsNearby = async (
 
     const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
     const res = await fetch(url);
+
+    // *** CORRECCIÓN CRÍTICA DE ROBUSTEZ: Validar respuesta antes de parsear JSON ***
+    if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`Overpass API Error Status ${res.status} (Gyms):`, errorText.substring(0, 200));
+        return [];
+    }
+
     const json = await res.json();
 
     const gyms: Gym[] = json.elements
@@ -50,16 +58,16 @@ export const fetchGymsNearby = async (
 
     return gyms;
   } catch (e) {
-    console.error("Overpass error (Gyms):", e);
+    console.error("Overpass Fetch Error (Gyms):", e);
     return [];
   }
 };
 
-// Función actualizada para buscar solo parques
+// Función para buscar parques cercanos usando la API de Overpass
 export const fetchParksNearby = async (
   lat: number,
   lon: number,
-  radiusM: number = 2000
+  radiusM: number = 100
 ): Promise<Park[]> => {
   try {
     const query = `
@@ -74,6 +82,14 @@ export const fetchParksNearby = async (
 
     const url = "https://overpass-api.de/api/interpreter?data=" + encodeURIComponent(query);
     const res = await fetch(url);
+
+    // *** CORRECCIÓN CRÍTICA DE ROBUSTEZ: Validar respuesta antes de parsear JSON ***
+    if (!res.ok) {
+        const errorText = await res.text();
+        console.error(`Overpass API Error Status ${res.status} (Parks):`, errorText.substring(0, 200));
+        return [];
+    }
+
     const json = await res.json();
 
     const parks: Park[] = json.elements
@@ -91,7 +107,7 @@ export const fetchParksNearby = async (
 
     return parks;
   } catch (e) {
-    console.error("Overpass error (Parks):", e);
+    console.error("Overpass Fetch Error (Parks):", e);
     return [];
   }
 };

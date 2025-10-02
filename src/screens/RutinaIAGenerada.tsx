@@ -10,6 +10,7 @@ import {
   StatusBar,
   Animated,
   SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useUser } from "../context/UserContext";
@@ -20,7 +21,7 @@ import { BlurView } from 'expo-blur';
 import { useRoute } from '@react-navigation/native';
 import DownloadRoutinePdfButton from "../components/DownloadRoutinePdfButton"; 
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 const PALETTE = {
   background_gradient: ['#1D2A32', '#163B48', '#1D2A32'] as const,
@@ -65,15 +66,14 @@ const LoaderAlert = ({ text = "Cargando tu rutina...", sub = "Esto puede tardar 
   );
 };
 
-const HeaderActions = ({ onPdfPress, rutinaData, nombreUsuario, fechaGeneracionRutina }: any) => (
+// MODIFICADO: Eliminadas props de estilo/texto redundantes para usar las internas del componente PDF
+const HeaderActions = ({ rutinaData, nombreUsuario, fechaGeneracionRutina }: any) => (
   <View style={styles.headerRow}>
     <DownloadRoutinePdfButton 
         rutinaData={rutinaData} 
         nombreUsuario={nombreUsuario} 
         fechaGeneracionRutina={fechaGeneracionRutina}
-        style={styles.headerButton} 
-        title="PDF Rutina" 
-        iconSize={width * 0.05} 
+        // Eliminadas props 'title' y 'iconSize' para evitar errores de tipado
     />
   </View>
 );

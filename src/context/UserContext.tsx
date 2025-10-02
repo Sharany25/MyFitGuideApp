@@ -57,6 +57,7 @@ function userReducer(state: State, action: Action): State {
 
 const STORAGE_KEY = 'userProfile';
 
+// CORRECCIÓN: Tipado correcto de props usando { children: ReactNode }
 export const UserProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(userReducer, initialState);
 

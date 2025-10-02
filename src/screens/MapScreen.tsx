@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import {
   StyleSheet,
   View,
@@ -35,38 +35,22 @@ const PALETTE = {
 };
 
 const PEXELS_API_KEY = "Y2SubFuD5dpJLdWZLSxS71D9Vr0swU5t2m9h3AQRpYSP91yam0HbjrmJ";
+const PLACEHOLDER_GYM = "https://placehold.co/600x400/1D2A32/FFFFFF?text=Gimnasio";
+const PLACEHOLDER_PARK = "https://placehold.co/600x400/263c3f/FFFFFF?text=Parque";
 
-const getGymImageFromPexels = async (): Promise<string> => {
+const fetchRandomImages = async (query: string, placeholder: string): Promise<string[]> => {
   try {
-    const response = await fetch("https://api.pexels.com/v1/search?query=gym%20fitness&per_page=20", {
+    const response = await fetch(`https://api.pexels.com/v1/search?query=${query}&per_page=20`, {
       headers: { Authorization: PEXELS_API_KEY },
     });
     const data = await response.json();
     if (data.photos && data.photos.length > 0) {
-      const randomIndex = Math.floor(Math.random() * data.photos.length);
-      return data.photos[randomIndex].src.landscape;
+      return data.photos.map((photo: any) => photo.src.landscape);
     }
-    return "https://placehold.co/600x400/1D2A32/FFFFFF?text=Gimnasio";
+    return [placeholder];
   } catch (error) {
-    console.error("Error al obtener imagen de gimnasio de Pexels:", error);
-    return "https://placehold.co/600x400/1D2A32/FFFFFF?text=Gimnasio";
-  }
-};
-
-const getParkImageFromPexels = async (): Promise<string> => {
-  try {
-    const response = await fetch("https://api.pexels.com/v1/search?query=park%20nature&per_page=20", {
-      headers: { Authorization: PEXELS_API_KEY },
-    });
-    const data = await response.json();
-    if (data.photos && data.photos.length > 0) {
-      const randomIndex = Math.floor(Math.random() * data.photos.length);
-      return data.photos[randomIndex].src.landscape;
-    }
-    return "https://placehold.co/600x400/263c3f/FFFFFF?text=Parque";
-  } catch (error) {
-    console.error("Error al obtener imagen de parque de Pexels:", error);
-    return "https://placehold.co/600x400/263c3f/FFFFFF?text=Parque";
+    console.error(`Error al obtener imágenes de ${query}:`, error);
+    return [placeholder];
   }
 };
 
@@ -94,6 +78,54 @@ export default function MapScreen() {
   const mapRef = useRef<MapView>(null);
   const cardAnim = useRef(new Animated.Value(300)).current;
 
+  const pedirPermisoUbicacion = useCallback(async () => {
+    setLoading(true);
+    const { status } = await Location.requestForegroundPermissionsAsync();
+
+    if (status !== "granted") {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      
+      const [gymImageUrls, parkImageUrls] = await Promise.all([
+        fetchRandomImages("gym fitness", PLACEHOLDER_GYM),
+        fetchRandomImages("park nature", PLACEHOLDER_PARK),
+      ]);
+
+      const [nearbyGyms, nearbyParks] = await Promise.all([
+          fetchGymsNearby(loc.coords.latitude, loc.coords.longitude, 2000),
+          fetchParksNearby(loc.coords.latitude, loc.coords.longitude, 2000)
+      ]);
+      
+      const getRandomImageUrl = (urls: string[]) => urls[Math.floor(Math.random() * urls.length)];
+
+      const gymsWithImages = nearbyGyms.map((gym) => ({
+        ...gym,
+        image: getRandomImageUrl(gymImageUrls), 
+        type: 'gym' as const
+      }));
+      setGyms(gymsWithImages);
+
+      const parksWithImages = nearbyParks.map((park) => ({
+        ...park,
+        image: getRandomImageUrl(parkImageUrls),
+        type: 'park' as const
+      }));
+      setParks(parksWithImages);
+
+      setLocation(loc.coords);
+
+    } catch (error) {
+      console.error("Error al obtener la ubicación o datos cercanos:", error);
+      setLocation(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const checkAlertStatus = async () => {
       try {
@@ -109,42 +141,7 @@ export default function MapScreen() {
       }
     };
     checkAlertStatus();
-  }, []);
-
-  const pedirPermisoUbicacion = async () => {
-    setLoading(true);
-    const { status } = await Location.requestForegroundPermissionsAsync();
-
-    if (status !== "granted") {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const loc = await Location.getCurrentPositionAsync({});
-      setLocation(loc.coords);
-
-      const [nearbyGyms, nearbyParks] = await Promise.all([
-          fetchGymsNearby(loc.coords.latitude, loc.coords.longitude, 2000),
-          fetchParksNearby(loc.coords.latitude, loc.coords.longitude, 2000)
-      ]);
-
-      const gymsWithImages = await Promise.all(
-        nearbyGyms.map(async (gym) => ({ ...gym, image: await getGymImageFromPexels(), type: 'gym' as const }))
-      );
-      setGyms(gymsWithImages);
-
-      const parksWithImages = await Promise.all(
-        nearbyParks.map(async (park) => ({ ...park, image: await getParkImageFromPexels(), type: 'park' as const }))
-      );
-      setParks(parksWithImages);
-
-    } catch (error) {
-      console.error("Error al obtener la ubicación o datos cercanos:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [pedirPermisoUbicacion]);
 
   useEffect(() => {
     if (selectedItem) {
@@ -154,66 +151,86 @@ export default function MapScreen() {
             useNativeDriver: true,
         }).start();
     } else {
+        // Reducimos la duración del timing para que la tarjeta desaparezca más rápido
         Animated.timing(cardAnim, {
             toValue: 300,
-            duration: 300,
+            duration: 200, 
             useNativeDriver: true,
         }).start();
     }
   }, [selectedItem, cardAnim]);
 
-  useEffect(() => {
-    const getRoute = async () => {
-      if (!location || !selectedItem) return; 
+  const getRoute = useCallback(async () => {
+      if (!location || !selectedItem) {
+          setRouteCoords([]);
+          return;
+      } 
 
       setRouteLoading(true);
       try {
         const apiKey = "5b3ce3597851110001cf6248149e21a82dda488e80568b769c230794";
         const url = `https://api.openrouteservice.org/v2/directions/foot-walking?api_key=${apiKey}`;
-        const body = { 
-            coordinates: [
-                [location.longitude, location.latitude],
-                [selectedItem.lon, selectedItem.lat]
-            ] 
-        };
+        
+        const coordinates = [
+            [location.longitude, location.latitude],
+            [selectedItem.lon, selectedItem.lat]
+        ];
+        
         const response = await fetch(url, { 
             method: "POST", 
             headers: { "Content-Type": "application/json" }, 
-            body: JSON.stringify(body) 
+            body: JSON.stringify({ coordinates }) 
         });
+        
+        if (!response.ok) {
+            console.error("OpenRouteService API error:", response.status);
+            setRouteCoords([]);
+            return;
+        }
+
         const json = await response.json();
         
-        const coords = json.features[0]?.geometry?.coordinates?.map(([lng, lat]: [number, number]) => ({ latitude: lat, longitude: lng }));
-        setRouteCoords(coords || []);
-
-        if (mapRef.current && coords && coords.length > 0) {
-            mapRef.current.fitToCoordinates(coords, {
-                edgePadding: { top: 50, right: 50, bottom: 300, left: 50 },
-                animated: true,
-            });
+        const coords = json.features?.[0]?.geometry?.coordinates?.map(([lng, lat]: [number, number]) => ({ latitude: lat, longitude: lng }));
+        
+        if (coords && coords.length > 1) {
+            setRouteCoords(coords);
+            if (mapRef.current) {
+                mapRef.current.fitToCoordinates(coords, {
+                    edgePadding: { top: 50, right: 50, bottom: 300, left: 50 },
+                    animated: true,
+                });
+            }
+        } else {
+            setRouteCoords([]);
         }
+
       } catch (err) {
         console.error("Error al obtener la ruta:", err);
         setRouteCoords([]);
       } finally {
         setRouteLoading(false);
       }
-    };
-    if (selectedItem) getRoute();
-    else setRouteCoords([]);
-  }, [selectedItem, location]);
+    }, [location, selectedItem]); // Dependencia crítica: location y selectedItem
 
-  const handleCloseAlert = async () => {
+  useEffect(() => {
+    if (selectedItem && location) {
+        getRoute();
+    } else {
+        setRouteCoords([]);
+    }
+  }, [selectedItem, location, getRoute]); // Ejecutar solo cuando cambian los puntos críticos o getRoute (que depende de ellos)
+
+  const handleCloseAlert = useCallback(async () => {
     setShowUbicacionAlerta(false);
     setLoading(false);
     await AsyncStorage.setItem('@hasSeenLocationAlert', 'true');
-  };
+  }, []);
 
-  const handleConfirmAlert = async () => {
+  const handleConfirmAlert = useCallback(async () => {
     setShowUbicacionAlerta(false);
     await AsyncStorage.setItem('@hasSeenLocationAlert', 'true');
     pedirPermisoUbicacion();
-  };
+  }, [pedirPermisoUbicacion]);
 
   if (showUbicacionAlerta) {
     return (
@@ -259,25 +276,14 @@ export default function MapScreen() {
         provider="google"
         customMapStyle={mapStyle}
       >
-        {gyms.map((gym) => (
+        {[...gyms, ...parks].map((item) => (
           <Marker 
-            key={`gym-${gym.id}`} 
-            coordinate={{ latitude: gym.lat, longitude: gym.lon }} 
-            onPress={() => setSelectedItem(gym)}
+            key={`${item.type}-${item.id}`} 
+            coordinate={{ latitude: item.lat, longitude: item.lon }} 
+            onPress={() => setSelectedItem(item)}
           >
             <View style={styles.markerContainer}>
-                <Image source={require("../../assets/logoMaps.png")} style={styles.markerImg} />
-            </View>
-          </Marker>
-        ))}
-        {parks.map((park) => (
-          <Marker 
-            key={`park-${park.id}`} 
-            coordinate={{ latitude: park.lat, longitude: park.lon }} 
-            onPress={() => setSelectedItem(park)}
-          >
-              <View style={styles.markerContainer}>
-                <Image source={require("../../assets/logoMapsPark.png")} style={styles.markerImg} />
+                <Image source={item.type === 'gym' ? require("../../assets/logoMaps.png") : require("../../assets/logoMapsPark.png")} style={styles.markerImg} />
             </View>
           </Marker>
         ))}
@@ -286,6 +292,8 @@ export default function MapScreen() {
             coordinates={routeCoords} 
             strokeColor={PALETTE.primary} 
             strokeWidth={5} 
+            tappable={false}
+            lineJoin="round"
           />
         )}
       </MapView>
@@ -310,8 +318,12 @@ export default function MapScreen() {
                 <Text style={styles.cardTitle}>{selectedItem.name}</Text>
                 <TouchableOpacity
                   onPress={() => {
-                    const url = `https://www.google.com/maps/dir/?api=1&origin=${location!.latitude},${location!.longitude}&destination=${selectedItem.lat},${selectedItem.lon}&travelmode=walking`; 
-                    Linking.openURL(url);
+                    const lat = location?.latitude;
+                    const lon = location?.longitude;
+                    if (lat && lon) {
+                       const url = `https://www.google.com/maps/dir/?api=1&origin=${lat},${lon}&destination=${selectedItem.lat},${selectedItem.lon}&travelmode=walking`; 
+                       Linking.openURL(url);
+                    }
                   }}
                 >
                     <LinearGradient colors={['#2CFD89', '#00A3FF']} style={styles.navigateButton}>
