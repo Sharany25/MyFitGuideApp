@@ -4,11 +4,11 @@
     "slug": "MyFitGuide",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/Logo.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/Logo.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#1D2A32"
     },
@@ -17,14 +17,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/Logo.png",
+        "foregroundImage": "./assets/icon-foreground.png",
         "backgroundColor": "#1D2A32"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.sharany.MyFitGuide"
     },
     "web": {
-      "favicon": "./assets/Logo.png"
+      "favicon": "./assets/icon.png"
     },
     "extra": {
       "eas": {
