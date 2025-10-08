@@ -25,8 +25,61 @@ import DownloadDietPdfButton from '../components/DownloadDietPdfButton';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { useUser } from '../context/UserContext';
+import DisclaimerModal from '../components/EdicionAlert';
 
 const { width, height } = Dimensions.get('window');
+
+interface Macro { proteinas: number; carbohidratos: number; grasas: number; }
+interface Ingrediente { nombre: string; cantidad: string; }
+interface PlatilloData {
+  platillo: string;
+  ingredientes: Ingrediente[];
+  macros: Macro;
+  calorias: number;
+}
+interface Comida {
+  tipo: string;
+  platillo: string | PlatilloData;
+  ingredientes: Ingrediente[];
+  macros: Macro;
+  calorias: number;
+}
+interface Dia {
+  dia: string;
+  comidas: Comida[];
+}
+interface DietaResultado {
+  semana: Dia[];
+}
+interface DietaData {
+  resultado: DietaResultado;
+}
+interface RouteParams {
+  userId: string;
+  nombre: string;
+}
+
+interface MealCardProps {
+  comida: Comida;
+  index: number;
+  dayIndex: number; 
+  editState: {
+    editIndex: number | null;
+    nuevoPlatillo: string;
+    platilloLoading: boolean;
+    platilloError: string | null;
+  };
+  favoritoState: { favoritosLocal: { [key: string]: boolean } };
+  handlers: {
+    onToggleFavorito: (platillo: string) => void;
+    onEdit: (index: number, tipo: string) => void;
+    onSave: () => Promise<void>;
+    onCancel: () => void;
+    onSetNuevoPlatillo: (text: string) => void;
+  };
+  modifiedMealKeys: { [key: string]: boolean }; 
+  animation: Animated.Value;
+}
 
 const PALETTE = {
   background_gradient: ['#1D2A32', '#163B48', '#1D2A32'] as const,
@@ -40,14 +93,13 @@ const PALETTE = {
   fats: '#E91E63',
   inactive: 'rgba(255, 255, 255, 0.1)',
   pin_red: '#F44336',
+  overlay: 'rgba(0, 0, 0, 0.6)', 
 };
 
 const DIAS_SEMANA = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
 const alimentos = ['food-variant', 'food-apple', 'food-drumstick', 'food-fork-drink', 'water'] as const;
 
-// ------------------------------------
-// 1. STYLES DEFINITION (MOVED UP)
-// ------------------------------------
+const MODIFIED_MEALS_PREFIX = 'modifiedMeals_';
 
 const styles = StyleSheet.create({
   base: { flex: 1 },
@@ -97,7 +149,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: width * 0.035
   },
-  // Nuevo estilo para el botón PDF, asegurando visibilidad y color
   pdfButtonVisible: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -241,21 +292,34 @@ const styles = StyleSheet.create({
     fontSize: width * 0.03,
     marginTop: 10
   },
+  modifiedBadge: {
+    backgroundColor: PALETTE.danger,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginRight: 15, 
+    alignSelf: 'center',
+  },
+  modifiedBadgeText: {
+    color: PALETTE.text_primary,
+    fontSize: width * 0.03,
+    fontWeight: 'bold',
+  },
 });
 
-// ------------------------------------
-// 2. SUB-COMPONENTS (USE DEFINED STYLES)
-// ------------------------------------
 
-const LoadingDieta = () => {
+const LoadingDieta: React.FC = () => {
   const spinValue = useRef(new Animated.Value(0)).current;
   const [iconIdx, setIconIdx] = useState(0);
+
   useEffect(() => {
     Animated.loop(Animated.timing(spinValue, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.ease), useNativeDriver: true })).start();
     const interval = setInterval(() => setIconIdx(i => (i + 1) % alimentos.length), 850);
     return () => clearInterval(interval);
   }, []);
+
   const spin = spinValue.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+
   return (
     <View style={styles.centeredScreen}>
       <Animated.View style={{ transform: [{ rotate: spin }] }}>
@@ -267,26 +331,32 @@ const LoadingDieta = () => {
   );
 };
 
-const HeaderActions = ({ onSummaryPress, onPdfPress, data, nombreUsuario }: any) => (
+const HeaderActions: React.FC<{ onSummaryPress: () => void; onPdfPress: () => void; data: DietaData | null; nombreUsuario: string }> = ({ onSummaryPress, data, nombreUsuario }) => (
   <View style={styles.headerRow}>
     <TouchableOpacity style={styles.headerButton} onPress={onSummaryPress}>
       <Ionicons name="stats-chart-outline" size={width * 0.05} color={PALETTE.text_primary} />
       <Text style={styles.headerButtonText}>Resumen</Text>
     </TouchableOpacity>
     
-    <DownloadDietPdfButton 
-      data={data} 
-      nombreUsuario={nombreUsuario} 
-      style={styles.pdfButtonVisible} 
-    />
+    {data && (
+      <DownloadDietPdfButton 
+        data={data} 
+        nombreUsuario={nombreUsuario} 
+        style={styles.pdfButtonVisible} 
+      />
+    )}
   </View>
 );
 
-const DaySelector = ({ semana, selectedDayIndex, onSelectDay }: any) => (
+const DaySelector: React.FC<{ semana: Dia[]; selectedDayIndex: number; onSelectDay: (index: number) => void }> = ({ semana, selectedDayIndex, onSelectDay }) => (
   <View style={styles.daySelectorContainer}>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daySelectorContent}>
-      {semana.map((_day: any, index: number) => (
-        <TouchableOpacity key={index} style={[styles.dayButton, selectedDayIndex === index && styles.dayButtonSelected]} onPress={() => onSelectDay(index)}>
+      {semana.map((_day: Dia, index: number) => (
+        <TouchableOpacity 
+          key={index} 
+          style={[styles.dayButton, selectedDayIndex === index && styles.dayButtonSelected]} 
+          onPress={() => onSelectDay(index)}
+        >
           <Text style={[styles.dayText, selectedDayIndex === index && styles.dayTextSelected]}>{DIAS_SEMANA[index]}</Text>
         </TouchableOpacity>
       ))}
@@ -294,15 +364,20 @@ const DaySelector = ({ semana, selectedDayIndex, onSelectDay }: any) => (
   </View>
 );
 
-const MealCard = ({ comida, index, editState, favoritoState, handlers, animation }: any) => {
+const MealCard: React.FC<MealCardProps> = ({ comida, index, dayIndex, modifiedMealKeys, editState, favoritoState, handlers, animation }) => {
   const { editIndex, nuevoPlatillo, platilloLoading, platilloError } = editState;
   const { favoritosLocal } = favoritoState;
   const { onToggleFavorito, onEdit, onSave, onCancel, onSetNuevoPlatillo } = handlers;
 
-  const nombrePlatillo = typeof comida.platillo === 'string' ? comida.platillo : (comida.platillo?.platillo ?? '');
-  const ingredientes = typeof comida.platillo === 'string' ? comida.ingredientes : comida.platillo?.ingredientes;
-  const macros = typeof comida.platillo === 'string' ? comida.macros : comida.platillo?.macros;
-  const calorias = typeof comida.platillo === 'string' ? comida.calorias : comida.platillo?.calorias;
+  const mealKey = `${dayIndex}-${index}`;
+  const isModified = modifiedMealKeys[mealKey];
+
+  const isStringPlatillo = typeof comida.platillo === 'string';
+
+  const nombrePlatillo = isStringPlatillo ? (comida.platillo as string) : (comida.platillo as PlatilloData)?.platillo ?? '';
+  const ingredientes: Ingrediente[] = isStringPlatillo ? (comida.ingredientes as Ingrediente[]) : (comida.platillo as PlatilloData)?.ingredientes ?? [];
+  const macros: Macro | undefined = isStringPlatillo ? (comida.macros as Macro) : (comida.platillo as PlatilloData)?.macros;
+  const calorias: number = isStringPlatillo ? (comida.calorias as number) : (comida.platillo as PlatilloData)?.calorias ?? 0;
 
   return (
     <Animated.View style={{ opacity: animation, transform: [{ translateY: animation.interpolate({ inputRange: [0, 1], outputRange: [50, 0] }) }] }}>
@@ -311,6 +386,11 @@ const MealCard = ({ comida, index, editState, favoritoState, handlers, animation
           <View style={styles.cardHeader}>
             <Text style={styles.mealType}>{comida.tipo.toUpperCase()}</Text>
             <View style={styles.cardActions}>
+              {isModified && (
+                <View style={styles.modifiedBadge}>
+                  <Text style={styles.modifiedBadgeText}>EDITADO</Text>
+                </View>
+              )}
               <TouchableOpacity onPress={() => onToggleFavorito(nombrePlatillo)}>
                 <MaterialCommunityIcons name={favoritosLocal[nombrePlatillo] ? 'pin' : 'pin-outline'} size={width * 0.06} color={favoritosLocal[nombrePlatillo] ? PALETTE.pin_red : PALETTE.text_secondary} />
               </TouchableOpacity>
@@ -347,9 +427,13 @@ const MealCard = ({ comida, index, editState, favoritoState, handlers, animation
             <>
               <Text style={styles.mealName}>{nombrePlatillo}</Text>
               <Text style={styles.ingredientTitle}>Ingredientes:</Text>
-              {Array.isArray(ingredientes) && ingredientes.map((ing: any, i: number) => (
-                <Text key={i} style={styles.ingredientItem}>- {ing.nombre}: {ing.cantidad}</Text>
-              ))}
+              {ingredientes.length > 0 ? (
+                ingredientes.map((ing: Ingrediente, i: number) => (
+                  <Text key={i} style={styles.ingredientItem}>- {ing.nombre}: {ing.cantidad}</Text>
+                ))
+              ) : (
+                <Text style={styles.ingredientItem}>- Información de ingredientes no disponible.</Text>
+              )}
               <View style={styles.macrosContainer}>
                 <Text style={styles.macrosText}><View style={[styles.macroDot, { backgroundColor: PALETTE.protein }]} /> P: {macros?.proteinas ?? 0}g</Text>
                 <Text style={styles.macrosText}><View style={[styles.macroDot, { backgroundColor: PALETTE.carbs }]} /> C: {macros?.carbohidratos ?? 0}g</Text>
@@ -364,34 +448,37 @@ const MealCard = ({ comida, index, editState, favoritoState, handlers, animation
   );
 };
 
-// ------------------------------------
-// 3. MAIN COMPONENT
-// ------------------------------------
-
 const DietaIAGenerada: React.FC = () => {
   const route = useRoute();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const { userId, nombre: nombreFromRoute } = route.params as { userId: string; nombre: string };
+  const { userId, nombre: nombreFromRoute } = route.params as RouteParams;
   const { obtenerDietaPorUsuario, loading, error } = useDieta();
   const { ComidasFavoritas } = useFavoritos();
   const { state: userContextState } = useUser();
 
-  const [data, setData] = useState<any>(null);
+  const [data, setData] = useState<DietaData | null>(null);
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [favoritosLocal, setFavoritosLocal] = useState<{ [key: string]: boolean }>({});
+  
+  // Edit State
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const [nuevoPlatillo, setNuevoPlatillo] = useState('');
   const [editTipoComida, setEditTipoComida] = useState('');
   const [platilloLoading, setPlatilloLoading] = useState(false);
   const [platilloError, setPlatilloError] = useState<string | null>(null);
-  const cardAnimations = useRef<Animated.Value[]>([]).current;
 
+  const [isDisclaimerVisible, setIsDisclaimerVisible] = useState(false);
+  const [pendingEditIndex, setPendingEditIndex] = useState<{ index: number; tipo: string } | null>(null);
+
+  const [modifiedMealKeys, setModifiedMealKeys] = useState<{ [key: string]: boolean }>({});
+  
+  const cardAnimations = useRef<Animated.Value[]>([]).current;
   const FAVORITOS_KEY = `favoritosComidas_${userId}`;
-  const scrollRef = useRef<ScrollView>(null);
+  const MODIFIED_MEALS_KEY = `${MODIFIED_MEALS_PREFIX}${userId}`;
 
   useEffect(() => {
-    (async () => {
+    const fetchData = async () => {
       const result = await obtenerDietaPorUsuario(userId);
       if (result) {
         setData(result);
@@ -405,13 +492,26 @@ const DietaIAGenerada: React.FC = () => {
       let favsLocal: string[] = [];
       try {
         const favs = await AsyncStorage.getItem(FAVORITOS_KEY);
-        if (favs) favsLocal = JSON.parse(favs);
-      } catch {}
+        if (favs) favsLocal = JSON.parse(favs) as string[];
+      } catch (e) {
+        console.error("Error loading favorites from AsyncStorage", e);
+      }
       
       const favMap: { [key: string]: boolean } = {};
       favsLocal.forEach((item: string) => (favMap[item] = true));
       setFavoritosLocal(favMap);
-    })();
+
+      try {
+        const jsonValue = await AsyncStorage.getItem(MODIFIED_MEALS_KEY);
+        if (jsonValue != null) {
+          setModifiedMealKeys(JSON.parse(jsonValue));
+        }
+      } catch (e) {
+          console.error("Error loading modified meals:", e);
+      }
+    };
+
+    fetchData();
   }, [userId]);
 
   const animateCards = () => {
@@ -438,10 +538,24 @@ const DietaIAGenerada: React.FC = () => {
   };
 
   const handleEditarPlatillo = (index: number, tipo: string) => {
-    setEditIndex(index);
-    setEditTipoComida(tipo);
-    setNuevoPlatillo('');
-    setPlatilloError(null);
+    setPendingEditIndex({ index, tipo });
+    setIsDisclaimerVisible(true);
+  };
+
+  const handleConfirmEdit = () => {
+    if (pendingEditIndex) {
+      setEditIndex(pendingEditIndex.index);
+      setEditTipoComida(pendingEditIndex.tipo);
+      setNuevoPlatillo('');
+      setPlatilloError(null);
+      setPendingEditIndex(null);
+    }
+    setIsDisclaimerVisible(false);
+  };
+
+  const handleCancelDisclaimer = () => {
+    setIsDisclaimerVisible(false);
+    setPendingEditIndex(null);
   };
 
   const handleCancelEdit = () => {
@@ -458,18 +572,39 @@ const DietaIAGenerada: React.FC = () => {
     }
     setPlatilloLoading(true);
     setPlatilloError(null);
-    const payload = { dia: data.resultado.semana[selectedDayIndex].dia, tipoComida: editTipoComida, platillo: nuevoPlatillo.trim() };
+    const payload = { dia: data?.resultado.semana[selectedDayIndex].dia, tipoComida: editTipoComida, platillo: nuevoPlatillo.trim() };
+    
     try {
-      const res = await fetch(`${API_URL}dieta-ia/${userId}/platillo`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (!payload.dia) {
+        setPlatilloError('Error: Día de la dieta no encontrado.');
+        return;
+      }
+
+      const res = await fetch(`${API_URL}dieta-ia/${userId}/platillo`, { 
+        method: 'PATCH', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify(payload) 
+      });
+      
       const result = await res.json();
-      if (!res.ok) setPlatilloError(result.message || 'No se pudo modificar');
-      else {
+      
+      if (!res.ok) {
+        setPlatilloError(result.message || 'No se pudo modificar');
+      } else {
+        const mealKey = `${selectedDayIndex}-${editIndex}`;
+        if (editIndex !== null) {
+            const newKeys = { ...modifiedMealKeys, [mealKey]: true };
+            setModifiedMealKeys(newKeys);
+            await AsyncStorage.setItem(MODIFIED_MEALS_KEY, JSON.stringify(newKeys));
+        }
+
         handleCancelEdit();
         const updated = await obtenerDietaPorUsuario(userId);
         if (updated) setData(updated);
       }
-    } catch {
-      setPlatilloError('Error de conexión');
+    } catch (e) {
+      console.error("Error saving platillo:", e);
+      setPlatilloError('Error de conexión o del servidor.');
     } finally {
       setPlatilloLoading(false);
     }
@@ -493,19 +628,25 @@ const DietaIAGenerada: React.FC = () => {
         <ScrollView
           style={styles.base}
           contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 10, paddingBottom: insets.bottom + 20 }]}
-          ref={scrollRef}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <HeaderActions onSummaryPress={() => navigation.navigate('ResumenSemanalDieta', { userId })} data={data} nombreUsuario={nombreUsuarioParaPdf} />
+          <HeaderActions 
+            onSummaryPress={() => navigation.navigate('ResumenSemanalDieta', { userId })} 
+            data={data} 
+            nombreUsuario={nombreUsuarioParaPdf} 
+            onPdfPress={() => { /* Handled internally by DownloadDietPdfButton */ }}
+          />
           <DaySelector semana={semana} selectedDayIndex={selectedDayIndex} onSelectDay={setSelectedDayIndex} />
           <Text style={styles.sectionTitle}>Comidas del día</Text>
 
-          {diaActual.comidas.map((comida: any, index: number) => (
+          {diaActual.comidas.map((comida: Comida, index: number) => (
             <MealCard
               key={`${selectedDayIndex}-${index}`}
               comida={comida}
               index={index}
+              dayIndex={selectedDayIndex}
+              modifiedMealKeys={modifiedMealKeys}
               animation={cardAnimations[index] || new Animated.Value(1)}
               editState={{ editIndex, nuevoPlatillo, platilloLoading, platilloError }}
               favoritoState={{ favoritosLocal }}
@@ -518,8 +659,15 @@ const DietaIAGenerada: React.FC = () => {
               }}
             />
           ))}
+          <Text style={styles.footerText}>Plan generado por NutriIA. La información proporcionada es solo una sugerencia.</Text>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <DisclaimerModal 
+        isVisible={isDisclaimerVisible}
+        onConfirm={handleConfirmEdit}
+        onCancel={handleCancelDisclaimer}
+      />
     </LinearGradient>
   );
 };
