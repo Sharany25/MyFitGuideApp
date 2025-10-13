@@ -164,10 +164,11 @@ const Header: React.FC<HeaderProps> = ({ user, onLogoutPress }) => {
               <Ionicons name="time-outline" size={20} color={PALETTE.primary} />
               <Text style={styles.menuItemText}>Historial de cambios</Text>
             </TouchableOpacity>*/}
-            <TouchableOpacity onPress={() => handleMenuItemPress('Map')} style={styles.menuItem}>
+            {/* Boton de Gym / Parkes cercanos, eliminado para optimizar y actualizar*/}
+            {/*<TouchableOpacity onPress={() => handleMenuItemPress('Map')} style={styles.menuItem}>
               <Ionicons name="map-outline" size={20} color={PALETTE.primary} />
               <Text style={styles.menuItemText}>Lugares cercanos</Text>
-            </TouchableOpacity>
+            </TouchableOpacity>*/}
             <TouchableOpacity onPress={() => handleMenuItemPress('QuejaSugerencia')} style={styles.menuItem}>
               <Ionicons name="chatbubble-ellipses-outline" size={20} color={PALETTE.text_secondary} />
               <Text style={styles.menuItemText}>Quejas y Sugerencias</Text>

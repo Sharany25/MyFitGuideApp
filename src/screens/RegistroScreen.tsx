@@ -8,18 +8,20 @@ import {
   Platform,
   Dimensions,
   TouchableOpacity,
-  StatusBar,
   ActivityIndicator,
   TextInput,
   Animated,
   Image,
+  Modal,
+  TextInputProps,
+  Linking,
 } from "react-native";
 import { Checkbox } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/StackNavigator";
 import ProgressStepper from "../components/ProgressStepper";
-import DateTimePicker from "@react-native-community/datetimepicker";
+import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import CustomToast from "../components/CustomToast";
 import { useRegistro } from "../hooks/useRegistro";
 import { useUser } from "../context/UserContext";
@@ -27,9 +29,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from 'expo-blur';
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSafeAreaInsets, SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from 'expo-image-picker';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get("window");
 
@@ -44,14 +45,46 @@ const PALETTE = {
   dark: '#1D2A32',
 };
 
-const formatDate = (date: Date): string => {
+const formatDate = (date: Date | null): string => {
+  if (!date) return "";
   const day = date.getDate().toString().padStart(2, "0");
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
   const year = date.getFullYear();
   return `${day}/${month}/${year}`;
 };
 
+const toISODate = (date: Date | null): string | undefined => {
+    return date?.toISOString().split('T')[0];
+}
+
 type NavigationProp = NativeStackNavigationProp<RootStackParamList, "Registro">;
+
+interface CustomInputProps extends TextInputProps {
+    label: string;
+    icon?: keyof typeof Feather.glyphMap;
+    rightIcon?: React.ReactNode;
+}
+
+const CustomInput: React.FC<CustomInputProps> = ({ label, rightIcon, icon, ...props }) => {
+    const [isFocused, setIsFocused] = useState(false);
+    return (
+        <View style={{marginBottom: 15}}>
+            <Text style={styles.label}>{label}</Text>
+            <View style={[styles.inputWrapper, isFocused && styles.inputFocused]}>
+                {icon && <Feather name={icon} size={20} color={isFocused ? PALETTE.primary : PALETTE.text_secondary} style={styles.leftIcon} />}
+                <TextInput
+                    style={styles.input}
+                    placeholderTextColor={PALETTE.text_secondary}
+                    onFocus={() => setIsFocused(true)}
+                    onBlur={() => setIsFocused(false)}
+                    {...props}
+                />
+                {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
+            </View>
+        </View>
+    );
+};
+
 
 const RegistroScreen: React.FC = () => {
   const navigation = useNavigation<NavigationProp>();
@@ -62,13 +95,12 @@ const RegistroScreen: React.FC = () => {
   const [correo, setCorreo] = useState("");
   const [contrasena, setContrasena] = useState("");
   const [contrasenaError, setContrasenaError] = useState<string | null>(null);
-  const [fechaNacimiento, setFechaNacimiento] = useState("");
-  const [fechaDate, setFechaDate] = useState<Date | null>(null);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [fechaNacimiento, setFechaNacimiento] = useState<Date | null>(null);
+  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
   const [aceptoTerminos, setAceptoTerminos] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [foto, setFoto] = useState<string>('');
-
+  
   const {
     registrar,
     loading,
@@ -86,24 +118,23 @@ const RegistroScreen: React.FC = () => {
         duration: 800,
         useNativeDriver: true,
     }).start();
-  }, []);
+  }, [fadeAnim]);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      alert('Se necesita permiso para acceder a la galería de fotos.');
+      setShowError(true);
       return;
     }
 
-    let result = await ImagePicker.launchImageLibraryAsync({
+    const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1], 
-      quality: 0.5, 
-      base64: false,
+      quality: 0.5,
     });
 
-    if (!result.canceled) {
+    if (!result.canceled && result.assets) {
       setFoto(result.assets[0].uri);
     }
   };
@@ -113,24 +144,18 @@ const RegistroScreen: React.FC = () => {
       setContrasenaError("La contraseña debe tener al menos 8 caracteres.");
       setShowError(true);
       return;
-    } else {
-      setContrasenaError(null);
     }
+    setContrasenaError(null);
 
     if (!aceptoTerminos || !nombre || !correo || !contrasena || !fechaNacimiento) {
       setShowError(true);
       return;
     }
-
-    const fechaParts = fechaNacimiento.split("/");
-    if (fechaParts.length !== 3) {
-      setShowError(true);
-      return;
-    }
-    const fechaISO = `${fechaParts[2]}-${fechaParts[1]}-${fechaParts[0]}`;
-    if (isNaN(new Date(fechaISO).getTime())) {
-      setShowError(true);
-      return;
+    
+    const fechaISO = toISODate(fechaNacimiento);
+    if (!fechaISO) {
+        setShowError(true);
+        return;
     }
 
     const emailToSend = correo.toLowerCase();
@@ -162,6 +187,65 @@ const RegistroScreen: React.FC = () => {
     }
   };
 
+  const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+        if (event.type === 'set' && selectedDate) {
+            setFechaNacimiento(selectedDate);
+            setDatePickerVisible(false);
+        } else if (event.type === 'dismissed') {
+            setDatePickerVisible(false);
+        }
+    } else { // iOS
+        if (selectedDate) {
+            setFechaNacimiento(selectedDate);
+        }
+    }
+  };
+
+  const renderDatePicker = () => {
+      const currentDate = fechaNacimiento || new Date(2000, 0, 1);
+      
+      if (Platform.OS === 'android') {
+          return isDatePickerVisible && (
+              <DateTimePicker
+                  value={currentDate}
+                  mode="date"
+                  display="inline"
+                  onChange={onDateChange}
+                  maximumDate={new Date()}
+              />
+          );
+      }
+      
+      return (
+          <Modal
+              animationType="slide"
+              transparent={true}
+              visible={isDatePickerVisible}
+              onRequestClose={() => setDatePickerVisible(false)}
+          >
+              <BlurView intensity={30} tint="dark" style={styles.modalBackdrop}>
+                  <View style={styles.modalContent}>
+                      <DateTimePicker
+                          value={currentDate}
+                          mode="date"
+                          display="spinner"
+                          onChange={onDateChange}
+                          textColor={PALETTE.text_primary}
+                          maximumDate={new Date()}
+                      />
+                      <TouchableOpacity
+                          style={styles.dateConfirmButton}
+                          onPress={() => setDatePickerVisible(false)}
+                      >
+                          <Text style={styles.dateConfirmButtonText}>Confirmar</Text>
+                      </TouchableOpacity>
+                  </View>
+              </BlurView>
+          </Modal>
+      );
+  }
+
   return (
     <LinearGradient colors={PALETTE.background_gradient} style={{ flex: 1 }}>
       <SafeAreaView style={styles.safeArea}>
@@ -183,7 +267,7 @@ const RegistroScreen: React.FC = () => {
                   <Text style={styles.subtitle}>Bienvenido, registra tu información</Text>
 
                   <CustomInput label="Nombre completo" value={nombre} onChangeText={setNombre} placeholder="Tu nombre" icon="user" />
-                  <CustomInput label="Correo electrónico" value={correo} onChangeText={setCorreo} placeholder="tu@email.com" keyboardType="email-address" autoCapitalize="none" icon="mail" />
+                  <CustomInput label="Correo electrónico" value={correo} onChangeText={setCorreo} placeholder="Nombre@gmail.com" keyboardType="email-address" autoCapitalize="none" icon="mail" />
                   
                   <View>
                     <CustomInput
@@ -209,43 +293,35 @@ const RegistroScreen: React.FC = () => {
                     {contrasenaError && <Text style={styles.errorText}>{contrasenaError}</Text>}
                   </View>
 
-                  <TouchableOpacity onPress={() => setShowDatePicker(true)}>
-                    <CustomInput label="Fecha de nacimiento" value={fechaDate ? formatDate(fechaDate) : ""} placeholder="DD/MM/AAAA" editable={false} icon="calendar" />
+                  <TouchableOpacity onPress={() => setDatePickerVisible(true)}>
+                    <CustomInput label="Fecha de nacimiento" value={formatDate(fechaNacimiento)} placeholder="DD/MM/AAAA" editable={false} icon="calendar" />
                   </TouchableOpacity>
 
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={fechaDate || new Date(2000, 0, 1)}
-                      mode="date"
-                      display="spinner"
-                      onChange={(event, selectedDate) => {
-                        setShowDatePicker(false);
-                        if (selectedDate) {
-                          setFechaDate(selectedDate);
-                          setFechaNacimiento(formatDate(selectedDate));
-                        }
-                      }}
-                    />
-                  )}
+                  {renderDatePicker()}
 
-                  {/* Campo para seleccionar la foto */}
-                  <View style={styles.photoPickerContainer}>
-                    <Text style={styles.label}>Foto de Perfil (opcional)</Text>
-                    <TouchableOpacity onPress={pickImage} style={styles.photoPickerButton}>
-                      {foto ? (
-                        <Image source={{ uri: foto }} style={styles.photoPreview} />
-                      ) : (
-                        <View style={styles.photoPlaceholder}>
-                          <Ionicons name="camera-outline" size={40} color={PALETTE.text_secondary} />
-                          <Text style={styles.photoPlaceholderText}>Seleccionar Foto</Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  </View>
+                  <Text style={[styles.label, {textAlign: 'center', marginBottom: 10}]}>Foto de Perfil (opcional)</Text>
+                  <TouchableOpacity onPress={pickImage} style={styles.photoPickerButton}>
+                    {foto ? (
+                      <Image source={{ uri: foto }} style={styles.photoPreview} />
+                    ) : (
+                      <View style={styles.photoPlaceholder}>
+                        <Ionicons name="camera-outline" size={40} color={PALETTE.text_secondary} />
+                        <Text style={styles.photoPlaceholderText}>Seleccionar Foto</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
 
                   <View style={styles.checkboxContainer}>
                     <Checkbox.Android status={aceptoTerminos ? "checked" : "unchecked"} onPress={() => setAceptoTerminos(!aceptoTerminos)} color={PALETTE.primary} uncheckedColor={PALETTE.text_secondary} />
-                    <Text style={styles.checkboxLabel}>Acepto los <Text style={{ textDecorationLine: "underline", color: PALETTE.primary }}>términos y condiciones</Text></Text>
+                    <Text style={styles.checkboxLabel}>
+                      Acepto los{' '}
+                      <Text 
+                        style={{ textDecorationLine: "underline", color: PALETTE.primary }}
+                        onPress={() => Linking.openURL('https://myfitguideapp-f48a8.web.app/projects/myfitguide')}
+                      >
+                        términos y condiciones
+                      </Text>
+                    </Text>
                   </View>
 
                   <TouchableOpacity
@@ -264,26 +340,6 @@ const RegistroScreen: React.FC = () => {
       </SafeAreaView>
     </LinearGradient>
   );
-};
-
-const CustomInput = ({ label, rightIcon, icon, ...props }: any) => {
-    const [isFocused, setIsFocused] = useState(false);
-    return (
-        <View style={{marginBottom: 15}}>
-            <Text style={styles.label}>{label}</Text>
-            <View style={[styles.inputWrapper, isFocused && styles.inputFocused]}>
-                {icon && <Feather name={icon} size={20} color={isFocused ? PALETTE.primary : PALETTE.text_secondary} style={styles.leftIcon} />}
-                <TextInput
-                    style={styles.input}
-                    placeholderTextColor={PALETTE.text_secondary}
-                    onFocus={() => setIsFocused(true)}
-                    onBlur={() => setIsFocused(false)}
-                    {...props}
-                />
-                {rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
-            </View>
-        </View>
-    );
 };
 
 const styles = StyleSheet.create({
@@ -326,10 +382,11 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     borderWidth: 1,
     borderColor: 'transparent',
+    height: 55,
   },
   input: {
     flex: 1,
-    height: 55,
+    height: '100%',
     paddingHorizontal: 15,
     color: PALETTE.text_primary,
     fontSize: 16,
@@ -349,25 +406,11 @@ const styles = StyleSheet.create({
     marginTop: 5,
     marginLeft: 5,
   },
-  outlineButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 1.5,
-    borderColor: PALETTE.primary,
-    borderRadius: 15,
-    paddingVertical: 15,
-    alignItems: "center",
-    marginTop: 15,
-    marginBottom: 20,
-  },
-  outlineButtonText: {
-    color: PALETTE.primary,
-    fontWeight: "600",
-    fontSize: 16,
-  },
   checkboxContainer: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 20,
+    marginTop: 25,
   },
   checkboxLabel: {
     fontSize: width * 0.038,
@@ -390,21 +433,17 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
-
-  photoPickerContainer: {
-    marginBottom: 15,
-    alignItems: 'center',
-  },
   photoPickerButton: {
-    width: width * 0.4,
-    height: width * 0.4,
-    borderRadius: (width * 0.4) / 2,
+    width: width * 0.35,
+    height: width * 0.35,
+    borderRadius: (width * 0.35) / 2,
     backgroundColor: PALETTE.inactive,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: PALETTE.border,
+    alignSelf: 'center',
   },
   photoPreview: {
     width: '100%',
@@ -420,5 +459,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 5,
   },
+  modalBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: PALETTE.dark,
+    width: '100%',
+    borderTopRightRadius: 20,
+    borderTopLeftRadius: 20,
+    padding: 20,
+    paddingBottom: 40,
+    alignItems: 'center',
+  },
+  dateConfirmButton: {
+    backgroundColor: PALETTE.primary,
+    paddingVertical: 15,
+    borderRadius: 15,
+    alignItems: "center",
+    width: '90%',
+    marginTop: 15,
+  },
+  dateConfirmButtonText: {
+    color: PALETTE.dark,
+    fontSize: 16,
+    fontWeight: 'bold',
+  }
 });
+
 export default RegistroScreen;
+

@@ -12,6 +12,7 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Dimensions,
+  Animated,
 } from 'react-native';
 import { useChatbot } from '../hooks/useChatbot';
 import { Feather } from '@expo/vector-icons';
@@ -19,14 +20,63 @@ import { LinearGradient } from 'expo-linear-gradient';
 import LottieView from 'lottie-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
+import { BlurView } from 'expo-blur';
 
 const { width } = Dimensions.get('window');
+
+const PALETTE = {
+  background_gradient: ['#1D2A32', '#163B48', '#1D2A32'] as const,
+  primary_gradient: ['#2CFD89', '#00A3FF'] as const,
+  primary: '#2CFD89',
+  text_primary: '#FFFFFF',
+  text_secondary: '#B0C4DE',
+  bot_bubble: '#2C3E50',
+  dark: '#1D2A32',
+  danger: '#FF4757',
+};
 
 interface Message {
   id: string;
   text: string;
   fromUser: boolean;
 }
+
+const AnimatedBubble = ({ item }: { item: Message }) => {
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const isUser = item.fromUser;
+
+    useEffect(() => {
+        Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 400,
+            useNativeDriver: true,
+        }).start();
+    }, [fadeAnim]);
+
+    const bubbleContent = (
+        <View style={[styles.messageBubble, isUser ? styles.userBubble : styles.botBubble]}>
+            <Text style={isUser ? styles.userMessageText : styles.botMessageText}>{item.text}</Text>
+        </View>
+    );
+
+    return (
+        <Animated.View style={{ opacity: fadeAnim, alignSelf: isUser ? 'flex-end' : 'flex-start' }}>
+            {isUser ? (
+                <LinearGradient
+                    colors={PALETTE.primary_gradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.userBubbleGradient}
+                >
+                    {bubbleContent}
+                </LinearGradient>
+            ) : (
+                bubbleContent
+            )}
+        </Animated.View>
+    );
+};
+
 
 export const ChatbotScreen: React.FC = () => {
   const [input, setInput] = useState('');
@@ -35,79 +85,73 @@ export const ChatbotScreen: React.FC = () => {
   const navigation = useNavigation();
   const flatListRef = useRef<FlatList>(null);
   const insets = useSafeAreaInsets();
+  const sendButtonScale = useRef(new Animated.Value(1)).current;
 
   const handleSend = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
 
-    const userMessage = {
-      id: Date.now().toString(),
-      text: input,
-      fromUser: true,
-    };
-
+    const userMessage = { id: Date.now().toString(), text: input, fromUser: true };
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = input;
     setInput('');
 
-    const reply = await sendMessage(input);
+    const reply = await sendMessage(currentInput);
 
-    const botMessage = {
-      id: (Date.now() + 1).toString(),
-      text: reply,
-      fromUser: false,
-    };
-
+    const botMessage = { id: (Date.now() + 1).toString(), text: reply, fromUser: false };
     setMessages((prev) => [...prev, botMessage]);
   };
 
   useEffect(() => {
-    flatListRef.current?.scrollToEnd({ animated: true });
+    if (messages.length > 0) {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }
   }, [messages]);
 
-  const keyboardVerticalOffset = Platform.OS === 'ios' ? insets.bottom + 10 : 0;
-
-  const renderBubble = ({ item }: { item: Message }) => {
-    return (
-      <View
-        style={[
-          styles.messageBubble,
-          item.fromUser ? styles.userBubble : styles.botBubble,
-        ]}
-      >
-        <Text style={styles.messageText}>{item.text}</Text>
-      </View>
-    );
+  const onPressInSend = () => {
+    Animated.spring(sendButtonScale, { toValue: 0.9, useNativeDriver: true }).start();
   };
 
-  const renderTypingIndicator = () => {
-    return (
-      <View style={styles.typingIndicatorContainer}>
-        <LottieView
-          source={require('../../assets/animations/Anima Bot.json')}
-          autoPlay
-          loop
-          style={styles.typingIndicatorLottie}
-        />
-      </View>
-    );
+  const onPressOutSend = () => {
+    Animated.spring(sendButtonScale, { toValue: 1, useNativeDriver: true }).start();
+    handleSend();
   };
+
+  const renderTypingIndicator = () => (
+    <View style={styles.typingIndicatorContainer}>
+      <LottieView
+        source={require('../../assets/animations/Anima Bot.json')}
+        autoPlay
+        loop
+        style={styles.typingIndicatorLottie}
+      />
+    </View>
+  );
 
   return (
-    <LinearGradient colors={['#1D2A32', '#163B48', '#1D2A32']} style={styles.container}>
-      <SafeAreaView style={[styles.safeArea, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
+    <LinearGradient colors={PALETTE.background_gradient} style={styles.container}>
+      <SafeAreaView style={styles.flexOne}>
         <KeyboardAvoidingView
-          style={styles.innerContainer}
+          style={styles.flexOne}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={keyboardVerticalOffset}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? -insets.bottom : 0}
         >
           <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={styles.flexOne}>
-              <View style={styles.header}>
+              <BlurView intensity={80} tint="dark" style={[styles.header, { paddingTop: insets.top }]}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                  <Feather name="arrow-left" size={28} color="#2CFD89" />
+                  <Feather name="arrow-left" size={24} color={PALETTE.primary} />
                 </TouchableOpacity>
-              </View>
+                <View style={styles.headerTitleContainer}>
+                    <Text style={styles.headerTitle}>Asistente Virtual</Text>
+                    <View style={styles.statusContainer}>
+                        <View style={styles.onlineIndicator} />
+                        <Text style={styles.statusText}>En línea</Text>
+                    </View>
+                </View>
+                <View style={styles.headerRightPlaceholder} />
+              </BlurView>
 
-              {messages.length === 0 ? (
+              {messages.length === 0 && !loading ? (
                 <View style={styles.welcomeContainer}>
                   <LottieView
                     source={require('../../assets/animations/Anima Bot.json')}
@@ -116,7 +160,10 @@ export const ChatbotScreen: React.FC = () => {
                     style={styles.lottie}
                   />
                   <Text style={styles.welcomeText}>
-                    Soy tu asistente virtual para el uso de MyFitGuide. ¡Pregunta lo que necesites!
+                    Soy tu asistente de MyFitGuide.
+                  </Text>
+                  <Text style={styles.welcomeSubtext}>
+                    ¡Pregúntame lo que necesites!
                   </Text>
                 </View>
               ) : (
@@ -124,8 +171,8 @@ export const ChatbotScreen: React.FC = () => {
                   ref={flatListRef}
                   data={messages}
                   keyExtractor={(item) => item.id}
-                  renderItem={renderBubble}
-                  contentContainerStyle={styles.messages}
+                  renderItem={({item}) => <AnimatedBubble item={item}/>}
+                  contentContainerStyle={[styles.messages, { paddingBottom: insets.bottom + 80, paddingTop: insets.top + 80 }]}
                   keyboardShouldPersistTaps="handled"
                 />
               )}
@@ -133,29 +180,30 @@ export const ChatbotScreen: React.FC = () => {
               {loading && renderTypingIndicator()}
               {error && <Text style={styles.error}>{error}</Text>}
 
-              <View style={styles.inputWrapper}>
-                <LinearGradient
-                  colors={['#1D2A32', '#163B48']}
-                  start={{ x: 0, y: 0.5 }}
-                  end={{ x: 1, y: 0.5 }}
-                  style={styles.inputContainer}
-                >
+              <View style={[styles.inputWrapper, { paddingBottom: insets.bottom || 15 }]}>
+                <BlurView intensity={80} tint="dark" style={styles.inputContainer}>
                   <TextInput
                     value={input}
                     onChangeText={setInput}
                     placeholder="Escribe tu mensaje..."
-                    placeholderTextColor="#7a8a94"
+                    placeholderTextColor={PALETTE.text_secondary}
                     style={styles.input}
                     multiline
-                    maxLength={500}
                     returnKeyType="send"
                     onSubmitEditing={handleSend}
                     blurOnSubmit={false}
                   />
-                  <TouchableOpacity onPress={handleSend} style={styles.sendButton} activeOpacity={0.7}>
-                    <Feather name="send" size={22} color="#1D2A32" />
+                  <TouchableOpacity
+                    onPressIn={onPressInSend}
+                    onPressOut={onPressOutSend}
+                    activeOpacity={1}
+                    disabled={!input.trim()}
+                  >
+                    <Animated.View style={[styles.sendButton, { transform: [{ scale: sendButtonScale }] }]}>
+                      {loading ? <ActivityIndicator size="small" color={PALETTE.dark} /> : <Feather name="send" size={20} color={PALETTE.dark} />}
+                    </Animated.View>
                   </TouchableOpacity>
-                </LinearGradient>
+                </BlurView>
               </View>
             </View>
           </TouchableWithoutFeedback>
@@ -166,37 +214,59 @@ export const ChatbotScreen: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#1D2A32',
-  },
-  innerContainer: {
-    flex: 1,
-  },
-  flexOne: {
-    flex: 1,
-  },
+  container: { flex: 1 },
+  flexOne: { flex: 1 },
   header: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: Platform.OS === 'ios' ? 15 : 20,
-    paddingBottom: 10,
+    justifyContent: 'space-between',
+    paddingBottom: 15,
     paddingHorizontal: 15,
-    backgroundColor: '#163B48',
-    borderBottomLeftRadius: 15,
-    borderBottomRightRadius: 15,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 6,
+    zIndex: 10,
   },
   backButton: {
-    backgroundColor: '#0f292f',
-    padding: 10,
-    borderRadius: 50,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(44, 62, 80, 0.5)',
+  },
+  headerTitleContainer: {
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: PALETTE.text_primary,
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  onlineIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: PALETTE.primary,
+    marginRight: 6,
+    shadowColor: PALETTE.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 5,
+  },
+  statusText: {
+    color: PALETTE.text_secondary,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  headerRightPlaceholder: {
+    width: 44,
   },
   welcomeContainer: {
     flex: 1,
@@ -205,85 +275,94 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
   },
   lottie: {
-    width: width * 0.5,
-    height: width * 0.5,
-    marginBottom: 25,
+    width: width * 0.6,
+    height: width * 0.6,
   },
   welcomeText: {
-    color: '#2CFD89',
+    color: PALETTE.text_primary,
+    fontSize: 22,
+    textAlign: 'center',
+    fontWeight: 'bold',
+    marginTop: -20
+  },
+  welcomeSubtext:{
+    color: PALETTE.primary,
     fontSize: 18,
     textAlign: 'center',
     fontWeight: '600',
+    marginTop: 8
   },
   messages: {
     paddingHorizontal: 15,
-    paddingVertical: 20,
-    flexGrow: 1,
   },
   messageBubble: {
-    padding: 14,
-    marginVertical: 6,
-    borderRadius: 20,
-    maxWidth: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    marginVertical: 5,
+    maxWidth: '85%',
   },
   userBubble: {
-    backgroundColor: '#2CFD89',
-    alignSelf: 'flex-end',
+    backgroundColor: 'transparent',
+  },
+  userBubbleGradient: {
+    borderRadius: 20,
     borderBottomRightRadius: 5,
+    alignSelf: 'flex-end',
+    marginVertical: 5,
   },
   botBubble: {
-    backgroundColor: '#34495E',
+    backgroundColor: PALETTE.bot_bubble,
     alignSelf: 'flex-start',
+    borderRadius: 20,
     borderBottomLeftRadius: 5,
   },
-  messageText: {
-    color: '#fff',
+  userMessageText: {
+    color: PALETTE.dark,
     fontSize: 16,
-    lineHeight: 22,
+    fontWeight: '500',
+  },
+  botMessageText: {
+    color: PALETTE.text_primary,
+    fontSize: 16,
   },
   inputWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
     paddingHorizontal: 15,
-    backgroundColor: 'transparent',
-    paddingBottom: Platform.OS === 'ios' ? 15 : 20,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingLeft: 20,
+    paddingRight: 8,
     paddingVertical: 8,
     borderRadius: 30,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#2CFD89',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   input: {
     flex: 1,
-    maxHeight: 100,
-    minHeight: 40,
+    maxHeight: 120,
     backgroundColor: 'transparent',
-    paddingHorizontal: 15,
-    paddingTop: Platform.OS === 'ios' ? 12 : 10,
-    paddingBottom: Platform.OS === 'ios' ? 12 : 10,
-    color: '#fff',
+    color: PALETTE.text_primary,
     fontSize: 16,
+    paddingTop: Platform.OS === 'ios' ? 2 : 0,
+    paddingBottom: Platform.OS === 'ios' ? 2 : 0,
+    marginRight: 10,
   },
   sendButton: {
-    backgroundColor: '#2CFD89',
-    padding: 14,
-    borderRadius: 50,
+    backgroundColor: PALETTE.primary,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#2CFD89',
-    shadowOpacity: 0.6,
-    shadowRadius: 6,
-    elevation: 4,
   },
   error: {
-    color: '#FF6B6B',
+    color: PALETTE.danger,
     textAlign: 'center',
     marginVertical: 10,
   },
@@ -291,7 +370,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginLeft: 15,
     marginVertical: 10,
-    backgroundColor: '#34495E',
+    backgroundColor: PALETTE.bot_bubble,
     borderRadius: 20,
     padding: 8,
   },

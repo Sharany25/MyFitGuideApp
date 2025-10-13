@@ -156,7 +156,7 @@ const RutinaScreen: React.FC = () => {
                   <StaticInfo label="Nombre" value={nombre} icon="person-outline" />
                   <StaticInfo label="Objetivo" value={objetivo} icon="flag-outline" />
 
-                  <CustomInput label="Edad" value={edad} onChangeText={handleEdadChange} placeholder="Ej: 22" keyboardType="numeric" maxLength={2} icon="calendar-outline" />
+                  <CustomInput label="Edad" value={edad} onChangeText={handleEdadChange} placeholder="Ej: 18" keyboardType="numeric" maxLength={2} icon="calendar-outline" />
 
                   <Text style={styles.label}>¿Dónde prefieres entrenar?</Text>
                   <View style={styles.preferenceContainer}>
