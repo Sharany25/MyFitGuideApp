@@ -99,7 +99,7 @@ const RegistroScreen: React.FC = () => {
   const [isDatePickerVisible, setDatePickerVisible] = useState(false);
   const [aceptoTerminos, setAceptoTerminos] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [foto, setFoto] = useState<string>('');
+  const [fotoBase64, setFotoBase64] = useState<string>('');
   
   const {
     registrar,
@@ -132,14 +132,22 @@ const RegistroScreen: React.FC = () => {
       allowsEditing: true,
       aspect: [1, 1], 
       quality: 0.5,
+      base64: true,
     });
 
-    if (!result.canceled && result.assets) {
-      setFoto(result.assets[0].uri);
+    if (!result.canceled && result.assets && result.assets[0].base64) {
+      const uri = `data:image/jpeg;base64,${result.assets[0].base64}`;
+      setFotoBase64(uri);
     }
   };
 
   const handleRegistro = async () => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(correo)) {
+      setShowError(true);
+      return;
+    }
+
     if (contrasena.length < 8) {
       setContrasenaError("La contraseña debe tener al menos 8 caracteres.");
       setShowError(true);
@@ -147,7 +155,7 @@ const RegistroScreen: React.FC = () => {
     }
     setContrasenaError(null);
 
-    if (!aceptoTerminos || !nombre || !correo || !contrasena || !fechaNacimiento) {
+    if (!aceptoTerminos || !nombre || !contrasena || !fechaNacimiento) {
       setShowError(true);
       return;
     }
@@ -158,23 +166,23 @@ const RegistroScreen: React.FC = () => {
         return;
     }
 
-    const emailToSend = correo.toLowerCase();
-
-    const userId = await registrar({
-      nombre,
-      correoElectronico: emailToSend,
-      contraseña: contrasena,
-      fechaNacimiento: fechaISO,
-      foto,
-    });
-
-    if (userId) {
-      const userProfile = {
-        userId,
+    const payload = {
         nombre,
-        correoElectronico: emailToSend,
+        correoElectronico: correo.toLowerCase(),
+        contraseña: contrasena,
         fechaNacimiento: fechaISO,
-        foto,
+        foto: fotoBase64 || undefined,
+    };
+    
+    const responseData = await registrar(payload);
+
+    if (responseData && responseData.userId) {
+      const userProfile = {
+        userId: responseData.userId,
+        nombre,
+        correoElectronico: correo.toLowerCase(),
+        fechaNacimiento: fechaISO,
+        foto: responseData.fotoUrl || fotoBase64,
       };
 
       dispatch({ type: "SET_USER", payload: userProfile });
@@ -182,23 +190,17 @@ const RegistroScreen: React.FC = () => {
 
       setTimeout(() => {
         setShowSuccess(false);
-        navigation.replace("Dieta", { nombre, userId });
+        navigation.replace("Dieta", { nombre, userId: responseData.userId });
       }, 1200);
     }
   };
 
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
-        if (event.type === 'set' && selectedDate) {
-            setFechaNacimiento(selectedDate);
-            setDatePickerVisible(false);
-        } else if (event.type === 'dismissed') {
-            setDatePickerVisible(false);
-        }
-    } else { // iOS
-        if (selectedDate) {
-            setFechaNacimiento(selectedDate);
-        }
+        setDatePickerVisible(false);
+    }
+    if (event.type === 'set' && selectedDate) {
+        setFechaNacimiento(selectedDate);
     }
   };
 
@@ -206,15 +208,16 @@ const RegistroScreen: React.FC = () => {
       const currentDate = fechaNacimiento || new Date(2000, 0, 1);
       
       if (Platform.OS === 'android') {
-          return isDatePickerVisible && (
-              <DateTimePicker
-                  value={currentDate}
-                  mode="date"
-                  display="inline"
-                  onChange={onDateChange}
-                  maximumDate={new Date()}
-              />
-          );
+        if (!isDatePickerVisible) return null;
+        return (
+            <DateTimePicker
+                value={currentDate}
+                mode="date"
+                display="calendar"
+                onChange={onDateChange}
+                maximumDate={new Date()}
+            />
+        );
       }
       
       return (
@@ -267,7 +270,7 @@ const RegistroScreen: React.FC = () => {
                   <Text style={styles.subtitle}>Bienvenido, registra tu información</Text>
 
                   <CustomInput label="Nombre completo" value={nombre} onChangeText={setNombre} placeholder="Tu nombre" icon="user" />
-                  <CustomInput label="Correo electrónico" value={correo} onChangeText={setCorreo} placeholder="Nombre@gmail.com" keyboardType="email-address" autoCapitalize="none" icon="mail" />
+                  <CustomInput label="Correo electrónico" value={correo} onChangeText={setCorreo} placeholder="nombre@ejemplo.com" keyboardType="email-address" autoCapitalize="none" icon="mail" />
                   
                   <View>
                     <CustomInput
@@ -301,8 +304,8 @@ const RegistroScreen: React.FC = () => {
 
                   <Text style={[styles.label, {textAlign: 'center', marginBottom: 10}]}>Foto de Perfil (opcional)</Text>
                   <TouchableOpacity onPress={pickImage} style={styles.photoPickerButton}>
-                    {foto ? (
-                      <Image source={{ uri: foto }} style={styles.photoPreview} />
+                    {fotoBase64 ? (
+                      <Image source={{ uri: fotoBase64 }} style={styles.photoPreview} />
                     ) : (
                       <View style={styles.photoPlaceholder}>
                         <Ionicons name="camera-outline" size={40} color={PALETTE.text_secondary} />
@@ -490,4 +493,3 @@ const styles = StyleSheet.create({
 });
 
 export default RegistroScreen;
-
