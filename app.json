@@ -21,7 +21,8 @@
         "backgroundColor": "#1D2A32"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.sharany.MyFitGuide"
+      "package": "com.sharany.MyFitGuide",
+      "usesCleartextTraffic": true
     },
     "web": {
       "favicon": "./assets/icon.png"

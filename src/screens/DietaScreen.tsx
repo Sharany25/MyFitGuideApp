@@ -170,7 +170,7 @@ const DietaScreen: React.FC = () => {
                   label="Alergias alimenticias"
                   value={alergiaInput}
                   onChangeText={setAlergiaInput}
-                  placeholder="Ej: Gluten, lactosa..."
+                  placeholder="Ej: Gluten, lactosa..."  //En caso de no ser nada, dejar este apartado vacio --Pendiente x colocar
                   icon="alert-circle-outline"
                   rightIcon={
                     <TouchableOpacity onPress={handleAddAlergia} style={styles.addBtn}>

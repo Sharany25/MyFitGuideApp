@@ -9,17 +9,12 @@ export interface RegistroPayload {
   foto?: string;
 }
 
-export interface RegistroResponse {
-  userId: string;
-  fotoUrl?: string;
-}
-
 export const useRegistro = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState(false);
 
-  const registrar = async (payload: RegistroPayload): Promise<RegistroResponse | null> => {
+  const registrar = async (payload: RegistroPayload): Promise<string | null> => {
     setLoading(true);
     setSuccess(false);
     setError(false);
@@ -40,12 +35,8 @@ export const useRegistro = () => {
 
       const data = await response.json();
       setSuccess(true);
-      
-      return {
-          userId: data._id || data.idUsuario || data.id,
-          fotoUrl: data.foto
-      };
 
+      return data._id || data.idUsuario || data.id || null;
     } catch (e) {
       console.error("Error de red o desconocido en el registro:", e);
       setError(true);
@@ -64,4 +55,3 @@ export const useRegistro = () => {
     setError,
   };
 };
-
