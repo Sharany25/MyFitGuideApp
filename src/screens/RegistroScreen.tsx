@@ -37,7 +37,7 @@ const { width } = Dimensions.get("window");
 
 // URL DE TERMINOS Y CONDICIONES
 const TérminosCondiciones = () => {
-  const url = "https://myfitguideapp-f48a8.web.app/projects/myfitguide";
+  const url = "https://myfitguideapp-f48a8.web.app/projects/myfitguide/terms?tab=terms";
   Linking.openURL(url).catch(err => console.error('Error al abrir el enlace:', err));
 };
 

@@ -275,7 +275,7 @@ const LoginScreen: React.FC = () => {
 
               <TouchableOpacity
                 style={styles.helpLinkContainer}
-                onPress={() => Linking.openURL("https://studio--smartbit-health-hub.us-central1.hosted.app/")}
+                onPress={() => Linking.openURL("https://myfitguideapp-f48a8.web.app/projects/myfitguide")}
               >
                 <MaterialIcons name="help-outline" size={20} color={PALETTE.text_secondary} style={{ marginRight: 6 }} />
                 <Text style={styles.helpLinkText}>Manual de Uso / Preguntas Frecuentes</Text>

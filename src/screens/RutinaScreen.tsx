@@ -34,7 +34,7 @@ const PALETTE = {
   primary: '#2CFD89',
   text_primary: '#FFFFFF',
   text_secondary: '#B0C4DE',
-  inactive: 'rgba(255, 255, 255, 0.1)',
+  inactive: 'rgba(255, 255, 225, 0.1)',
   border: 'rgba(255, 255, 255, 0.15)',
   danger: '#FF4757',
   dark: '#1D2A32',
@@ -151,7 +151,6 @@ const RutinaScreen: React.FC = () => {
                 <BlurView intensity={50} tint="dark" style={styles.card}>
                   <Text style={styles.title}>MyFitGuide</Text>
                   <ProgressStepper currentStep="Rutina" />
-                  <Text style={styles.subtitle}>Diseñemos tu rutina ideal</Text>
 
                   <StaticInfo label="Nombre" value={nombre} icon="person-outline" />
                   <StaticInfo label="Objetivo" value={objetivo} icon="flag-outline" />
@@ -209,22 +208,45 @@ const RutinaScreen: React.FC = () => {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {/* Inicia apartado de carga */}
+      {isSubmitting && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={PALETTE.primary} />
+          <Text style={styles.loadingText}>Generando tu rutina...</Text>
+        </View>
+      )}
+      {/* Termina apartado de carga */}
+      
     </LinearGradient>
   );
 };
 
-const CustomInput = ({ label, icon, ...props }: any) => {
+interface CustomInputProps {
+    label: string;
+    icon?: keyof typeof Ionicons.glyphMap; // FIX: Se corrigió el tipo a uno válido para Ionicons.
+    value: string;
+    onChangeText: (text: string) => void;
+    placeholder: string;
+    keyboardType?: 'default' | 'numeric' | 'email-address';
+    multiline?: boolean;
+    height?: number;
+    maxLength?: number;
+}
+
+const CustomInput: React.FC<CustomInputProps> = ({ label, icon, height = 55, multiline = false, ...props }) => {
     const [isFocused, setIsFocused] = useState(false);
     return (
         <View style={{marginBottom: 15}}>
             <Text style={styles.label}>{label}</Text>
-            <View style={[styles.inputWrapper, isFocused && styles.inputFocused]}>
-                {icon && <Ionicons name={icon} size={22} color={isFocused ? PALETTE.primary : PALETTE.text_secondary} style={styles.leftIcon} />}
+            <View style={[styles.inputWrapper, isFocused && styles.inputFocused, { height: multiline ? height : 55 }]}>
+                {icon && <Ionicons name={icon} size={22} color={isFocused ? PALETTE.primary : PALETTE.text_secondary} style={[styles.leftIcon, { marginTop: multiline ? 15 : 0, alignSelf: multiline ? 'flex-start' : 'center' }]} />}
                 <TextInput
-                    style={styles.input}
+                    style={[styles.input, { height: multiline ? height : 55, textAlignVertical: multiline ? 'top' : 'center' }]}
                     placeholderTextColor={PALETTE.text_secondary}
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
+                    multiline={multiline}
                     {...props}
                 />
             </View>
@@ -272,12 +294,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: width * 0.08,
     marginBottom: 15,
-  },
-  subtitle: {
-    fontSize: width * 0.045,
-    color: PALETTE.text_secondary,
-    textAlign: "center",
-    marginBottom: 30,
   },
   label: {
     fontSize: width * 0.04,
@@ -377,6 +393,19 @@ const styles = StyleSheet.create({
     color: PALETTE.dark,
     fontSize: 18,
     fontWeight: "bold",
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(29, 42, 50, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  loadingText: {
+    marginTop: 15,
+    color: PALETTE.text_primary,
+    fontSize: 18,
+    fontWeight: '600',
   },
 });
 

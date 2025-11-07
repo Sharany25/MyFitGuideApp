@@ -139,11 +139,10 @@ const DietaScreen: React.FC = () => {
             <BlurView intensity={50} tint="dark" style={styles.card}>
               <Text style={styles.title}>MyFitGuide</Text>
               <ProgressStepper currentStep="Dieta" />
-              <Text style={styles.subtitle}>Tu información corporal y dieta</Text>
 
               <CustomInput label="Peso (kg)" value={peso} onChangeText={setPeso} placeholder="Ej: 70" keyboardType="numeric" icon="barbell-outline" />
               <CustomInput label="Altura (cm)" value={altura} onChangeText={setAltura} placeholder="Ej: 170" keyboardType="numeric" icon="body-outline" />
-              <CustomInput label="Objetivo" value={objetivo} onChangeText={setObjetivo} placeholder="Ej: Bajar grasa, ganar masa" icon="trophy-outline" />
+              <CustomInput label="Objetivo" value={objetivo} onChangeText={setObjetivo} placeholder="Ej: Bajar de peso, definir musculo" icon="trophy-outline" />
 
               <Text style={styles.label}>Género</Text>
               <View style={styles.genderContainer}>
@@ -170,7 +169,7 @@ const DietaScreen: React.FC = () => {
                   label="Alergias alimenticias"
                   value={alergiaInput}
                   onChangeText={setAlergiaInput}
-                  placeholder="Ej: Gluten, lactosa..."  //En caso de no ser nada, dejar este apartado vacio --Pendiente x colocar
+                  placeholder="Ej: Gluten, lácteos..."
                   icon="alert-circle-outline"
                   rightIcon={
                     <TouchableOpacity onPress={handleAddAlergia} style={styles.addBtn}>
@@ -194,13 +193,21 @@ const DietaScreen: React.FC = () => {
                 disabled={loading}
               >
                 <LinearGradient colors={['#2CFD89', '#00A3FF']} style={styles.nextButton}>
-                    {loading ? <ActivityIndicator color={PALETTE.dark} /> : <Text style={styles.nextButtonText}>Siguiente</Text>}
+                    {loading ? <ActivityIndicator color={PALETTE.dark} /> : <Text style={styles.nextButtonText}>Generar dieta</Text>}
                 </LinearGradient>
               </TouchableOpacity>
             </BlurView>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+      
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color={PALETTE.primary} />
+          <Text style={styles.loadingText}>Generando tu plan de dieta...</Text>
+        </View>
+      )}
+
     </LinearGradient>
   );
 };
@@ -245,12 +252,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: PALETTE.border,
     overflow: 'hidden',
-  },
-  subtitle: {
-    fontSize: width * 0.045,
-    color: PALETTE.text_secondary,
-    textAlign: "center",
-    marginBottom: 30,
   },
   label: {
     fontSize: width * 0.04,
@@ -342,6 +343,19 @@ const styles = StyleSheet.create({
     color: PALETTE.dark,
     fontSize: 18,
     fontWeight: "bold",
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(29, 42, 50, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 999,
+  },
+  loadingText: {
+    marginTop: 15,
+    color: PALETTE.text_primary,
+    fontSize: 18,
+    fontWeight: '600',
   },
 });
 
